@@ -9,4 +9,7 @@ class PublicController extends Controller {
     }
     public function registrationSent(){if($this->currentUser())$this->redirect('/');$this->render('public/registration-sent',['pageTitle'=>'Confirmez votre e-mail','previewUrl'=>$_SESSION['registration_preview_url']??null]);unset($_SESSION['registration_preview_url']);}
     public function verify($token=''){if($this->currentUser())$this->redirect('/');$ok=(new PublicRegistrationService())->verify((string)$token);$this->render('public/verify',['pageTitle'=>$ok?'Compte activé':'Lien invalide','verified'=>$ok]);}
+    public function privacy(){$this->render('public/legal',['pageTitle'=>'Politique de confidentialité Strax','legal'=>PublicLegalContent::privacy()]);}
+    public function terms(){$this->render('public/legal',['pageTitle'=>'Conditions d’utilisation Strax','legal'=>PublicLegalContent::terms()]);}
+    public function dataDeletion(){$this->render('public/legal',['pageTitle'=>'Suppression des données Strax','legal'=>PublicLegalContent::deletion()]);}
 }
