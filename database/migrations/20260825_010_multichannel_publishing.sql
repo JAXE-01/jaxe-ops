@@ -1,0 +1,80 @@
+CREATE TABLE IF NOT EXISTS social_connections (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    organization_id BIGINT UNSIGNED NULL,
+    client_id INT NULL,
+    provider VARCHAR(30) NOT NULL,
+    account_label VARCHAR(190) NOT NULL,
+    external_account_id VARCHAR(190) NULL,
+    account_type VARCHAR(40) NOT NULL DEFAULT 'Page',
+    access_token_encrypted LONGTEXT NULL,
+    refresh_token_encrypted LONGTEXT NULL,
+    token_expires_at DATETIME NULL,
+    status ENUM('Pending','Connected','Expired','Revoked','Error') NOT NULL DEFAULT 'Pending',
+    scopes_json JSON NULL,
+    metadata_json JSON NULL,
+    connected_by INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_social_connection_tenant (tenant_id, client_id, provider, status),
+    UNIQUE KEY uq_social_external_account (tenant_id, provider, external_account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS social_publications (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    organization_id BIGINT UNSIGNED NULL,
+    client_id INT NOT NULL,
+    project_id INT NULL,
+    content_id INT NULL,
+    master_title VARCHAR(255) NOT NULL,
+    master_caption TEXT NOT NULL,
+    media_url TEXT NULL,
+    publish_mode ENUM('Now','Scheduled') NOT NULL DEFAULT 'Scheduled',
+    scheduled_at DATETIME NULL,
+    approval_status ENUM('Draft','Pending','Approved','Rejected') NOT NULL DEFAULT 'Draft',
+    approved_by INT NULL,
+    approved_at DATETIME NULL,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_social_publication_tenant (tenant_id, client_id, approval_status, scheduled_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS social_publication_targets (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    publication_id BIGINT UNSIGNED NOT NULL,
+    connection_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(30) NOT NULL,
+    adapted_caption TEXT NOT NULL,
+    status ENUM('WaitingApproval','Queued','Processing','Published','Retrying','Failed','Cancelled') NOT NULL DEFAULT 'WaitingApproval',
+    attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    max_attempts SMALLINT UNSIGNED NOT NULL DEFAULT 3,
+    next_attempt_at DATETIME NULL,
+    published_at DATETIME NULL,
+    external_post_id VARCHAR(190) NULL,
+    external_post_url TEXT NULL,
+    last_error TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_social_target_publication FOREIGN KEY (publication_id) REFERENCES social_publications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_social_target_connection FOREIGN KEY (connection_id) REFERENCES social_connections(id) ON DELETE CASCADE,
+    INDEX idx_social_queue (status, next_attempt_at),
+    UNIQUE KEY uq_publication_connection (publication_id, connection_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS social_publication_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    publication_id BIGINT UNSIGNED NOT NULL,
+    target_id BIGINT UNSIGNED NULL,
+    event_type VARCHAR(60) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    message TEXT NULL,
+    payload_json JSON NULL,
+    created_by INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_social_event_publication FOREIGN KEY (publication_id) REFERENCES social_publications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_social_event_target FOREIGN KEY (target_id) REFERENCES social_publication_targets(id) ON DELETE SET NULL,
+    INDEX idx_social_event_tenant (tenant_id, publication_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

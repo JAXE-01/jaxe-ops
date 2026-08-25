@@ -1,0 +1,14 @@
+config/instance.php
+config/instance.secrets.php
+/public/uploads/*
+!/public/uploads/.gitkeep
+/storage/backups/*.sql
+.env
+.env.*
+!.env.example
+!.env.production.example
+/vendor/
+/composer.phar
+/storage/backups/*
+!/storage/.htaccess
+/.codex-tpack/

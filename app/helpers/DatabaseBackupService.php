@@ -1,0 +1,13 @@
+<?php
+class DatabaseBackupService {
+    public static function create(PDO $pdo,string $reason='manual'): string {
+        $base=dirname(__DIR__,2).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'backups';if(!is_dir($base)&&!mkdir($base,0700,true)&&!is_dir($base))throw new RuntimeException('Dossier de sauvegarde inaccessible.');
+        $safe=preg_replace('/[^a-z0-9_-]+/i','-',trim($reason))?:'backup';$target=$base.DIRECTORY_SEPARATOR.date('Ymd-His').'-'.$safe.'-'.bin2hex(random_bytes(3)).'.sql';
+        $binary=trim((string)config_env_value('DB_DUMP_BINARY','mysqldump'));$command=escapeshellarg($binary).' --single-transaction --quick --routines --triggers --events --default-character-set=utf8mb4 --host='.escapeshellarg((string)DB_HOST).' --user='.escapeshellarg((string)DB_USER).' '.escapeshellarg((string)DB_NAME);
+        $spec=[0=>['pipe','r'],1=>['file',$target,'wb'],2=>['pipe','w']];$env=$_ENV;$env['MYSQL_PWD']=(string)DB_PASS;$process=@proc_open($command,$spec,$pipes,null,$env);$code=-1;
+        if(is_resource($process)){fclose($pipes[0]);stream_get_contents($pipes[2]);fclose($pipes[2]);$code=proc_close($process);}if($code!==0||!is_file($target)||filesize($target)<100){@unlink($target);self::pdoDump($pdo,$target);}
+        @chmod($target,0600);self::prune($base,14);return$target;
+    }
+    private static function prune(string$base,int$keep): void {$files=glob($base.DIRECTORY_SEPARATOR.'*.sql')?:[];usort($files,static fn($a,$b)=>filemtime($b)<=>filemtime($a));foreach(array_slice($files,$keep)as$file){@unlink($file);}}
+    private static function pdoDump(PDO$pdo,string$target): void {$out=fopen($target,'wb');if(!$out)throw new RuntimeException('Impossible de creer la sauvegarde PDO.');try{fwrite($out,"SET FOREIGN_KEY_CHECKS=0;\nSET NAMES utf8mb4;\n\n");$tables=$pdo->query('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"')->fetchAll(PDO::FETCH_NUM);foreach($tables as$tableRow){$table=(string)$tableRow[0];$quoted='`'.str_replace('`','``',$table).'`';$create=$pdo->query('SHOW CREATE TABLE '.$quoted)->fetch(PDO::FETCH_NUM);fwrite($out,'DROP TABLE IF EXISTS '.$quoted.";\n".($create[1]??'').";\n");$rows=$pdo->query('SELECT * FROM '.$quoted);while($row=$rows->fetch(PDO::FETCH_ASSOC)){$columns=array_map(static fn($c)=>'`'.str_replace('`','``',$c).'`',array_keys($row));$values=array_map(static fn($v)=>$v===null?'NULL':$pdo->quote((string)$v),array_values($row));fwrite($out,'INSERT INTO '.$quoted.' ('.implode(',',$columns).') VALUES ('.implode(',',$values).");\n");}fwrite($out,"\n");}fwrite($out,"SET FOREIGN_KEY_CHECKS=1;\n");}finally{fclose($out);}if(!is_file($target)||filesize($target)<100){@unlink($target);throw new RuntimeException('Sauvegarde PDO vide ou incomplete.');}}
+}

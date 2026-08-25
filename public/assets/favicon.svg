@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jaxe Ops">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4b83b2"/>
+      <stop offset="100%" stop-color="#23537a"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#g)"/>
+  <path d="M19 19h14v14H19zM35 19h10v8H35zM19 35h8v10h-8zM29 35h16v10H29z" fill="none" stroke="#eaf4fb" stroke-width="3.2" stroke-linejoin="round"/>
+</svg>

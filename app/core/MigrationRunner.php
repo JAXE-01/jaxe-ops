@@ -1,0 +1,16 @@
+<?php
+class MigrationRunner {
+    public static function runIfNeeded(PDO $pdo) {
+        if(!defined('MIGRATIONS_PATH')||!is_dir((string)MIGRATIONS_PATH))return;
+        self::ensureTrackingTable($pdo);$lockName='strax_schema_migrations_'.sha1((string)DB_NAME);
+        $stmt=$pdo->prepare('SELECT GET_LOCK(:name,30)');$stmt->execute(['name'=>$lockName]);if((int)$stmt->fetchColumn()!==1)throw new RuntimeException('Impossible d obtenir le verrou de migration.');
+        try{foreach(self::files()as$filePath){$filename=basename($filePath);$checksum=sha1_file($filePath)?:'';if($checksum==='')continue;$current=self::getAppliedChecksum($pdo,$filename);if($current===$checksum)continue;if($current!==null)throw new RuntimeException('Migration deja appliquee mais modifiee: '.$filename.'. Creez une nouvelle migration corrective.');$sql=trim((string)file_get_contents($filePath));if($sql!==''){foreach(self::splitStatements($sql)as$statement){$statement=trim($statement);if($statement!=='')$pdo->exec($statement);}}self::markApplied($pdo,$filename,$checksum);}}
+        finally{$release=$pdo->prepare('SELECT RELEASE_LOCK(:name)');$release->execute(['name'=>$lockName]);}
+    }
+    public static function pendingFiles(PDO $pdo): array {if(!defined('MIGRATIONS_PATH')||!is_dir((string)MIGRATIONS_PATH))return[];self::ensureTrackingTable($pdo);$pending=[];foreach(self::files()as$filePath){$filename=basename($filePath);$checksum=sha1_file($filePath)?:'';$current=self::getAppliedChecksum($pdo,$filename);if($current!==null&&!hash_equals($current,$checksum))throw new RuntimeException('Checksum de migration modifie: '.$filename);if($current===null)$pending[]=$filename;}return$pending;}
+    private static function files(): array {$files=glob(rtrim((string)MIGRATIONS_PATH,'/\\').DIRECTORY_SEPARATOR.'*.sql')?:[];sort($files,SORT_NATURAL|SORT_FLAG_CASE);return$files;}
+    private static function ensureTrackingTable(PDO $pdo){$pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (filename VARCHAR(190) PRIMARY KEY,checksum CHAR(40) NOT NULL,applied_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');}
+    private static function getAppliedChecksum(PDO $pdo,$filename){$stmt=$pdo->prepare('SELECT checksum FROM schema_migrations WHERE filename=:filename LIMIT 1');$stmt->execute(['filename'=>(string)$filename]);$value=$stmt->fetchColumn();return$value!==false?(string)$value:null;}
+    private static function markApplied(PDO $pdo,$filename,$checksum){$stmt=$pdo->prepare('INSERT INTO schema_migrations(filename,checksum,applied_at) VALUES(:filename,:checksum,NOW())');$stmt->execute(['filename'=>(string)$filename,'checksum'=>(string)$checksum]);}
+    private static function splitStatements($sql){$lines=preg_split('/\R/',(string)$sql);$buffer='';$statements=[];foreach($lines as$line){$trim=trim((string)$line);if($trim===''||strpos($trim,'--')===0||strpos($trim,'#')===0)continue;$buffer.=$line."\n";if(substr(rtrim((string)$line),-1)===';'){$statements[]=$buffer;$buffer='';}}if(trim($buffer)!=='')$statements[]=$buffer;return$statements;}
+}

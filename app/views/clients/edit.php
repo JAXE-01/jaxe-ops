@@ -1,0 +1,11 @@
+<section class="page-intro-card compact-intro"><div><span class="page-eyebrow">Portefeuille clients</span><h2>Modifier le client</h2><p>Mettez à jour les coordonnées et l’état de la relation client.</p></div><a class="button secondary" href="<?= htmlspecialchars(route_url('/client')) ?>">← Retour aux clients</a></section>
+<section class="panel form-panel-narrow"><div class="panel-head"><div><h2><?= htmlspecialchars($client['nom'] ?? 'Client') ?></h2><p class="panel-subtitle">Informations générales et coordonnées.</p></div><span class="status-badge"><?= htmlspecialchars($client['statut'] ?? '') ?></span></div>
+<form method="post" class="form-grid two-columns entity-form">
+ <label class="field"><span>Nom du contact *</span><input type="text" name="nom" value="<?= htmlspecialchars($client['nom'] ?? '') ?>" required autocomplete="name"></label>
+ <label class="field"><span>Entreprise</span><input type="text" name="entreprise" value="<?= htmlspecialchars($client['entreprise'] ?? '') ?>" autocomplete="organization"></label>
+ <label class="field"><span>Secteur d’activité</span><input type="text" name="secteur" value="<?= htmlspecialchars($client['secteur'] ?? '') ?>"></label>
+ <label class="field"><span>Téléphone</span><input type="tel" name="telephone" value="<?= htmlspecialchars($client['telephone'] ?? '') ?>" autocomplete="tel"></label>
+ <label class="field"><span>Adresse email</span><input type="email" name="email" value="<?= htmlspecialchars($client['email'] ?? '') ?>" autocomplete="email"></label>
+ <label class="field"><span>Statut</span><select name="statut"><option value="Actif" <?= ($client['statut'] ?? '') === 'Actif' ? 'selected' : '' ?>>Actif</option><option value="Inactif" <?= ($client['statut'] ?? '') === 'Inactif' ? 'selected' : '' ?>>Inactif</option></select></label>
+ <div class="form-actions form-actions-wide"><a class="button secondary" href="<?= htmlspecialchars(route_url('/client')) ?>">Annuler</a><button class="button primary" type="submit">Enregistrer les modifications</button></div>
+</form></section>

@@ -1,0 +1,2 @@
+-- Migration bootstrap intentionally left empty.
+-- Add future ALTER/CREATE statements in new migration files.
