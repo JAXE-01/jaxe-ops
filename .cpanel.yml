@@ -1,0 +1,7 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/c2268453c/public_html/strax/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R app config database public scripts storage $DEPLOYPATH
+    - /bin/cp index.php install.sql composer.json composer.lock .htaccess $DEPLOYPATH
