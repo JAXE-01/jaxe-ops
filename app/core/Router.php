@@ -45,6 +45,7 @@ class Router {
 
     private function resolveControllerName($segment) {
         $normalized = str_replace(' ', '', ucwords(str_replace('-', ' ', $segment)));
+        $normalized = str_replace('Oauth', 'OAuth', $normalized);
         return $normalized . 'Controller';
     }
     private function resolveMethodName($segment) {
