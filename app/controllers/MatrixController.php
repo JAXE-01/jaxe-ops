@@ -211,7 +211,7 @@ class MatrixController extends Controller {
     private function projectsForClient($clientId){
         if($clientId<=0)return[];
         TenantGuard::assertClient((int)$clientId);
-        $stmt=$this->pdo->prepare('SELECT p.id,p.nom,p.date_debut,p.date_fin,p.quota_videos_mensuel,p.quota_visuels_mensuel,p.tenant_id,p.client_id,p.beneficiary_organization_id FROM projets p WHERE p.client_id=:client ORDER BY p.nom');
+        $stmt=$this->pdo->prepare('SELECT p.id,p.nom,p.date_debut,p.date_fin,p.quota_videos_mensuel,p.quota_visuels_mensuel,p.client_id,p.beneficiary_organization_id FROM projets p WHERE p.client_id=:client ORDER BY p.nom');
         $stmt->execute(['client'=>$clientId]);
         return array_values(array_filter($stmt->fetchAll(PDO::FETCH_ASSOC),static fn($row)=>AgencyAccessPolicy::canAccessRecord('projets',$row,'projects')));
     }    private function matricesForClient($clientId){if($clientId<=0)return[];$stmt=$this->pdo->prepare("SELECT * FROM content_matrices WHERE tenant_id=:tenant AND client_id=:client AND status='Active' ORDER BY updated_at DESC");$stmt->execute(['tenant'=>$this->tenantId,'client'=>$clientId]);return$stmt->fetchAll(PDO::FETCH_ASSOC);}
