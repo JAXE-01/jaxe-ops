@@ -31,3 +31,4 @@
 .mx-idea summary,.mx-idea button,.mx-idea label{cursor:pointer}
 @keyframes mxIdeaReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.mx-idea,.mx-idea details[open] .mx-grid{transition:none;animation:none}.mx-idea details summary b{transition:none}}
+.mx-context-alert{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 18px;border:1px solid #efd89e;border-radius:15px;background:#fffaf0;color:#674f1c}.mx-context-alert div{display:grid;gap:4px}.mx-context-alert span{color:#816e45;font-size:12px}.mx-context-alert .button{flex:0 0 auto}@media(max-width:620px){.mx-context-alert{align-items:stretch;flex-direction:column}}
