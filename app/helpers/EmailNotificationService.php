@@ -6,6 +6,10 @@ class EmailNotificationService {
         $message="Bienvenue sur Strax.\n\nConfirmez le compte de ".(string)$company." en ouvrant ce lien valable 24 heures :\n".(string)$url."\n\nSi vous n etes pas a l origine de cette demande, ignorez ce message.";
         return self::sendMail([$email],'Confirmez votre compte Strax',$message);
     }
+    public static function sendTeamInvitation($email,$name,$organization,$url,$existing=false) {
+        $message="Bonjour ".trim((string)$name).",\n\nVous êtes invité(e) à rejoindre ".trim((string)$organization)." sur Strax.\nOuvrez ce lien valable 48 heures :\n".(string)$url."\n\n".($existing?'Votre mot de passe actuel restera inchangé.':'Vous choisirez votre mot de passe pendant l activation.')."\n\nSi vous n attendiez pas cette invitation, ignorez ce message.";
+        return self::sendMail([(string)$email],'Invitation à rejoindre '.trim((string)$organization).' sur Strax',$message);
+    }
     public static function sendPublicValidationNotifications(array $context) {
         $clientEmail = trim((string) ($context['client_email'] ?? ''));
         $internalRecipients = self::parseRecipients((string) VALIDATION_NOTIFICATION_EMAILS);

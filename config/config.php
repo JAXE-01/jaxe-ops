@@ -127,7 +127,7 @@ $config = [
     'db_name' => $isLocal ? 'jaxe_local' : 'jaxe_production',
     'db_user' => $isLocal ? 'root' : '',
     'db_pass' => '',
-    'auto_sync_schema' => true,
+    'auto_sync_schema' => $appEnv !== 'production',
     'install_sql_path' => __DIR__ . '/../install.sql',
     'migrations_path' => __DIR__ . '/../database/migrations',
     'public_path' => __DIR__ . '/../public',
@@ -150,6 +150,8 @@ if (!empty($instanceConfig)) {
 
 $config['app_env'] = (string) config_env_value('APP_ENV', (string) ($config['app_env'] ?? $appEnv));
 $config['app_debug'] = config_env_bool('APP_DEBUG', (bool) ($config['app_debug'] ?? $isLocal));
+$config['auto_sync_schema'] = config_env_bool('AUTO_SYNC_SCHEMA', (bool) ($config['auto_sync_schema'] ?? false));
+$config['uploads_path'] = (string) config_env_value('UPLOADS_PATH', (string) ($config['uploads_path'] ?? (__DIR__ . '/../public/uploads')));
 $envDbSuffix = strtolower((string) $config['app_env']) === 'production' ? 'PROD' : 'LOCAL';
 $dbHostKey = 'DB_HOST_' . $envDbSuffix;
 $dbNameKey = 'DB_DATABASE_' . $envDbSuffix;

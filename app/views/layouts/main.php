@@ -42,6 +42,12 @@ $mainNavItems = [
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v4h-7V4ZM4 13h4v7H4v-7Zm6 0h10v7H10v-7Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>'
     ],
     [
+        'label' => 'Démarrage',
+        'href' => route_url('/onboarding'),
+        'match' => [route_url('/onboarding')],
+        'permission' => 'dashboard.view',
+        'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3h4v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    ],    [
         'label' => 'Calendrier global',
         'href' => route_url('/calendrier-global'),
         'match' => [route_url('/calendrier-global')],
@@ -120,8 +126,8 @@ $mainNavItems = [
     ],
     [
         'label' => 'Mon equipe',
-        'href' => route_url('/user'),
-        'match' => [route_url('/user')],
+        'href' => route_url('/team'),
+        'match' => [route_url('/team')],
         'permission' => 'users.view',
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm9-1v6m3-3h-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
     ]];
@@ -220,7 +226,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/style.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/sidebar.css')) ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/public-site.css?v=20260825-3')) ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/public-site.css?v=20260826-1')) ?>">
 </head>
 <body class="<?= $currentUser ? 'authenticated-user' : 'public-visitor' ?>" data-role-profile="<?= htmlspecialchars($roleProfile) ?>">
 <div class="global-loader" id="globalLoader" aria-hidden="true" role="status">
@@ -252,7 +258,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
                 <?php foreach ($allowedMainNavItems as $item): ?>
                     <?php
                     $navLabel = (string) ($item['label'] ?? '');
-                    if (in_array($navLabel, ['Dashboard', 'Calendrier global', 'Pilotage', 'Clients', 'Projets'], true)) {
+                    if (in_array($navLabel, ['Dashboard', 'Démarrage', 'Calendrier global', 'Pilotage', 'Clients', 'Projets'], true)) {
                         $navGroup = 'Espace de travail';
                     } elseif (in_array($navLabel, ['Matrice de creation', 'Publication sociale', 'Documentation', 'Realisations', 'Export documents'], true)) {
                         $navGroup = 'Contenus & livrables';
@@ -287,6 +293,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
         <?php else: ?>
             <nav class="public-nav" aria-label="Navigation publique">
                 <a href="<?= htmlspecialchars(route_url('/public/solutions')) ?>">Solutions</a>
+                <a href="<?= htmlspecialchars(route_url('/pricing')) ?>">Tarifs</a>
                 <a href="<?= htmlspecialchars(route_url('/login')) ?>">Connexion</a>
                 <a class="public-nav-cta" href="<?= htmlspecialchars(route_url('/public/register')) ?>">Créer un compte</a>
             </nav>

@@ -11,7 +11,10 @@ return [
     'db_pass' => '',
 
     // Schema automation
-    'auto_sync_schema' => true,
+    'auto_sync_schema' => false,
+
+    // Upload directory used by the current asset delivery layer.
+    'uploads_path' => __DIR__ . '/../public/uploads',
 
     // Optional webhooks and notification settings
     'publication_api_webhook' => '',
