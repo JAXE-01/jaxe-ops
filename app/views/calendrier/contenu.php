@@ -13,15 +13,7 @@ $selectedObjective = trim((string) ($_POST['objectif_publication'] ?? $deliverab
 if ($selectedObjective !== '' && !in_array($selectedObjective, $contentObjectiveOptions, true)) {
     $contentObjectiveOptions[] = $selectedObjective;
 }
-$contentRequirements = [
-    ['label' => 'Objectif du mois ou campagne liee', 'done' => $campaignId > 0 || trim((string) ($deliverable['objectif_mois'] ?? '')) !== ''],
-    ['label' => 'Dates ou evenements cles du mois', 'done' => trim((string) ($deliverable['temps_forts_mois'] ?? '')) !== ''],
-    ['label' => 'Sujet / angle du contenu', 'done' => trim((string) ($deliverable['contenu_sujet'] ?? $deliverable['titre'] ?? '')) !== ''],
-    ['label' => 'Objectif de publication', 'done' => trim((string) ($deliverable['objectif_publication'] ?? '')) !== ''],
-    ['label' => 'Message a vehiculer', 'done' => trim((string) ($deliverable['contenu_message'] ?? '')) !== ''],
-    ['label' => 'Persona cible ou cible libre', 'done' => $personaId > 0 || trim((string) ($deliverable['cible_libre'] ?? '')) !== ''],
-    ['label' => 'Reseau cible', 'done' => trim((string) ($deliverable['reseau_cible'] ?? $deliverable['canal'] ?? $deliverable['canal_principal'] ?? '')) !== ''],
-];
+$contentRequirements = ContentCompletion::requirements($deliverable);
 $tpackRefs = [
  'targets'=>['Restaurants','Agroalimentaire','Marques locales','Cosmétique','Événementiel','Grand public','Pâtisseries','Traiteurs','Transformateurs locaux','Entrepreneurs débutants'],
  'objectives'=>['Visibilité','Notoriété','Autorité','Confiance','Conversion','Engagement','Référencement','Mémorisation','Prospects','Vente'],
@@ -110,20 +102,10 @@ $tpackRefs = [
     </div>
 
     <?php if (!$canEdit): ?>
-        <div class="info-banner">Lecture seule: le charge de communication complete cette fiche, puis la chaine de production herite du contexte deja renseigne.</div>
-    <?php else: ?>
-        <div class="info-banner">
-            <strong>Sauvegarde vs reconnaissance du statut</strong><br>
-            Tu peux enregistrer cette fiche a tout moment pour sauvegarder le travail en brouillon. En revanche, la tache n est reconnue comme terminee que lorsque tous les elements indispensables ci-dessous sont renseignes.
-            <ul class="requirement-list">
-                <?php foreach ($contentRequirements as $requirement): ?>
-                    <li class="requirement-item <?= $requirement['done'] ? 'is-done' : 'is-missing' ?>">
-                        <span class="requirement-state"><?= $requirement['done'] ? 'Ceci est deja fait' : 'A completer' ?></span>
-                        <span><?= htmlspecialchars($requirement['label']) ?></span>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
+        <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-completion.css')) ?>">
+        <div data-content-completion aria-live="polite"></div>
+        <script type="application/json" data-completion-initial><?= json_encode($contentRequirements,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
+        <script src="<?= htmlspecialchars(app_url('/public/assets/content-completion.js')) ?>"></script>
     <?php endif; ?>
 
     <form method="post" class="form-grid" data-autosave-form="true" data-autosave-label="Fiche contenu" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/contenu/' . (int) ($deliverable['id'] ?? 0))) ?>">
@@ -308,6 +290,7 @@ $tpackRefs = [
                     }
                     return;
                 }
+                if(window.updateContentCompletion)window.updateContentCompletion(result.json.requirements);
                 setStatus('Sauvegarde auto: ' + (result.json.at || ''), 'saved');
                 if (window.AppUI && typeof window.AppUI.toast === 'function') {
                     window.AppUI.toast('success', 'Sauvegarde auto reussie');

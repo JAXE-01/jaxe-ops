@@ -13,7 +13,7 @@ class TeamController extends Controller {
                     $sent=EmailNotificationService::sendTeamInvitation($invitation['email'],$invitation['name'],$invitation['organization'],$url,$invitation['existing']);
                     $_SESSION['team_invitation_preview']=$sent?null:$url;
                     $this->flash($sent?'success':'info',$sent?'Invitation envoyée par e-mail.':'Invitation créée. Le serveur mail n a pas confirmé l envoi : utilisez le lien de secours affiché.');
-                }elseif($action==='suspend'){$service->suspend((int)($_POST['membership_id']??0));$this->flash('success','Accès suspendu.');}
+                }elseif($action==='reactivate'){$service->reactivate((int)($_POST['membership_id']??0));$this->flash('success','Accès réactivé dans cette entreprise.');}elseif($action==='suspend'){$service->suspend((int)($_POST['membership_id']??0));$this->flash('success','Accès suspendu.');}
                 else throw new RuntimeException('Action d équipe inconnue.');
             }catch(Throwable $e){$this->flash('error',$e->getMessage());}
             $this->redirect('/team');

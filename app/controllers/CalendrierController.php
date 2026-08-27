@@ -432,7 +432,8 @@ class CalendrierController extends Controller {
                 PipelineService::syncContentReadinessForPlan((int) $workspace['plan_mensuel_id']);
                 PipelineService::syncContentStatusByDeliverable((int) $deliverableId);
                 if ($isInlineAutosave) {
-                    $this->respondJson(['ok' => true, 'autosaved' => true, 'message' => 'Brouillon enregistre.', 'at' => date('H:i:s')]);
+                    $fresh=$this->calendrierModel->getContentWorkspace((int)$deliverableId,$this->currentUser());
+                    $this->respondJson(['ok' => true, 'autosaved' => true, 'message' => 'Brouillon enregistre.', 'requirements'=>ContentCompletion::requirements($fresh?:[]), 'at' => date('H:i:s')]);
                 }
                 $this->flash('success', 'Fiche contenu mise a jour.');
                 header('Location: ' . $returnTo);

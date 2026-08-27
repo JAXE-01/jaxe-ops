@@ -47,6 +47,11 @@ class TeamInvitationService {
         if(!$stmt->rowCount())throw new RuntimeException('Accès introuvable ou protégé.');
     }
 
+    public function reactivate(int $membershipId): void {
+        $q=$this->pdo->prepare("UPDATE tenant_memberships SET status='Actif' WHERE id=:id AND tenant_id=:tenant AND organization_id=:org AND status='Suspendu' AND joined_at IS NOT NULL");
+        $q->execute(['id'=>$membershipId,'tenant'=>TenantGuard::tenantId(),'org'=>$this->organization['id']]);
+        if(!$q->rowCount())throw new RuntimeException('Accès inaccessible ou invitation jamais acceptée : une invitation doit être renouvelée.');
+    }
     public static function inspect(string $token): ?array {
         if(!preg_match('/^[a-f0-9]{64}$/',$token))return null;
         $stmt=Database::getConnection()->prepare("SELECT ti.id token_id,ti.membership_id,tm.tenant_id,tm.organization_id,tm.status membership_status,u.id user_id,u.nom,u.email,u.statut user_status,o.name organization_name FROM team_invitation_tokens ti JOIN tenant_memberships tm ON tm.id=ti.membership_id JOIN users u ON u.id=tm.user_id JOIN organizations o ON o.id=tm.organization_id WHERE ti.token_hash=:hash AND ti.accepted_at IS NULL AND ti.expires_at>NOW() LIMIT 1");

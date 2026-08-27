@@ -10,17 +10,34 @@ class ProjectModel extends CrudModel {
     public function getById($id) {
         $record = parent::getById($id);
         if ($record) {
+            // Projects inherit their tenant from their client (no tenant_id column).
+            $scope=$this->db->prepare('SELECT tenant_id FROM clients WHERE id=:client');
+            $scope->execute(['client'=>$record['client_id']]);
+            $record['tenant_id']=(int)$scope->fetchColumn();
             $record['configuration_mode'] = !empty($record['abonnement_id']) ? 'abonnement' : 'custom';
         }
         return $record;
     }
 
     public function create(array $data) {
-        return parent::create($this->normalizeProjectPayload($data));
+        $this->db->beginTransaction();
+        try {
+            $id=parent::create($this->normalizeProjectPayload($data));
+            if(isset($data['social_pages_present'])) ProjectSocialPages::save((int)$id,(int)$data['client_id'],(array)($data['social_page_ids']??[]));
+            $this->db->commit();return $id;
+        } catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
     }
 
     public function update($id, array $data) {
-        return parent::update($id, $this->normalizeProjectPayload($data));
+        $previous=$this->getById($id);
+        if(!$previous) throw new RuntimeException('Projet inaccessible.');
+        $this->db->beginTransaction();
+        try {
+            $result=parent::update($id,$this->normalizeProjectPayload($data));
+            if(isset($data['social_pages_present'])) ProjectSocialPages::save((int)$id,(int)$data['client_id'],(array)($data['social_page_ids']??[]));
+            elseif(isset($data['client_id'])&&(int)$data['client_id']!==(int)$previous['client_id']) ProjectSocialPages::save((int)$id,(int)$data['client_id'],[]);
+            $this->db->commit();return $result;
+        } catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
     }
 
     public function extendOneMonth($id) {

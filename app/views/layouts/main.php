@@ -587,5 +587,6 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     });
 })();
 </script>
+<script src="<?= htmlspecialchars(app_url('/public/assets/calendar-position.js')) ?>"></script>
 </body>
 </html>

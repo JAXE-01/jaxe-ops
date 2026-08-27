@@ -1,0 +1,16 @@
+/* Native hidden must win over label/grid component declarations. */
+.compose-dialog [hidden], .publish-layout [hidden], .meta-selection-panel [hidden] { display:none !important; }
+.publication-main,.target-result>div,.connections-panel { min-width:0; }
+.publication-main p,.target-result em,.connection-list strong { overflow-wrap:anywhere; }
+.publication-details { padding:12px 0; }
+.publication-details summary { cursor:pointer;color:#315d8b;font-weight:600; }
+.publication-details p { white-space:normal; }
+.connection-group { border-top:1px solid #e0e7f0;padding:12px 0; }
+.connection-group summary { cursor:pointer;font-weight:700;line-height:1.5; }
+.connection-group .connection-list { max-height:440px;overflow:auto; }
+.connection-list article { flex-wrap:wrap; }
+.connection-list article>div { flex:1;min-width:130px; }
+.connection-state { font-size:12px; }
+.destination-search { width:100%;margin:12px 0;padding:12px;border:1px solid #d7e2f0;border-radius:10px; }
+.meta-selection-card[hidden] { display:none !important; }
+@media(max-width:650px){.publish-layout .segmented{display:flex;flex-wrap:wrap;}.target-result{flex-wrap:wrap;}.publication-actions{flex-wrap:wrap;}}

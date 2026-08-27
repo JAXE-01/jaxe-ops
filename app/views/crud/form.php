@@ -49,11 +49,11 @@ function field_multiselect_values($value) {
             <label class="field <?= in_array(($meta['type'] ?? 'text'), ['textarea', 'files', 'multiselect'], true) ? 'field-wide' : '' ?> <?= $isVisible ? '' : 'is-hidden' ?>" <?= $showWhenField !== '' ? 'data-show-when-field="' . htmlspecialchars($showWhenField) . '" data-show-when-values="' . htmlspecialchars($showWhenValues) . '"' : '' ?>>
                 <span><?= htmlspecialchars($meta['label']) ?></span>
                 <?php if (($meta['type'] ?? 'text') === 'textarea'): ?>
-                    <textarea name="<?= htmlspecialchars($field) ?>" <?= !empty($meta['required']) ? 'required' : '' ?> <?= !$isVisible ? 'disabled' : '' ?>><?= htmlspecialchars((string) $value) ?></textarea>
+                    <textarea name="<?= htmlspecialchars($field) ?>" <?= !empty($meta['required']) && !(($meta['type']??'')==='password' && !empty($record['id'])) ? 'required' : '' ?> <?= !$isVisible ? 'disabled' : '' ?>><?= htmlspecialchars((string) $value) ?></textarea>
                 <?php elseif (($meta['type'] ?? 'text') === 'checkbox'): ?>
                     <input type="checkbox" name="<?= htmlspecialchars($field) ?>" value="1" <?= !empty($value) ? 'checked' : '' ?> <?= !$isVisible ? 'disabled' : '' ?>>
                 <?php elseif (($meta['type'] ?? 'text') === 'select'): ?>
-                    <select name="<?= htmlspecialchars($field) ?>" <?= !empty($meta['required']) ? 'required' : '' ?> <?= !$isVisible ? 'disabled' : '' ?>>
+                    <select name="<?= htmlspecialchars($field) ?>" <?= !empty($meta['required']) && !(($meta['type']??'')==='password' && !empty($record['id'])) ? 'required' : '' ?> <?= !$isVisible ? 'disabled' : '' ?>>
                         <?php foreach ($meta['options'] as $optionValue => $label): ?>
                             <option value="<?= htmlspecialchars($optionValue) ?>" <?= (string) $value === (string) $optionValue ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
                         <?php endforeach; ?>
@@ -96,14 +96,15 @@ function field_multiselect_values($value) {
                         name="<?= htmlspecialchars($field) ?>"
                         value="<?= htmlspecialchars($inputValue) ?>"
                         <?= isset($meta['step']) ? 'step="' . htmlspecialchars($meta['step']) . '"' : '' ?>
-                        <?= !empty($meta['required']) ? 'required' : '' ?>
-                        <?= $inputType === 'password' ? 'autocomplete="new-password"' : '' ?>
+                        <?= !empty($meta['required']) && !(($meta['type']??'')==='password' && !empty($record['id'])) ? 'required' : '' ?>
+                        <?= $inputType === 'password' ? 'autocomplete="new-password" placeholder="Laisser vide pour conserver le mot de passe actuel (modification)"' : '' ?>
                         <?= !$isVisible ? 'disabled' : '' ?>
                     >
                 <?php endif; ?>
             </label>
         <?php endforeach; ?>
 
+        <?php if(($module['route']??'')==='projet' && $this->can('publishing.manage')) require __DIR__.'/project-social-pages.php'; ?>
         <div class="form-actions crud-form-actions">
             <button class="button primary" type="submit">Enregistrer</button>
             <a class="button secondary" href="<?= htmlspecialchars($returnTo ?? route_url('/' . $module['route'])) ?>"><?= htmlspecialchars($backLabel ?? 'Annuler') ?></a>

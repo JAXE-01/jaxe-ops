@@ -19,6 +19,7 @@ class ProjetController extends CrudController {
 
         if ($this->isPost()) {
             try {
+                if(isset($_POST['social_pages_present'])) $this->requirePermission('publishing.manage');
                 $projectId = $this->model->create($_POST);
                 PipelineService::syncProject($projectId);
                 $this->flash('success', 'Projet cree et pipeline initialise.');
@@ -53,6 +54,7 @@ class ProjetController extends CrudController {
 
         if ($this->isPost()) {
             try {
+                if(isset($_POST['social_pages_present'])) $this->requirePermission('publishing.manage');
                 $this->model->update($id, $_POST);
                 PipelineService::syncProject($id);
                 $this->flash('success', 'Projet mis a jour et pipeline synchronise.');

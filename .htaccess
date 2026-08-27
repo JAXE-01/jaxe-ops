@@ -1,3 +1,12 @@
+# STRAX_PRIVATE_PATHS: application internals are never served as files.
+Options -Indexes
+<FilesMatch "(?i)^(\.env(?:\..*)?|composer\.(json|lock|phar)|composer-setup\.php|install\.sql|.*\.(?:sql|bak|log|ini))$">
+    Require all denied
+</FilesMatch>
+RewriteEngine On
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+RewriteRule ^(?:app|config|database|scripts|storage|vendor)(?:/|$) - [F,L,NC]
+RewriteRule ^public/uploads/.*\.(?:php[0-9]?|phtml|phar|cgi|pl|shtml)(?:/|$) - [F,L,NC]
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -1,6 +1,7 @@
 <?php
 class UserController extends CrudController {
     protected $moduleKey = 'user';
+    public function __construct(){parent::__construct();$this->model=new ManagedUserModel();}
 
     protected function collectRequestData(array $currentRecord = []) {
         $payload = parent::collectRequestData($currentRecord);
@@ -14,7 +15,7 @@ class UserController extends CrudController {
             $payload['secondary_roles'] = UserRoles::serialize($secondaryRoles);
         }
 
-        if (array_key_exists('password', $payload) && $payload['password'] === null && !empty($currentRecord)) {
+        if (array_key_exists('password', $payload) && trim((string)$payload['password']) === '' && !empty($currentRecord)) {
             unset($payload['password']);
         }
 

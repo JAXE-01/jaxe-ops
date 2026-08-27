@@ -115,7 +115,7 @@ class DashboardModel extends Model {
                 JOIN projets p ON p.id = tp.projet_id
                 JOIN clients c ON c.id = p.client_id
                                 LEFT JOIN taches_pipeline validation ON validation.parent_task_id = tp.id
-                WHERE tp.auteur_id = :user_id
+                WHERE tp.auteur_id = :user_id AND c.tenant_id = :dashboard_tenant
                                     AND tp.statut <> 'Bloquee'
                                     AND (
                                         validation.validation_decision = 'Non valide'
@@ -123,7 +123,7 @@ class DashboardModel extends Model {
                                     )
                 ORDER BY CASE WHEN tp.deadline IS NULL THEN 1 ELSE 0 END, tp.deadline ASC, tp.id ASC";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['user_id' => $userId]);
+        $stmt->execute(['user_id' => $userId,'dashboard_tenant'=>TenantGuard::tenantId()]);
         $tasks = $this->filterVisibleOperationalTasks($stmt->fetchAll(), $currentUser, 'type_tache');
         if ($limit === null) {
             return $tasks;
@@ -138,7 +138,7 @@ class DashboardModel extends Model {
                 JOIN projets p ON p.id = tp.projet_id
                 JOIN clients c ON c.id = p.client_id
                 LEFT JOIN users u ON u.id = tp.auteur_id
-                WHERE tp.auteur_id = :user_id
+                WHERE tp.auteur_id = :user_id AND c.tenant_id = :dashboard_tenant
                   AND " . $whereClause . "
                 ORDER BY CASE WHEN tp.deadline IS NULL THEN 1 ELSE 0 END, tp.deadline ASC, tp.id ASC";
 
@@ -147,7 +147,7 @@ class DashboardModel extends Model {
         }
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(array_merge(['user_id' => $userId], $params));
+        $stmt->execute(array_merge(['user_id' => $userId,'dashboard_tenant'=>TenantGuard::tenantId()], $params));
         return $this->filterVisibleOperationalTasks($stmt->fetchAll(), $currentUser, 'type_tache');
     }
 
@@ -155,10 +155,11 @@ class DashboardModel extends Model {
         $sql = "SELECT tp.type_tache, p.id AS project_id, p.client_id, p.type_projet
                 FROM taches_pipeline tp
                 JOIN projets p ON p.id = tp.projet_id
-                WHERE tp.auteur_id = :user_id
+                JOIN clients c ON c.id = p.client_id
+                WHERE tp.auteur_id = :user_id AND c.tenant_id = :dashboard_tenant
                   AND tp.statut <> 'Bloquee'";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['user_id' => $userId]);
+        $stmt->execute(['user_id' => $userId,'dashboard_tenant'=>TenantGuard::tenantId()]);
         return $this->filterVisibleOperationalTasks($stmt->fetchAll(), $currentUser, 'type_tache');
     }
 
