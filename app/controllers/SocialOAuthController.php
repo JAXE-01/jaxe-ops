@@ -1,43 +1,63 @@
 <?php
 class SocialOAuthController extends Controller {
+    private const REQUIRED_PAGE_SCOPES=['pages_show_list','pages_read_engagement','pages_manage_posts'];
     public function __construct(){parent::__construct();$this->requireAuth();$this->requirePermission('publishing.manage');}
 
     public function connect($connectionId){
-        $clientId=trim((string)config_env_value('META_CLIENT_ID',''));
-        $secret=trim((string)config_env_value('META_CLIENT_SECRET',''));
+        $clientId=trim((string)config_env_value('META_CLIENT_ID',''));$secret=trim((string)config_env_value('META_CLIENT_SECRET',''));
         if($clientId===''||$secret===''){$this->flash('error','Ajoutez META_CLIENT_ID et META_CLIENT_SECRET dans le fichier .env.');$this->redirect('/social-publishing');}
         $connection=$this->connection((int)$connectionId);
         if(!in_array($connection['provider'],['facebook','instagram'],true)){$this->flash('error','Ce connecteur OAuth sera disponible dans un prochain adaptateur.');$this->redirect('/social-publishing');}
-        $state=bin2hex(random_bytes(24));
-        $_SESSION['social_oauth'][$state]=['connection_id'=>(int)$connection['id'],'tenant_id'=>TenantGuard::tenantId(),'created_at'=>time()];
-        $redirect=route_url('/social-oauth/callback');
-        // Les permissions de publication ne deviennent demandables qu apres activation chez Meta.
-        $scopes=trim((string)config_env_value('META_OAUTH_SCOPES','pages_show_list,pages_read_engagement,instagram_basic'));
-        $params=['client_id'=>$clientId,'redirect_uri'=>$this->absoluteUrl($redirect),'state'=>$state,'response_type'=>'code','scope'=>$scopes];
+        $state=bin2hex(random_bytes(24));$_SESSION['social_oauth'][$state]=['connection_id'=>(int)$connection['id'],'tenant_id'=>TenantGuard::tenantId(),'created_at'=>time()];
+        $scopes=$this->requestedScopes();$params=['client_id'=>$clientId,'redirect_uri'=>$this->absoluteUrl(route_url('/social-oauth/callback')),'state'=>$state,'response_type'=>'code','scope'=>implode(',',$scopes),'auth_type'=>'rerequest'];
         header('Location: https://www.facebook.com/'.rawurlencode($this->version()).'/dialog/oauth?'.http_build_query($params));exit;
     }
 
     public function callback(){
         $state=(string)($_GET['state']??'');$saved=$_SESSION['social_oauth'][$state]??null;unset($_SESSION['social_oauth'][$state]);
-        if(!$saved||!hash_equals((string)$saved['tenant_id'],(string)TenantGuard::tenantId())||time()-(int)$saved['created_at']>900){$this->flash('error','Session OAuth invalide ou expiree.');$this->redirect('/social-publishing');}
-        if(!empty($_GET['error'])){$this->flash('error','Connexion Meta annulee ou refusee.');$this->redirect('/social-publishing');}
-        $code=trim((string)($_GET['code']??''));if($code===''){$this->flash('error','Meta n a retourne aucun code OAuth.');$this->redirect('/social-publishing');}
+        if(!$saved||!hash_equals((string)$saved['tenant_id'],(string)TenantGuard::tenantId())||time()-(int)$saved['created_at']>900){$this->flash('error','Session OAuth invalide ou expirée.');$this->redirect('/social-publishing');}
+        if(!empty($_GET['error'])){$detail=trim((string)($_GET['error_description']??''));$this->flash('error','Connexion Meta annulée ou refusée'.($detail!==''?' : '.$detail:'.'));$this->redirect('/social-publishing');}
+        $code=trim((string)($_GET['code']??''));if($code===''){$this->flash('error','Meta n a retourné aucun code OAuth.');$this->redirect('/social-publishing');}
         try{
-            $token=$this->request('https://graph.facebook.com/'.$this->version().'/oauth/access_token',['client_id'=>config_env_value('META_CLIENT_ID',''),'client_secret'=>config_env_value('META_CLIENT_SECRET',''),'redirect_uri'=>$this->absoluteUrl(route_url('/social-oauth/callback')),'code'=>$code]);
-            if(empty($token['access_token']))throw new RuntimeException('Jeton Meta manquant.');
-            $pages=$this->request('https://graph.facebook.com/'.$this->version().'/me/accounts',['fields'=>'id,name,access_token,instagram_business_account','access_token'=>$token['access_token']]);
-            $connection=$this->connection((int)$saved['connection_id']);$count=0;
-            foreach((array)($pages['data']??[]) as $page){$this->savePage($connection,$page);$count++;}
-            if(!$count)throw new RuntimeException('Aucune Page Facebook administrable retournee par Meta.');
-            $this->flash('success',$count.' destination(s) Meta connectee(s).');
-        }catch(Throwable $e){$this->markError((int)$saved['connection_id'],$e->getMessage());$this->flash('error','Connexion Meta impossible : '.$e->getMessage());}
+            $short=$this->request('/oauth/access_token',['client_id'=>config_env_value('META_CLIENT_ID',''),'client_secret'=>config_env_value('META_CLIENT_SECRET',''),'redirect_uri'=>$this->absoluteUrl(route_url('/social-oauth/callback')),'code'=>$code]);
+            if(empty($short['access_token']))throw new RuntimeException('Jeton Meta manquant.');
+            $token=$this->exchangeLongLived((string)$short['access_token']);$granted=$this->grantedScopes($token);$missing=array_values(array_diff(self::REQUIRED_PAGE_SCOPES,$granted));
+            if($missing)throw new RuntimeException('Permissions Meta manquantes : '.implode(', ',$missing).'. Activez-les dans le cas d utilisation Pages puis reconnectez.');
+            $connection=$this->connection((int)$saved['connection_id']);$pages=$this->allPages($token);
+            if(!$pages)throw new RuntimeException('Aucune Page Facebook administrable retournée par Meta. Vérifiez le rôle de la Page et la tâche CREATE_CONTENT.');
+            $selectionKey=bin2hex(random_bytes(24));$options=[];
+            foreach($pages as$page){if(empty($page['id'])||empty($page['access_token']))continue;$page['access_token']=CryptoService::encrypt((string)$page['access_token']);$options[]=$page;}
+            if(!$options)throw new RuntimeException('Meta n a retourné aucun jeton de Page exploitable.');
+            $_SESSION['social_oauth_selection'][$selectionKey]=['tenant_id'=>TenantGuard::tenantId(),'connection_id'=>(int)$connection['id'],'created_at'=>time(),'scopes'=>$granted,'pages'=>$options];
+            $this->redirect('/social-oauth/select/'.$selectionKey);
+        }catch(Throwable$e){$this->markError((int)$saved['connection_id'],$e->getMessage());$this->flash('error','Connexion Meta impossible : '.$e->getMessage());}
         $this->redirect('/social-publishing');
     }
 
-    private function connection(int $id): array {$stmt=Database::getConnection()->prepare('SELECT * FROM social_connections WHERE id=:id AND tenant_id=:tenant LIMIT 1');$stmt->execute(['id'=>$id,'tenant'=>TenantGuard::tenantId()]);$row=$stmt->fetch(PDO::FETCH_ASSOC);if(!$row)throw new RuntimeException('Connexion sociale inaccessible.');return$row;}
-    private function savePage(array $base,array $page): void {$pdo=Database::getConnection();$token=CryptoService::encrypt((string)($page['access_token']??''));$meta=json_encode(['instagram_business_account'=>$page['instagram_business_account']['id']??null],JSON_UNESCAPED_SLASHES);$stmt=$pdo->prepare("INSERT INTO social_connections(tenant_id,organization_id,client_id,provider,account_label,external_account_id,account_type,access_token_encrypted,status,scopes_json,metadata_json,connected_by) VALUES(:tenant,:org,:client,'facebook',:label,:external,'Page',:token,'Connected',:scopes,:meta,:user) ON DUPLICATE KEY UPDATE account_label=VALUES(account_label),access_token_encrypted=VALUES(access_token_encrypted),status='Connected',scopes_json=VALUES(scopes_json),metadata_json=VALUES(metadata_json),connected_by=VALUES(connected_by)");$stmt->execute(['tenant'=>TenantGuard::tenantId(),'org'=>$base['organization_id'],'client'=>$base['client_id'],'label'=>$page['name']??$base['account_label'],'external'=>$page['id'],'token'=>$token,'scopes'=>json_encode(array_values(array_filter(array_map('trim',explode(',',(string)config_env_value('META_OAUTH_SCOPES','pages_show_list,pages_read_engagement,instagram_basic')))))),'meta'=>$meta,'user'=>(int)$this->currentUser()['id']]);if((string)$base['external_account_id']===''||$base['status']!=='Connected')$pdo->prepare("UPDATE social_connections SET status='Revoked' WHERE id=:id")->execute(['id'=>$base['id']]);}
-    private function markError(int$id,string$message): void {$stmt=Database::getConnection()->prepare("UPDATE social_connections SET status='Error',metadata_json=:meta WHERE id=:id AND tenant_id=:tenant");$stmt->execute(['meta'=>json_encode(['last_error'=>mb_strimwidth($message,0,500)]),'id'=>$id,'tenant'=>TenantGuard::tenantId()]);}
-    private function request(string$url,array$params): array {$ch=curl_init($url.'?'.http_build_query($params));curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_HTTPHEADER=>['Accept: application/json']]);$body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);$data=json_decode((string)$body,true);if($body===false||$status<200||$status>=300)throw new RuntimeException((string)($data['error']['message']??$error?:('HTTP '.$status)));return is_array($data)?$data:[];}
+    public function select($selectionKey){
+        $selectionKey=(string)$selectionKey;$saved=$_SESSION['social_oauth_selection'][$selectionKey]??null;
+        if(!$saved||!hash_equals((string)$saved['tenant_id'],(string)TenantGuard::tenantId())||time()-(int)$saved['created_at']>900){unset($_SESSION['social_oauth_selection'][$selectionKey]);$this->flash('error','La sélection des Pages Meta a expiré. Recommencez la connexion.');$this->redirect('/social-publishing');}
+        $connection=$this->connection((int)$saved['connection_id']);
+        if($_SERVER['REQUEST_METHOD']!=='POST'){$pages=$saved['pages'];$this->view('social-oauth/select',compact('selectionKey','connection','pages'));return;}
+        $selected=array_values(array_unique((array)($_POST['destinations']??[])));
+        if(!$selected){$this->flash('error','Sélectionnez au moins une Page Facebook ou un compte Instagram.');$this->redirect('/social-oauth/select/'.$selectionKey);}
+        $facebook=0;$instagram=0;
+        try{foreach($selected as$value){if(!preg_match('/^(facebook|instagram):(\d+)$/',(string)$value,$match))continue;$provider=$match[1];$index=(int)$match[2];$page=$saved['pages'][$index]??null;if(!$page)continue;$page['access_token']=CryptoService::decrypt((string)$page['access_token']);if($provider==='facebook'){$this->saveDestination($connection,$page,'facebook',(array)$saved['scopes']);$facebook++;continue;}$ig=$page['instagram_business_account']??null;if(!is_array($ig)||empty($ig['id']))continue;$this->saveDestination($connection,['id'=>$ig['id'],'name'=>$ig['username']??$ig['name']??(($page['name']??'Page').' · Instagram'),'access_token'=>$page['access_token'],'page_id'=>$page['id'],'page_name'=>$page['name']??''],'instagram',(array)$saved['scopes']);$instagram++;}
+            if(!$facebook&&!$instagram)throw new RuntimeException('Aucune destination Meta valide n a été sélectionnée.');
+            Database::getConnection()->prepare("UPDATE social_connections SET status='Revoked' WHERE id=:id AND tenant_id=:tenant AND external_account_id IS NULL")->execute(['id'=>$connection['id'],'tenant'=>TenantGuard::tenantId()]);unset($_SESSION['social_oauth_selection'][$selectionKey]);$this->flash('success',$facebook.' Page(s) Facebook et '.$instagram.' compte(s) Instagram connectés et vérifiés.');
+        }catch(Throwable$e){$this->flash('error','Sélection Meta impossible : '.$e->getMessage());}
+        $this->redirect('/social-publishing');
+    }
+
+    private function requestedScopes(): array {$raw=(string)config_env_value('META_OAUTH_SCOPES','pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish');$scopes=array_values(array_unique(array_filter(array_map('trim',explode(',',$raw)))));foreach(self::REQUIRED_PAGE_SCOPES as$scope)if(!in_array($scope,$scopes,true))$scopes[]=$scope;return$scopes;}
+    private function exchangeLongLived(string$short): string {try{$data=$this->request('/oauth/access_token',['grant_type'=>'fb_exchange_token','client_id'=>config_env_value('META_CLIENT_ID',''),'client_secret'=>config_env_value('META_CLIENT_SECRET',''),'fb_exchange_token'=>$short]);return(string)($data['access_token']??$short);}catch(Throwable$e){return$short;}}
+    private function grantedScopes(string$token): array {$data=$this->request('/me/permissions',['access_token'=>$token]);$granted=[];foreach((array)($data['data']??[])as$row)if(($row['status']??'')==='granted'&&!empty($row['permission']))$granted[]=(string)$row['permission'];return array_values(array_unique($granted));}
+    private function allPages(string$token): array {$url='/me/accounts';$params=['fields'=>'id,name,access_token,tasks,instagram_business_account{id,username,name,profile_picture_url}','limit'=>100,'access_token'=>$token];$all=[];for($i=0;$i<10;$i++){$data=$this->request($url,$params);$all=array_merge($all,(array)($data['data']??[]));$next=(string)($data['paging']['next']??'');if($next==='')break;$url=$next;$params=[];}return$all;}
+    private function instagramProvider(): string{return'instagram';}
+    private function saveDestination(array$base,array$item,string$provider,array$scopes): void {$pdo=Database::getConnection();$owner=$pdo->prepare('SELECT client_id FROM social_connections WHERE tenant_id=:tenant AND provider=:provider AND external_account_id=:external LIMIT 1');$owner->execute(['tenant'=>TenantGuard::tenantId(),'provider'=>$provider,'external'=>$item['id']]);$existing=$owner->fetchColumn();if($existing!==false&&(int)$existing!==(int)$base['client_id'])throw new RuntimeException('Cette destination est déjà rattachée à un autre client. Révoquez d abord son ancien rattachement.');$token=CryptoService::encrypt((string)($item['access_token']??''));$metadata=['page_id'=>$item['page_id']??($provider==='facebook'?$item['id']:null),'page_name'=>$item['page_name']??($provider==='facebook'?($item['name']??''):null),'tasks'=>$item['tasks']??[]];$stmt=$pdo->prepare("INSERT INTO social_connections(tenant_id,organization_id,client_id,provider,account_label,external_account_id,account_type,access_token_encrypted,status,scopes_json,metadata_json,connected_by,last_validated_at) VALUES(:tenant,:org,:client,:provider,:label,:external,:type,:token,'Connected',:scopes,:meta,:user,NOW()) ON DUPLICATE KEY UPDATE account_label=VALUES(account_label),account_type=VALUES(account_type),access_token_encrypted=VALUES(access_token_encrypted),status='Connected',scopes_json=VALUES(scopes_json),metadata_json=VALUES(metadata_json),connected_by=VALUES(connected_by),last_validated_at=NOW()");$stmt->execute(['tenant'=>TenantGuard::tenantId(),'org'=>$base['organization_id'],'client'=>$base['client_id'],'provider'=>$provider,'label'=>$item['name']??$base['account_label'],'external'=>$item['id'],'type'=>$provider==='facebook'?'Page':'Business','token'=>$token,'scopes'=>json_encode($scopes),'meta'=>json_encode($metadata,JSON_UNESCAPED_SLASHES),'user'=>(int)$this->currentUser()['id']]);}
+    private function connection(int$id): array {$stmt=Database::getConnection()->prepare('SELECT * FROM social_connections WHERE id=:id AND tenant_id=:tenant LIMIT 1');$stmt->execute(['id'=>$id,'tenant'=>TenantGuard::tenantId()]);$row=$stmt->fetch(PDO::FETCH_ASSOC);if(!$row)throw new RuntimeException('Connexion sociale inaccessible.');return$row;}
+    private function markError(int$id,string$message): void {$stmt=Database::getConnection()->prepare("UPDATE social_connections SET status='Error',metadata_json=:meta WHERE id=:id AND tenant_id=:tenant AND status<>'Connected'");$stmt->execute(['meta'=>json_encode(['last_error'=>mb_strimwidth($message,0,500)]),'id'=>$id,'tenant'=>TenantGuard::tenantId()]);}
+    private function request(string$url,array$params): array {$endpoint=str_starts_with($url,'https://')?$url:'https://graph.facebook.com/'.$this->version().$url;if($params)$endpoint.=(str_contains($endpoint,'?')?'&':'?').http_build_query($params);$ch=curl_init($endpoint);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>30,CURLOPT_HTTPHEADER=>['Accept: application/json']]);$body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);$data=json_decode((string)$body,true);if($body===false||$status<200||$status>=300){$meta=$data['error']??[];$message=(string)($meta['message']??$error?:('Meta HTTP '.$status));if(isset($meta['code']))$message.=' [code '.$meta['code'].(isset($meta['error_subcode'])?'/'.$meta['error_subcode']:'').']';throw new RuntimeException($message);}return is_array($data)?$data:[];}
     private function version(): string {$v=trim((string)config_env_value('META_GRAPH_VERSION','v23.0'));return preg_match('/^v\d+\.\d+$/',$v)?$v:'v23.0';}
-    private function absoluteUrl(string$path): string {$scheme=(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off')?'https':'http';$host=(string)($_SERVER['HTTP_HOST']??'localhost');return$scheme.'://'.$host.$path;}
+    private function absoluteUrl(string$path): string {$scheme=(!empty($_SERVER['HTTPS'])&&strtolower((string)$_SERVER['HTTPS'])!=='off')?'https':'http';return$scheme.'://'.(string)($_SERVER['HTTP_HOST']??'localhost').$path;}
 }
