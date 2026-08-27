@@ -47,10 +47,10 @@ class AuthController extends Controller {
     }
 
     public function logout() {
+        unset($_SESSION['user'], $_SESSION['workspace_mode'], $_SESSION['social_oauth'], $_SESSION['social_oauth_selection']);
         TenantContext::clear();
         session_regenerate_id(true);
-        unset($_SESSION['user']);
-        $this->flash('success', 'Deconnexion effectuee.');
+        $this->flash('success', 'Vous êtes maintenant déconnecté.');
         $this->redirect('/login');
     }
 }

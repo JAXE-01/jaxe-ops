@@ -370,3 +370,4 @@ th {
 .settings-incomplete-badge{display:inline-flex;align-items:center;width:max-content;max-width:calc(100% - 4px);margin-top:7px;padding:3px 7px;border-radius:999px;background:#fff2dc;color:#8a641c;font-size:.6rem;font-weight:800;line-height:1.2}
 .settings-section-card[hidden],.settings-sidebar-group[hidden]{display:none!important}
 .settings-secondary-sidebar .settings-section-card:has(.settings-incomplete-badge){padding-bottom:9px}
+.workspace-switch{display:flex;gap:8px;margin-top:12px}.workspace-switch a{flex:1;padding:8px;text-align:center;border:1px solid #64748b;border-radius:8px;color:#fff}.workspace-switch a.active{background:#234766}.logout-form{margin:0}.logout-form .nav-icon-button{width:100%;cursor:pointer}

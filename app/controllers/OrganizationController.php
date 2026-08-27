@@ -48,28 +48,11 @@ class OrganizationController extends Controller {
                 $stmt->execute(['tenant_id' => $tenantId, 'name' => $name, 'slug' => $slug . '-' . bin2hex(random_bytes(2)), 'account_type' => $accountType, 'project_mode' => $projectMode, 'registration_state' => $registrationState]);
                 $this->flash('success', 'Organisation creee.');
             } elseif ($action === 'invite') {
-                $email = strtolower(trim((string) ($_POST['email'] ?? '')));
-                $name = trim((string) ($_POST['user_name'] ?? ''));
-                $organizationId = (int) ($_POST['organization_id'] ?? 0);
-                TenantGuard::assertOrganization($organizationId);
-                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Email invalide.');
-                $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
-                $stmt->execute(['email' => $email]);
-                $userId = (int) ($stmt->fetchColumn() ?: 0);
-                $temporaryPassword = null;
-                if ($userId <= 0) {
-                    $temporaryPassword = 'Jx!' . bin2hex(random_bytes(6));
-                    $stmt = $pdo->prepare("INSERT INTO users (nom,email,password,role,statut) VALUES (:nom,:email,:password,'Clientele','Actif')");
-                    $stmt->execute(['nom' => $name !== '' ? $name : $email, 'email' => $email, 'password' => password_hash($temporaryPassword, PASSWORD_BCRYPT)]);
-                    $userId = (int) $pdo->lastInsertId();
-                }
-                $stmt = $pdo->prepare("INSERT INTO tenant_memberships (tenant_id,organization_id,user_id,membership_role,status,invited_at)
-                    VALUES (:tenant_id,:organization_id,:user_id,'Client','Invite',NOW())
-                    ON DUPLICATE KEY UPDATE organization_id=VALUES(organization_id), membership_role='Client', status='Invite', invited_at=NOW()");
-                $stmt->execute(['tenant_id' => $tenantId, 'organization_id' => $organizationId, 'user_id' => $userId]);
-                $message = 'Invitation enregistree.' . ($temporaryPassword ? ' Mot de passe temporaire : ' . $temporaryPassword : '');
-                $this->flash('success', $message);
-            } elseif ($action === 'update_membership') {
+                $email=strtolower(trim((string)($_POST['email']??'')));$name=trim((string)($_POST['user_name']??''));$organizationId=(int)($_POST['organization_id']??0);TenantGuard::assertOrganization($organizationId);
+                $invitation=(new TeamInvitationService($this->currentUser()))->invite($name!==''?$name:$email,$email,'Client','Clientele',$organizationId);
+                $scheme=(!empty($_SERVER['HTTPS'])&&strtolower((string)$_SERVER['HTTPS'])!=='off')?'https':'http';$url=$scheme.'://'.($_SERVER['HTTP_HOST']??'localhost').route_url('/team-invitation/accept/'.$invitation['token']);
+                $sent=EmailNotificationService::sendTeamInvitation($invitation['email'],$invitation['name'],$invitation['organization'],$url,$invitation['existing']);
+                $this->flash($sent?'success':'info',$sent?'Invitation sécurisée envoyée par e-mail.':'Invitation créée mais non confirmée par SMTP. Lien de secours : '.$url);            } elseif ($action === 'update_membership') {
                 $membershipId = (int) ($_POST['membership_id'] ?? 0);
                 $role = (string) ($_POST['membership_role'] ?? 'Member');
                 $status = (string) ($_POST['membership_status'] ?? 'Actif');

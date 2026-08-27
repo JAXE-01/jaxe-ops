@@ -3,6 +3,7 @@ $flash = $this->getFlash();
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $currentUser = $this->currentUser();
 $organizationContext = $currentUser ? OrganizationContext::forUser($currentUser) : null;
+$isPlatformAdmin=$currentUser&&OrganizationContext::isPlatformAdmin($currentUser);$workspaceMode=$isPlatformAdmin?(string)($_SESSION['workspace_mode']??'agency'):'organization';
 $settingsModel = new SettingsModel();
 $brandingConfig = $settingsModel->getBrandingConfig();
 $appName = trim((string) ($brandingConfig['app_name'] ?? 'Strax'));
@@ -111,9 +112,9 @@ $mainNavItems = [
     ]
 ,
     [
-        'label' => 'Entreprises',
-        'href' => route_url('/organization'),
-        'match' => [route_url('/organization')],
+        'label' => 'Administration SaaS',
+        'href' => route_url('/platform'),
+        'match' => [route_url('/platform')],
         'permission' => 'settings.manage',
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5l8-3 8 3v16M8 8h2m4 0h2M8 12h2m4 0h2M8 16h2m4 0h2M2 21h20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     ],
@@ -180,7 +181,9 @@ if ($currentUser) {
         if (!$this->can($item['permission'] ?? null)) {
             continue;
         }
-        if (($item['label'] ?? '') === 'Entreprises' && !OrganizationContext::canManageOrganizations($currentUser)) { continue; }
+        if (($item['label'] ?? '') === 'Administration SaaS' && (!$isPlatformAdmin || $workspaceMode !== 'platform')) { continue; }
+        if (($item['label'] ?? '') === 'Acces agences') { $membership=(string)($organizationContext['membership_role']??''); if(!$isPlatformAdmin&&!in_array($membership,['Owner','Admin'],true)){continue;} }
+        if ($workspaceMode === 'platform' && ($item['label'] ?? '') !== 'Administration SaaS') { continue; }
         $allowedMainNavItems[] = $item;
     }
 }
@@ -249,10 +252,11 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
 
         <?php if ($currentUser): ?>
             <div class="sidebar-context">
-                <small><?= OrganizationContext::isPlatformAdmin($currentUser) ? 'Administration generale' : 'Espace entreprise' ?></small>
+                <small><?= $isPlatformAdmin ? ($workspaceMode==='platform'?'Administration SaaS':'Espace agence') : 'Espace entreprise' ?></small>
                 <strong><?= htmlspecialchars($organizationContext['name'] ?? 'Jaxe Communication') ?></strong>
                 <span><?= htmlspecialchars($organizationContext['account_type'] ?? 'Agency') ?> · <?= htmlspecialchars($organizationContext['membership_role'] ?? '') ?></span>
             </div>
+                        <?php if ($isPlatformAdmin): ?><div class="workspace-switch" aria-label="Changer d espace"><a class="<?= $workspaceMode==='platform'?'active':'' ?>" href="<?= htmlspecialchars(route_url('/workspace-mode/mode/platform')) ?>">SaaS</a><a class="<?= $workspaceMode==='agency'?'active':'' ?>" href="<?= htmlspecialchars(route_url('/workspace-mode/mode/agency')) ?>">Agence</a></div><?php endif; ?>
             <nav class="top-nav top-nav-unified" aria-label="Navigation principale">
                 <?php $lastNavGroup = ''; ?>
                 <?php foreach ($allowedMainNavItems as $item): ?>
@@ -286,9 +290,9 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
                 <a class="nav-icon-button <?= is_nav_active($currentPath, $profileMatch) ? 'active' : '' ?>" href="<?= htmlspecialchars($profileHref) ?>" title="Profil" aria-label="Profil">
                     <?= $profileIcon ?><span class="nav-utility-label">Mon profil</span>
                 </a>
-                <a class="nav-icon-button" href="<?= htmlspecialchars(route_url('/logout')) ?>" title="Deconnexion" aria-label="Deconnexion">
-                    <?= $logoutIcon ?><span class="nav-utility-label">Déconnexion</span>
-                </a>
+                <form method="post" action="<?= htmlspecialchars(route_url('/logout')) ?>" class="logout-form">
+                    <button type="submit" class="nav-icon-button" aria-label="Déconnexion"><?= $logoutIcon ?><span class="nav-utility-label">Déconnexion</span></button>
+                </form>
             </div>
         <?php else: ?>
             <nav class="public-nav" aria-label="Navigation publique">

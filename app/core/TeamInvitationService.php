@@ -17,24 +17,27 @@ class TeamInvitationService {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function invite(string $name,string $email,string $membershipRole,string $operationalRole): array {
+    public function invite(string $name,string $email,string $membershipRole,string $operationalRole,int $organizationId=0): array {
         $name=trim($name);$email=strtolower(trim($email));
         if($name===''||mb_strlen($name)>100)throw new RuntimeException('Renseignez le nom du collaborateur.');
         if(!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($email)>120)throw new RuntimeException('Adresse e-mail invalide.');
-        if(!in_array($membershipRole,['Admin','Manager','Member'],true))throw new RuntimeException('Niveau d accès invalide.');
+        if(!in_array($membershipRole,['Admin','Manager','Member','Client'],true))throw new RuntimeException('Niveau d accès invalide.');$targetOrganization=$this->organization;if($organizationId>0&&$organizationId!==(int)$this->organization['id']){if(!OrganizationContext::isPlatformAdmin($this->user))throw new RuntimeException('Organisation cible inaccessible.');$orgStmt=$this->pdo->prepare("SELECT id,name FROM organizations WHERE id=:id AND tenant_id=:tenant AND status='Actif'");$orgStmt->execute(['id'=>$organizationId,'tenant'=>TenantGuard::tenantId()]);$targetOrganization=$orgStmt->fetch(PDO::FETCH_ASSOC)?:[];if(empty($targetOrganization['id']))throw new RuntimeException('Organisation cible introuvable.');}
         if(!array_key_exists($operationalRole,ModuleRegistry::roleOptions()))throw new RuntimeException('Rôle opérationnel invalide.');
         $token=bin2hex(random_bytes(32));
         $this->pdo->beginTransaction();
         try{
             $q=$this->pdo->prepare('SELECT id,statut FROM users WHERE email=:email LIMIT 1');$q->execute(['email'=>$email]);$existing=$q->fetch(PDO::FETCH_ASSOC);
             if($existing){$userId=(int)$existing['id'];}else{$temporary=password_hash(bin2hex(random_bytes(32)),PASSWORD_DEFAULT);$q=$this->pdo->prepare("INSERT INTO users(nom,email,password,role,statut) VALUES(:name,:email,:password,:role,'Inactif')");$q->execute(['name'=>$name,'email'=>$email,'password'=>$temporary,'role'=>$operationalRole]);$userId=(int)$this->pdo->lastInsertId();}
+            $membershipCheck=$this->pdo->prepare('SELECT organization_id,status,membership_role FROM tenant_memberships WHERE tenant_id=:tenant AND user_id=:user FOR UPDATE');
+            $membershipCheck->execute(['tenant'=>TenantGuard::tenantId(),'user'=>$userId]);$membership=$membershipCheck->fetch(PDO::FETCH_ASSOC);
+            if($membership&&((int)$membership['organization_id']!==(int)$targetOrganization['id']||$membership['status']!=='Invite'||$membership['membership_role']==='Owner'))throw new RuntimeException('Ce compte possède déjà une adhésion. Gérez ses droits depuis son équipe, sans le réinviter ni le déplacer.');
             $q=$this->pdo->prepare("INSERT INTO tenant_memberships(tenant_id,organization_id,user_id,membership_role,status,invited_at) VALUES(:tenant,:org,:user,:role,'Invite',NOW()) ON DUPLICATE KEY UPDATE organization_id=VALUES(organization_id),membership_role=VALUES(membership_role),status='Invite',invited_at=NOW()");
-            $q->execute(['tenant'=>TenantGuard::tenantId(),'org'=>$this->organization['id'],'user'=>$userId,'role'=>$membershipRole]);
+            $q->execute(['tenant'=>TenantGuard::tenantId(),'org'=>$targetOrganization['id'],'user'=>$userId,'role'=>$membershipRole]);
             $q=$this->pdo->prepare('SELECT id FROM tenant_memberships WHERE tenant_id=:tenant AND user_id=:user LIMIT 1');$q->execute(['tenant'=>TenantGuard::tenantId(),'user'=>$userId]);$membershipId=(int)$q->fetchColumn();
             $this->pdo->prepare('UPDATE team_invitation_tokens SET accepted_at=NOW() WHERE membership_id=:membership AND accepted_at IS NULL')->execute(['membership'=>$membershipId]);
             $q=$this->pdo->prepare('INSERT INTO team_invitation_tokens(membership_id,token_hash,expires_at,created_by) VALUES(:membership,:hash,DATE_ADD(NOW(),INTERVAL 48 HOUR),:creator)');$q->execute(['membership'=>$membershipId,'hash'=>hash('sha256',$token),'creator'=>$this->user['id']]);
             $this->pdo->commit();
-            return ['email'=>$email,'name'=>$name,'organization'=>$this->organization['name'],'token'=>$token,'existing'=>!empty($existing)];
+            return ['email'=>$email,'name'=>$name,'organization'=>$targetOrganization['name'],'token'=>$token,'existing'=>!empty($existing)];
         }catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw$e;}
     }
 
