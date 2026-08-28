@@ -616,7 +616,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 </div>
             </div>
             <div class="info-banner"><?= htmlspecialchars(task_completion_note($taskType, $task)) ?></div>
-            <form method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>">
+            <form data-brief-editor="true" method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>">
                 <div class="autosave-status" data-autosave-status>Modifications locales</div>
                 <label class="field">
                     <span>Titre</span>

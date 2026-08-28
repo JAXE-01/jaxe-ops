@@ -271,7 +271,7 @@ class ModuleRegistry {
                 'listFields' => ['id', 'client_id', 'workspace_owner_type', 'nom', 'type_projet', 'charge_compte_id', 'charge_clientele_id', 'createur_id', 'cadreur_id', 'videaste_id', 'designer_id', 'date_debut', 'date_fin', 'quota_videos_mensuel', 'quota_visuels_mensuel', 'statut'],
                 'formFields' => [
                     'client_id' => ['label' => 'Client', 'type' => 'relation', 'module' => 'client'],
-                    'campagne_id' => ['label' => 'Campagne associee', 'type' => 'relation', 'module' => 'campagne', 'nullable' => true],
+                    'campagne_id' => ['label' => 'Campagne complémentaire (optionnelle)', 'type' => 'relation', 'module' => 'campagne', 'nullable' => true],
                     'nom' => ['label' => 'Nom du projet', 'type' => 'text', 'required' => true],
                     'configuration_mode' => ['label' => 'Configuration', 'type' => 'select', 'options' => ['abonnement' => 'Abonnement existant', 'custom' => 'Sur mesure']],
                     'abonnement_id' => ['label' => 'Abonnement', 'type' => 'relation', 'module' => 'abonnement', 'nullable' => true, 'showWhen' => ['field' => 'configuration_mode', 'values' => ['abonnement']]],

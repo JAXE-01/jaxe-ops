@@ -7,13 +7,20 @@ class PipelineService {
             return;
         }
 
-        self::cleanupLegacyTasks($pdo, $project['id']);
+        $cadenceHistory=CadenceRevision::decode((string)($project['publication_rules']??''));
+        $hasCadenceHistory=!empty($cadenceHistory['revisions']);
+        $firstRevision=$hasCadenceHistory?min(array_keys($cadenceHistory['revisions'])):null;
+        if(!$hasCadenceHistory)self::cleanupLegacyTasks($pdo, $project['id']);
 
         $periods = self::buildMonthlyPeriods($project['date_debut'], $project['date_fin'], $project['duree_mois'] ?? null);
-        self::pruneExtraPlans($pdo, $project['id'], $periods);
-        self::ensureProjectOnboarding($pdo, $project);
+        if(!$hasCadenceHistory)self::pruneExtraPlans($pdo, $project['id'], $periods);
+        if(!$hasCadenceHistory)self::ensureProjectOnboarding($pdo, $project);
 
         foreach ($periods as $index => $period) {
+            if($hasCadenceHistory && ($period->format('Y-m')<$firstRevision || $period->format('Y-m')<date('Y-m')))continue;
+            unset($project['_cadence']);
+            $rules=CadenceRevision::rules((string)($project['publication_rules']??''),$period->format('Y-m'));
+            if($rules){$project['_cadence']=EditorialCadence::dates($rules,$project['date_debut'],$project['date_fin'],$period->format('Y-m'));$project['quota_videos_mensuel']=count($project['_cadence']['Video']);$project['quota_visuels_mensuel']=count($project['_cadence']['Visuel']);}
             $planId = self::ensureMonthlyPlan($pdo, $project, $period, $index + 1);
             $monthWithArticle = self::monthLabelWithArticle($period);
             $strategyId = self::ensureTask($pdo, [
@@ -88,10 +95,14 @@ class PipelineService {
 
             self::ensureDeliverableChain($pdo, $project, $planId, $calendarId, 'Video', (int) $project['quota_videos_mensuel'], $period);
             self::ensureDeliverableChain($pdo, $project, $planId, $calendarId, 'Visuel', (int) $project['quota_visuels_mensuel'], $period);
-            self::syncContentReadinessForPlan($planId);
+            if(!$hasCadenceHistory)self::syncContentReadinessForPlan($planId);
+            if($hasCadenceHistory){
+                $actual=$pdo->prepare("UPDATE plans_mensuels SET videos_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Video'),visuels_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Visuel'),livrables_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=?) WHERE id=?");
+                $actual->execute([$planId,$planId,$planId,$planId]);
+            }
         }
 
-        self::reconcileTaskTransitions($pdo, (int) $project['id']);
+        if(!$hasCadenceHistory)self::reconcileTaskTransitions($pdo, (int) $project['id']);
     }
 
     public static function unlockChildren($taskId) {
@@ -242,6 +253,10 @@ class PipelineService {
         $existingId = $stmt->fetchColumn();
 
         if ($existingId) {
+            // Preserve existing workflow state during cadence revisions.
+            if (CadenceRevision::hasHistory($pdo, (int) $project['id'])) {
+                return (int) $existingId;
+            }
             $update = $pdo->prepare('UPDATE plans_mensuels
                 SET videos_prevus = :videos_prevus,
                     visuels_prevus = :visuels_prevus,
@@ -378,6 +393,7 @@ class PipelineService {
         for ($index = 1; $index <= $quantity; $index++) {
             $itemId = self::ensureDeliverableItem($pdo, $project, $planId, $type, $index, $period);
             self::ensureContentItem($pdo, $project, $planId, $itemId, $type, $index, $period);
+            $cadenceDate=null;if(isset($project['_cadence'])){$dateQuery=$pdo->prepare('SELECT date_prevue FROM livrable_items WHERE id=:id');$dateQuery->execute(['id'=>$itemId]);$cadenceDate=$dateQuery->fetchColumn();}
             if ($type === 'Video') {
                 $scriptId = self::ensureTask($pdo, [
                     'projet_id' => $project['id'],
@@ -388,7 +404,7 @@ class PipelineService {
                     'type_tache' => 'Script',
                     'auteur_id' => self::getCreativeOwnerId($project),
                     'statut' => 'Bloquee',
-                    'deadline' => self::formatDate(clone $period, 1 + (($index - 1) * 7)),
+                    'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-6 days')->format('Y-m-d'):self::formatDate(clone $period, 1 + (($index - 1) * 7)),
                     'ordre_pipeline' => 3,
                     'notes' => 'Rediger le script, l intention editoriale et les indications de tournage.'
                 ]);
@@ -402,7 +418,7 @@ class PipelineService {
                     'type_tache' => 'Tournage',
                     'auteur_id' => self::getCameraOwnerId($project),
                     'statut' => 'Bloquee',
-                    'deadline' => self::formatDate(clone $period, 2 + (($index - 1) * 7)),
+                    'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-5 days')->format('Y-m-d'):self::formatDate(clone $period, 2 + (($index - 1) * 7)),
                     'ordre_pipeline' => 4,
                     'notes' => 'Realiser la captation selon le script valide.'
                 ]);
@@ -416,7 +432,7 @@ class PipelineService {
                     'type_tache' => 'Montage',
                     'auteur_id' => self::getVideoEditorOwnerId($project),
                     'statut' => 'Bloquee',
-                    'deadline' => self::formatDate(clone $period, 4 + (($index - 1) * 7)),
+                    'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-3 days')->format('Y-m-d'):self::formatDate(clone $period, 4 + (($index - 1) * 7)),
                     'ordre_pipeline' => 5,
                     'notes' => 'Monter la video, integrer habillage et version finale pour validation.'
                 ]);
@@ -430,7 +446,7 @@ class PipelineService {
                     'type_tache' => 'Brief',
                     'auteur_id' => self::getCreativeOwnerId($project),
                     'statut' => 'Bloquee',
-                    'deadline' => self::formatDate(clone $period, 1 + (($index - 1) * 7)),
+                    'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-6 days')->format('Y-m-d'):self::formatDate(clone $period, 1 + (($index - 1) * 7)),
                     'ordre_pipeline' => 3,
                     'notes' => 'Produire le brief detaille du visuel, ses formats et ses livrables attendus.'
                 ]);
@@ -444,7 +460,7 @@ class PipelineService {
                     'type_tache' => 'Production',
                     'auteur_id' => self::getCreativeOwnerId($project),
                     'statut' => 'Bloquee',
-                    'deadline' => self::formatDate(clone $period, 3 + (($index - 1) * 7)),
+                    'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-3 days')->format('Y-m-d'):self::formatDate(clone $period, 3 + (($index - 1) * 7)),
                     'ordre_pipeline' => 4,
                     'notes' => 'Produire le visuel et preparer exports ainsi que source PSD/PSB si necessaire.'
                 ]);
@@ -459,7 +475,7 @@ class PipelineService {
                 'type_tache' => 'Validation interne',
                 'auteur_id' => $project['charge_compte_id'],
                 'statut' => 'Bloquee',
-                'deadline' => self::formatDate(clone $period, ($type === 'Video' ? 5 : 4) + (($index - 1) * 7)),
+                'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-2 days')->format('Y-m-d'):self::formatDate(clone $period, ($type === 'Video' ? 5 : 4) + (($index - 1) * 7)),
                 'ordre_pipeline' => $type === 'Video' ? 6 : 5,
                 'notes' => $type === 'Video'
                     ? 'Verifier script, montage, habillage et conformite avant envoi client.'
@@ -474,7 +490,7 @@ class PipelineService {
                 'type_tache' => 'Validation client',
                 'auteur_id' => self::getValidationClientOwnerId($project),
                 'statut' => 'Bloquee',
-                'deadline' => self::formatDate(clone $period, ($type === 'Video' ? 6 : 5) + (($index - 1) * 7)),
+                'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('-1 day')->format('Y-m-d'):self::formatDate(clone $period, ($type === 'Video' ? 6 : 5) + (($index - 1) * 7)),
                 'ordre_pipeline' => $type === 'Video' ? 7 : 6,
                 'notes' => 'Envoyer au client, recueillir les retours et valider la version finale.'
             ]);
@@ -487,7 +503,7 @@ class PipelineService {
                 'type_tache' => 'Publication',
                 'auteur_id' => $project['cm_id'],
                 'statut' => 'Bloquee',
-                'deadline' => self::formatDate(clone $period, ($type === 'Video' ? 7 : 6) + (($index - 1) * 7)),
+                'deadline' => $cadenceDate?:self::formatDate(clone $period, ($type === 'Video' ? 7 : 6) + (($index - 1) * 7)),
                 'ordre_pipeline' => $type === 'Video' ? 8 : 7,
                 'notes' => 'Publier le contenu selon le calendrier valide.'
             ]);
@@ -500,7 +516,7 @@ class PipelineService {
                 'type_tache' => 'Collecte KPI',
                 'auteur_id' => $project['cm_id'],
                 'statut' => 'Bloquee',
-                'deadline' => self::formatDate(clone $period, 20 + (($index - 1) * 7)),
+                'deadline' => $cadenceDate?(new DateTimeImmutable($cadenceDate))->modify('+14 days')->format('Y-m-d'):self::formatDate(clone $period, 20 + (($index - 1) * 7)),
                 'ordre_pipeline' => $type === 'Video' ? 9 : 8,
                 'notes' => 'Collecter les performances 14 jours apres la publication.'
             ]);
@@ -517,9 +533,11 @@ class PipelineService {
         $existing = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $existingId = (int) ($existing['id'] ?? 0);
 
-        $datePrevue = self::formatDate(clone $period, 5 + (($index - 1) * 7));
-        $titre = sprintf('%s %s #%s', $type, self::monthLabelForTitle($period), $index);
+        $slot=$project['_cadence'][$type][$index-1]??null;
+        $datePrevue = $slot['date']??self::formatDate(clone $period, 5 + (($index - 1) * 7));
+        $titre = $slot['label']??sprintf('%s %s #%s', $type, self::monthLabelForTitle($period), $index);
 
+        if ($existingId > 0 && isset($project['_cadence'])) return $existingId;
         if ($existingId > 0) {
             $existingDate = trim((string) ($existing['date_prevue'] ?? ''));
             $dateToKeep = $existingDate !== '' ? $existingDate : $datePrevue;
@@ -547,7 +565,9 @@ class PipelineService {
             'canal' => $project['canal_principal']
         ]);
 
-        return (int) $pdo->lastInsertId();
+        $createdId=(int)$pdo->lastInsertId();
+        if(!empty($slot['format']))$pdo->prepare('UPDATE livrable_items SET sous_type=:format WHERE id=:id')->execute(['format'=>$slot['format'],'id'=>$createdId]);
+        return $createdId;
     }
 
     private static function ensureContentItem(PDO $pdo, array $project, $planId, $deliverableId, $type, $index, DateTime $period) {
@@ -556,7 +576,7 @@ class PipelineService {
         $existingId = $stmt->fetchColumn();
 
         $contentType = $type === 'Video' ? 'Video' : 'Visuel';
-        $subject = sprintf('%s mois %s #%s', $type, date('m/Y', strtotime($period->format('Y-m-01'))), $index);
+        $slot=$project['_cadence'][$type][$index-1]??null; $subject = $slot['label']??sprintf('%s mois %s #%s', $type, date('m/Y', strtotime($period->format('Y-m-01'))), $index);
         $personaId = !empty($project['campagne_id']) ? self::findCampaignPersonaId($pdo, (int) $project['campagne_id']) : null;
 
         $payload = [
@@ -566,7 +586,7 @@ class PipelineService {
             'plan_mensuel_id' => (int) $planId,
             'livrable_item_id' => (int) $deliverableId,
             'type' => $contentType,
-            'sous_type' => null,
+            'sous_type' => $slot['format']??null,
             'nombre_pages_carrousel' => 1,
             'sujet' => $subject,
             'message' => '',
@@ -577,6 +597,7 @@ class PipelineService {
             'responsable' => ''
         ];
 
+        if ($existingId && CadenceRevision::hasHistory($pdo,(int)$project['id']))return (int)$existingId;
         if ($existingId) {
             $update = $pdo->prepare('UPDATE contenus
                 SET campagne_id = :campagne_id,
@@ -659,6 +680,7 @@ class PipelineService {
         $existing = $stmt->fetch();
 
         if ($existing) {
+            if(CadenceRevision::hasHistory($pdo,(int)$data['projet_id']))return (int)$existing['id'];
             $currentStatus = $existing['statut'];
             $statusToKeep = in_array($currentStatus, ['En cours', 'Terminee', 'Annulee'], true) ? $currentStatus : $data['statut'];
             $existingAuthorId = (int) ($existing['auteur_id'] ?? 0);

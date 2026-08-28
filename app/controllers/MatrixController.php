@@ -22,7 +22,7 @@ class MatrixController extends Controller {
         $projects = $this->projectsForClient($clientId);
         $projectId = (int) ($_REQUEST['project_id'] ?? ($projects[0]['id'] ?? 0));
         if ($projectId > 0 && !in_array($projectId, array_map('intval', array_column($projects, 'id')), true)) { throw new RuntimeException('Projet inaccessible.'); }
-        $month = preg_match('/^\d{4}-\d{2}$/', (string) ($_REQUEST['month'] ?? '')) ? (string) $_REQUEST['month'] : date('Y-m');
+        $month = WorkingMonth::resolve($_POST['month']??$_GET['month']??null);
 
         if ($this->isPost()) {
             try { $this->handleAction($clientId, $projectId, $month); }

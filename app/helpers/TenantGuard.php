@@ -18,7 +18,7 @@ class TenantGuard {
         return AgencyAccessPolicy::canAccessRecord($table,$row,AgencyAccessPolicy::defaultCapability($table));
     }
     public static function prepareCreate($table,array $payload,array $config=[]){
-        $tenantId=self::requireTenantId();$pdo=Database::getConnection();$orgId=self::currentOrganizationId($tenantId);
+        $tenantId=self::requireTenantId();$pdo=Database::getConnection();$orgId=self::currentOrganizationId($tenantId); if($table==='abonnements')$payload['tenant_id']=$tenantId;
         if($table==='clients'){
             $payload['tenant_id']=$tenantId;
             $payload['managed_by_organization_id']=$orgId?:null;

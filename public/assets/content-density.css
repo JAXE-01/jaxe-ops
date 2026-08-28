@@ -1,0 +1,26 @@
+.content-workspace-hero h2{display:none}
+.content-workspace-hero .panel-subtitle{margin:0!important;font-weight:600}
+.content-overview{padding:12px 16px!important}
+.content-overview h2{font-size:17px}
+.content-overview [data-content-completion]{padding:10px;margin-bottom:8px}
+.content-overview [data-content-completion] progress{margin:7px 0}
+.content-overview .content-completion-steps span{padding:4px 7px}
+.content-general-panel>form>.autosave-status,.content-general-panel>form>.form-actions,.content-general-panel>form>.inset-panel{grid-column:1/-1}
+.inline-content-brief{scroll-margin-top:90px}
+.inline-content-brief summary{cursor:pointer}
+.inline-content-brief .form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.inline-content-brief textarea{min-height:80px;height:80px;resize:vertical}
+.inline-content-brief .field:has([name="texte_script"]),.inline-content-brief .field:has([name="plan_script"]),.inline-content-brief .field:has([name="details_message"]){grid-column:1/-1}
+.inline-content-brief .form-actions,.inline-content-brief .autosave-status{grid-column:1/-1}
+.content-specific-panel [data-persona-summary]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 18px;padding:10px;font-size:12px}
+.content-specific-panel [data-persona-summary][hidden]{display:none}
+.content-specific-panel [data-persona-summary] p{margin:0}
+.date-occupancy{max-width:285px;padding:10px;border:1px solid #dce6ef;border-radius:10px;background:white;margin-top:6px}
+.date-occupancy-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:8px 0}
+.date-occupancy-grid>a,.date-occupancy-grid>span{display:flex;align-items:center;justify-content:center;min-height:30px;border-radius:5px;position:relative;text-decoration:none;color:#1e3857}
+.date-occupancy-grid>a:hover,.date-occupancy-grid>a:focus-visible{outline:2px solid #3476b6;background:#e5effa}
+.date-occupancy-grid .occupied{background:#e7eff9;font-weight:700}
+.date-occupancy-grid small{position:absolute;font-size:8px;right:1px;bottom:0;color:#266bab}
+.date-occupancy-grid .weekday{font-size:10px;min-height:20px;color:#6a7d94}
+@media(max-width:850px){.inline-content-brief .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.inline-content-brief .form-grid,.content-specific-panel [data-persona-summary]{grid-template-columns:minmax(0,1fr)}}

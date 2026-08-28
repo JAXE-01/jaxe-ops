@@ -2,12 +2,19 @@
 class SocialPublishingModel extends Model {
     public const PROVIDERS=['facebook'=>'Facebook','instagram'=>'Instagram','linkedin'=>'LinkedIn','tiktok'=>'TikTok','youtube'=>'YouTube','x'=>'X'];
 
-    public function dashboardData(): array {
+    public function dashboardData(?string $month=null): array {
+        $monthSql='';$monthParams=[];
+        if($month!==null){
+            if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$month))throw new RuntimeException('Mois invalide.');
+            $from=new DateTimeImmutable($month.'-01');
+            $monthSql=' AND COALESCE(sp.scheduled_at,sp.created_at)>=:month_from AND COALESCE(sp.scheduled_at,sp.created_at)<:month_until';
+            $monthParams=['month_from'=>$from->format('Y-m-d'),'month_until'=>$from->modify('+1 month')->format('Y-m-d')];
+        }
         $tenant=TenantGuard::tenantId();
         $connections=$this->db->prepare('SELECT sc.*,c.entreprise client_name,(SELECT GROUP_CONCAT(scp.project_id ORDER BY scp.project_id) FROM social_connection_projects scp WHERE scp.connection_id=sc.id) project_ids FROM social_connections sc LEFT JOIN clients c ON c.id=sc.client_id WHERE sc.tenant_id=:tenant ORDER BY sc.status="Connected" DESC,sc.provider,sc.account_label');$connections->execute(['tenant'=>$tenant]);
-        $publications=$this->db->prepare('SELECT sp.*,c.entreprise client_name,COUNT(t.id) target_count,SUM(t.status="Published") published_count,SUM(t.status="Failed") failed_count,SUM(t.status IN ("Queued","Retrying","Processing")) queued_count FROM social_publications sp JOIN clients c ON c.id=sp.client_id LEFT JOIN social_publication_targets t ON t.publication_id=sp.id WHERE sp.tenant_id=:tenant GROUP BY sp.id ORDER BY sp.created_at DESC LIMIT 40');$publications->execute(['tenant'=>$tenant]);$publicationRows=$publications->fetchAll(PDO::FETCH_ASSOC);
+        $publications=$this->db->prepare('SELECT sp.*,c.entreprise client_name,COUNT(t.id) target_count,SUM(t.status="Published") published_count,SUM(t.status="Failed") failed_count,SUM(t.status IN ("Queued","Retrying","Processing")) queued_count FROM social_publications sp JOIN clients c ON c.id=sp.client_id LEFT JOIN social_publication_targets t ON t.publication_id=sp.id WHERE sp.tenant_id=:tenant'.$monthSql.' GROUP BY sp.id ORDER BY sp.created_at DESC LIMIT 40');$publications->execute(array_merge(['tenant'=>$tenant],$monthParams));$publicationRows=$publications->fetchAll(PDO::FETCH_ASSOC);
         $targetsByPublication=[];if($publicationRows){$ids=array_map(static fn($r)=>(int)$r['id'],$publicationRows);$marks=implode(',',array_fill(0,count($ids),'?'));$stmt=$this->db->prepare("SELECT t.*,sc.account_label FROM social_publication_targets t JOIN social_connections sc ON sc.id=t.connection_id WHERE t.publication_id IN ($marks) ORDER BY t.id");$stmt->execute($ids);foreach($stmt->fetchAll(PDO::FETCH_ASSOC)as$row)$targetsByPublication[(int)$row['publication_id']][]=$row;}
-        $stats=$this->db->prepare('SELECT COUNT(*) total,SUM(status IN ("Queued","Retrying","Processing")) queued,SUM(status="Published" AND remote_deleted_at IS NULL) published,SUM(status="Failed") failed FROM social_publication_targets WHERE publication_id IN (SELECT id FROM social_publications WHERE tenant_id=:tenant)');$stats->execute(['tenant'=>$tenant]);
+        $stats=$this->db->prepare('SELECT COUNT(*) total,SUM(status IN ("Queued","Retrying","Processing")) queued,SUM(status="Published" AND remote_deleted_at IS NULL) published,SUM(status="Failed") failed FROM social_publication_targets WHERE publication_id IN (SELECT sp.id FROM social_publications sp WHERE sp.tenant_id=:tenant'.$monthSql.')');$stats->execute(array_merge(['tenant'=>$tenant],$monthParams));
         $eventsByPublication=[];
         if($publicationRows){$eventQuery=$this->db->prepare("SELECT publication_id,created_at,status,message FROM social_publication_events WHERE tenant_id=? AND publication_id IN ($marks) ORDER BY id DESC LIMIT 500");$eventQuery->execute(array_merge([$tenant],$ids));foreach($eventQuery->fetchAll(PDO::FETCH_ASSOC)as$event)$eventsByPublication[(int)$event['publication_id']][]=$event;}
         return['eventsByPublication'=>$eventsByPublication,'connections'=>$connections->fetchAll(PDO::FETCH_ASSOC),'publications'=>$publicationRows,'targetsByPublication'=>$targetsByPublication,'stats'=>$stats->fetch(PDO::FETCH_ASSOC)?:[]];

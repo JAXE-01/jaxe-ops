@@ -6,6 +6,11 @@ class Controller {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        // Resolve the navigation month before controllers read their filters.
+        // GET only: content/task POST requests must retain their own record dates.
+        if (!$this->isPost() && isset($_GET['month']) && is_scalar($_GET['month']) && $this->currentUser()) {
+            WorkingMonth::resolve($_GET['month']);
+        }
         $this->ensureCsrfToken();
         if ($this->isPost()) {
             $this->verifyCsrfToken();

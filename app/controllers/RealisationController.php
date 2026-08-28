@@ -24,6 +24,10 @@ class RealisationController extends Controller {
             'sort'               => trim((string) ($_GET['sort'] ?? 'date_desc')),
         ];
 
+        if(!isset($_GET['period']) && $filters['from']==='' && $filters['to']===''){
+            $workDate=new DateTimeImmutable(WorkingMonth::resolve().'-01');
+            $filters['from']=$workDate->format('Y-m-d');$filters['to']=$workDate->format('Y-m-t');$filters['period']='';
+        }
         if ($preset !== '' && $filters['from'] === '' && $filters['to'] === '') {
             $range = $this->resolvePeriodPreset($preset);
             if ($range) {

@@ -1791,15 +1791,6 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
             $options = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
         }
 
-        if ($selectedPersonaId > 0 && !isset($options[$selectedPersonaId])) {
-            $selectedStmt = $this->db->prepare('SELECT nom_persona FROM personas WHERE id = :id LIMIT 1');
-            $selectedStmt->execute(['id' => $selectedPersonaId]);
-            $selectedLabel = (string) $selectedStmt->fetchColumn();
-            if ($selectedLabel !== '') {
-                $options[$selectedPersonaId] = $selectedLabel . ' (hors client du calendrier)';
-            }
-        }
-
         return $options;
     }
 

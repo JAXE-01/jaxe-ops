@@ -7,6 +7,10 @@ class ProjectModel extends CrudModel {
         $this->settingsModel = new SettingsModel();
     }
 
+    public function getRelationOptions(string $moduleKey) {
+        if($moduleKey!=='abonnement')return parent::getRelationOptions($moduleKey);
+        $q=$this->db->prepare("SELECT id,nom FROM abonnements WHERE tenant_id=:tenant AND statut='Actif' ORDER BY nom");$q->execute(['tenant'=>TenantGuard::tenantId()]);return $q->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
     public function getById($id) {
         $record = parent::getById($id);
         if ($record) {
@@ -22,7 +26,7 @@ class ProjectModel extends CrudModel {
     public function create(array $data) {
         $this->db->beginTransaction();
         try {
-            $id=parent::create($this->normalizeProjectPayload($data));
+            $id=parent::create($this->normalizeProjectPayload($data)); EditorialCadence::save($this->db,(int)$id,$data);
             if(isset($data['social_pages_present'])) ProjectSocialPages::save((int)$id,(int)$data['client_id'],(array)($data['social_page_ids']??[]));
             $this->db->commit();return $id;
         } catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
@@ -33,9 +37,10 @@ class ProjectModel extends CrudModel {
         if(!$previous) throw new RuntimeException('Projet inaccessible.');
         $this->db->beginTransaction();
         try {
-            $result=parent::update($id,$this->normalizeProjectPayload($data));
+            $result=parent::update($id,$this->normalizeProjectPayload($data)); EditorialCadence::save($this->db,(int)$id,$data);
             if(isset($data['social_pages_present'])) ProjectSocialPages::save((int)$id,(int)$data['client_id'],(array)($data['social_page_ids']??[]));
             elseif(isset($data['client_id'])&&(int)$data['client_id']!==(int)$previous['client_id']) ProjectSocialPages::save((int)$id,(int)$data['client_id'],[]);
+            if(CadenceRevision::hasHistory($this->db,(int)$id))PipelineService::syncProject((int)$id);
             $this->db->commit();return $result;
         } catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
     }
@@ -99,10 +104,10 @@ class ProjectModel extends CrudModel {
             return null;
         }
 
-        $stmt = $this->db->prepare('SELECT * FROM abonnements WHERE id = :id AND statut = :statut LIMIT 1');
+        $stmt = $this->db->prepare('SELECT * FROM abonnements WHERE id = :id AND tenant_id = :tenant AND statut = :statut LIMIT 1');
         $stmt->execute([
             'id' => $id,
-            'statut' => 'Actif'
+            'statut' => 'Actif', 'tenant'=>TenantGuard::tenantId()
         ]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }

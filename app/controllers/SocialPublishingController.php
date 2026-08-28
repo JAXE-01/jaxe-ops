@@ -14,6 +14,6 @@ class SocialPublishingController extends Controller {
             elseif($action==='delete_remote'){$this->requirePermission('publishing.approve');(new SocialPublisherService())->deleteRemote((int)$_POST['target_id'],TenantGuard::tenantId(),$user);$this->flash('success','Publication Facebook supprimée.');}
             else throw new RuntimeException('Action de publication inconnue.');
         }catch(Throwable$e){$this->flash('error',$e->getMessage());}$this->redirect('/social-publishing');}
-        $data=$this->model->dashboardData();$this->render('social-publishing/index',array_merge($data,['pageTitle'=>'Publication multiréseau','clients'=>$this->model->clients(),'projects'=>$this->model->projects(),'providers'=>SocialPublishingModel::PROVIDERS,'canManage'=>$this->can('publishing.manage'),'canApprove'=>$this->can('publishing.approve')]));
+        $data=$this->model->dashboardData(WorkingMonth::resolve());$this->render('social-publishing/index',array_merge($data,['pageTitle'=>'Publication multiréseau','clients'=>$this->model->clients(),'projects'=>$this->model->projects(),'providers'=>SocialPublishingModel::PROVIDERS,'canManage'=>$this->can('publishing.manage'),'canApprove'=>$this->can('publishing.approve')]));
     }
 }

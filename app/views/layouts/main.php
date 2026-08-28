@@ -304,7 +304,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
         <?php endif; ?>
     </header>
 
-    <main class="content">
+    <main class="content"><?php require dirname(__DIR__).'/calendrier/month-context-bar.php'; ?>
         <header class="topbar">
             <div>
                 <h1><?= htmlspecialchars($pageTitle ?? 'Strax') ?></h1>

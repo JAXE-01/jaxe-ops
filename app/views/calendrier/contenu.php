@@ -21,7 +21,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
  if($saved!==''&&!in_array($saved,$tpackRefs[$key],true))$tpackRefs[$key][]=$saved;
 }
 ?>
-<section class="panel content-workspace-hero">
+<link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-compact.css')) ?>"><link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-density.css')) ?>"><script src="<?= htmlspecialchars(app_url('/public/assets/content-date-picker.js')) ?>" defer></script><section class="panel content-workspace-hero">
     <div class="panel-head">
         <div>
             <h2>Fiche contenu</h2>
@@ -36,9 +36,9 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
             <?php endif; ?>
             <button class="button secondary" type="button" data-compact-toggle>Mode compact</button>
             <?php if (!empty($briefEditUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $briefEditUrl) ?>">Voir / editer le <?= (($deliverable['type_livrable'] ?? '') === 'Video') ? 'script' : 'brief' ?></a>
+                <a class="button secondary" href="#inline-content-brief" data-open-inline-brief>Voir / editer le <?= (($deliverable['type_livrable'] ?? '') === 'Video') ? 'script' : 'brief' ?></a>
             <?php endif; ?>
-            <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>">Retour au projet</a>
+            <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>" title="Retour au projet" aria-label="Retour au projet">↩</a>
         </div>
     </div>
 
@@ -104,16 +104,16 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
     <form method="post" class="form-grid" data-autosave-form="true" data-autosave-label="Fiche contenu" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/contenu/' . (int) ($deliverable['id'] ?? 0))) ?>">
         <div class="autosave-status" data-autosave-status>Modifications locales</div>
         <label class="field">
+            <span>Dates ou evenements cles du mois</span>
+            <textarea name="temps_forts_mois" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['temps_forts_mois'] ?? $deliverable['temps_forts_mois'] ?? '')) ?></textarea>
+        </label>
+        <label class="field">
             <span>Contexte du mois / cadre general</span>
             <textarea name="contexte_mois" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['contexte_mois'] ?? $deliverable['contexte_mois'] ?? '')) ?></textarea>
         </label>
         <label class="field">
             <span>Objectif du mois</span>
             <textarea name="objectif_mois" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['objectif_mois'] ?? $deliverable['objectif_mois'] ?? '')) ?></textarea>
-        </label>
-        <label class="field">
-            <span>Dates ou evenements cles du mois</span>
-            <textarea name="temps_forts_mois" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['temps_forts_mois'] ?? $deliverable['temps_forts_mois'] ?? '')) ?></textarea>
         </label>
 
         <details class="panel inset-panel tpack-composer-panel" open>
@@ -140,7 +140,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
 
             <div class="form-grid">
                 <label class="field">
-                    <span>Sujet / angle du contenu</span>
+                    <span>Sujet / angle éditorial</span><small class="field-help">Angle à traiter, distinct du nom du livrable affiché en haut.</small>
                     <textarea name="sujet" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['sujet'] ?? $deliverable['contenu_sujet'] ?? $deliverable['titre'] ?? '')) ?></textarea>
                 </label>
                 <label class="field">
@@ -156,13 +156,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
                     <span>Date de publication prevue</span>
                     <input type="date" name="date_prevue" value="<?= htmlspecialchars((string) ($_POST['date_prevue'] ?? $deliverable['date_prevue'] ?? '')) ?>" <?= !$canEdit ? 'disabled' : '' ?>>
                     <small class="field-help">Tu peux planifier la publication au-dela du mois courant si necessaire.</small>
-                    <?php if (!empty($scheduledPublicationDates)): ?>
-                        <div class="chips-row">
-                            <?php foreach ($scheduledPublicationDates as $scheduledDate): ?>
-                                <span class="chip"><?= htmlspecialchars((string) ($scheduledDate['date_prevue'] ?? '')) ?><?= !empty($scheduledDate['total']) ? ' · ' . htmlspecialchars((string) $scheduledDate['total']) . ' deja planifie(s)' : '' ?></span>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+                    <?php require __DIR__.'/date-occupancy-calendar.php'; ?>
                 </label>
                 <label class="field">
                     <span>Persona cible</span>
@@ -173,13 +167,14 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
                         <?php endforeach; ?>
                     </select>
                 </label>
+                <?php require __DIR__.'/persona-summary.php'; ?>
                 <label class="field">
-                    <span>Cible libre</span>
+                    <span>Cible libre (alternative au persona)</span>
                     <textarea name="cible_libre" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['cible_libre'] ?? $deliverable['cible_libre'] ?? '')) ?></textarea>
                 </label>
                 <label class="field">
                     <span>Reseau principalement cible</span>
-                    <input type="text" name="reseau_cible" value="<?= htmlspecialchars((string) ($_POST['reseau_cible'] ?? $deliverable['reseau_cible'] ?? $deliverable['canal'] ?? $deliverable['canal_principal'] ?? '')) ?>" <?= !$canEdit ? 'disabled' : '' ?>>
+                    <?php require __DIR__.'/network-select.php'; ?>
                 </label>
                 <label class="field">
                     <span>Message a vehiculer</span>
@@ -192,6 +187,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
             </div>
         </div>
 
+
         <?php if ($canEdit || $canManagerInvalidate): ?>
             <div class="form-actions">
                 <?php if ($canEdit): ?>
@@ -200,12 +196,13 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
                 <?php if ($canManagerInvalidate): ?>
                     <button class="button secondary" type="submit" name="manager_action" value="invalidate_content" onclick="return confirm('Marquer cette fiche contenu comme non valide ?');">Invalider la fiche</button>
                 <?php endif; ?>
-                <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>">Retour au projet</a>
+                <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>" title="Retour au projet" aria-label="Retour au projet">↩</a>
             </div>
         <?php endif; ?>
     </form>
 </details>
 
+<?php require __DIR__.'/inline-brief.php'; ?>
 <?php if (!empty($previousContentUrl) || !empty($nextContentUrl)): ?>
     <section class="panel inset-panel">
         <div class="toolbar-actions">

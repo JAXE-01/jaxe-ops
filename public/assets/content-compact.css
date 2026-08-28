@@ -1,0 +1,23 @@
+.content-workspace-hero{padding:14px 18px!important}
+.content-workspace-hero .panel-head{margin-bottom:10px}
+.content-workspace-hero .detail-grid{display:flex;flex-wrap:wrap;gap:8px 20px}
+.content-workspace-hero .detail-card{display:flex;align-items:baseline;gap:7px;background:none;border:0;padding:0;min-width:0}
+.content-workspace-hero .detail-label{font-size:11px}
+.content-workspace-hero .detail-value{font-size:13px;margin:0}
+.content-general-panel>.panel-head{display:none}
+.content-general-panel>form.form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.content-general-panel textarea[name="temps_forts_mois"],.content-general-panel textarea[name="contexte_mois"],.content-general-panel textarea[name="objectif_mois"]{min-height:68px;height:68px;resize:vertical}
+.content-specific-panel .form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.content-specific-panel .field{min-width:0}
+.content-specific-panel textarea[name="sujet"],.content-specific-panel textarea[name="cible_libre"]{min-height:48px;height:48px;resize:vertical}
+.content-specific-panel .field:has(textarea[name="message"]){grid-column:1/-1}
+.content-specific-panel textarea[name="message"]{min-height:100px;resize:vertical}
+.content-specific-panel input[type="date"]{max-width:190px}
+.occupied-dates{font-size:12px;margin-top:6px}
+.occupied-dates summary{cursor:pointer;color:#315f90}
+.occupied-dates-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:8px 0}
+.occupied-dates-grid span{background:#eef4fa;border-radius:5px;padding:4px}
+.content-general-panel .inset-panel{padding:14px}
+.content-general-panel .panel-head h2{font-size:18px}
+@media(max-width:1000px){.content-general-panel>form.form-grid,.content-specific-panel .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.content-general-panel>form.form-grid,.content-specific-panel .form-grid{grid-template-columns:minmax(0,1fr)}.content-workspace-hero .detail-grid{gap:8px}.content-workspace-hero .toolbar-actions{flex-wrap:wrap}}

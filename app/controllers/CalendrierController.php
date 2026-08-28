@@ -25,7 +25,7 @@ class CalendrierController extends Controller {
     public function index() {
         $currentUser = $this->currentUser();
         $settingsModel = new SettingsModel();
-        $monthFilter = trim((string) ($_GET['month'] ?? date('Y-m')));
+        $monthFilter = WorkingMonth::resolve($_GET['month']??null);
         if (!preg_match('/^\d{4}-\d{2}$/', $monthFilter)) {
             $monthFilter = date('Y-m');
         }
@@ -78,8 +78,8 @@ class CalendrierController extends Controller {
 
     public function projet($projectId) {
         $currentUser = $this->currentUser();
-        $hasMonthFilter = array_key_exists('month', $_GET);
-        $selectedMonth = trim((string) ($_GET['month'] ?? ''));
+        $hasMonthFilter = true;
+        $selectedMonth = WorkingMonth::resolve($_GET['month']??null).'-01';
         $calendar = $this->calendrierModel->getProjectCalendar($projectId, $hasMonthFilter ? $selectedMonth : null, $currentUser);
         if (!$calendar) {
             $this->flash('error', 'Projet introuvable ou non accessible.');
@@ -226,8 +226,8 @@ class CalendrierController extends Controller {
     public function publicationCalendar($projectId) {
         $projectId = (int) $projectId;
         $currentUser = $this->currentUser();
-        $hasMonthFilter = array_key_exists('month', $_GET);
-        $selectedMonth = trim((string) ($_GET['month'] ?? ''));
+        $hasMonthFilter = true;
+        $selectedMonth = WorkingMonth::resolve($_GET['month']??null).'-01';
         $calendar = $this->calendrierModel->getProjectCalendar($projectId, $hasMonthFilter ? $selectedMonth : null, $currentUser);
         if (!$calendar || empty($calendar['plans'][0])) {
             $this->flash('error', 'Calendrier publication introuvable.');
