@@ -48,13 +48,13 @@ class TeamInvitationService {
     }
 
     public function reactivate(int $membershipId): void {
-        $q=$this->pdo->prepare("UPDATE tenant_memberships SET status='Actif' WHERE id=:id AND tenant_id=:tenant AND organization_id=:org AND status='Suspendu' AND joined_at IS NOT NULL");
+        $q=$this->pdo->prepare("UPDATE tenant_memberships SET status=CASE WHEN joined_at IS NULL THEN 'Invite' ELSE 'Actif' END WHERE id=:id AND tenant_id=:tenant AND organization_id=:org AND status='Suspendu'");
         $q->execute(['id'=>$membershipId,'tenant'=>TenantGuard::tenantId(),'org'=>$this->organization['id']]);
         if(!$q->rowCount())throw new RuntimeException('Accès inaccessible ou invitation jamais acceptée : une invitation doit être renouvelée.');
     }
     public static function inspect(string $token): ?array {
         if(!preg_match('/^[a-f0-9]{64}$/',$token))return null;
-        $stmt=Database::getConnection()->prepare("SELECT ti.id token_id,ti.membership_id,tm.tenant_id,tm.organization_id,tm.status membership_status,u.id user_id,u.nom,u.email,u.statut user_status,o.name organization_name FROM team_invitation_tokens ti JOIN tenant_memberships tm ON tm.id=ti.membership_id JOIN users u ON u.id=tm.user_id JOIN organizations o ON o.id=tm.organization_id WHERE ti.token_hash=:hash AND ti.accepted_at IS NULL AND ti.expires_at>NOW() LIMIT 1");
+        $stmt=Database::getConnection()->prepare("SELECT ti.id token_id,ti.membership_id,tm.tenant_id,tm.organization_id,tm.status membership_status,u.id user_id,u.nom,u.email,u.statut user_status,o.name organization_name FROM team_invitation_tokens ti JOIN tenant_memberships tm ON tm.id=ti.membership_id JOIN users u ON u.id=tm.user_id JOIN organizations o ON o.id=tm.organization_id WHERE ti.token_hash=:hash AND ti.accepted_at IS NULL AND ti.expires_at>NOW() AND tm.status='Invite' LIMIT 1");
         $stmt->execute(['hash'=>hash('sha256',$token)]);$row=$stmt->fetch(PDO::FETCH_ASSOC);return$row?:null;
     }
 
@@ -66,6 +66,8 @@ class TeamInvitationService {
         if($needsPassword&&!hash_equals($password,$confirmation))throw new RuntimeException('Les mots de passe ne correspondent pas.');
         $pdo=Database::getConnection();$pdo->beginTransaction();
         try{
+            $lock=$pdo->prepare("SELECT id FROM tenant_memberships WHERE id=:id AND status='Invite' FOR UPDATE");$lock->execute(['id'=>$record['membership_id']]);if(!$lock->fetchColumn())throw new RuntimeException('Cette invitation a été suspendue ou déjà acceptée.');
+            $tokenLock=$pdo->prepare("SELECT id FROM team_invitation_tokens WHERE id=:id AND accepted_at IS NULL AND expires_at>NOW() FOR UPDATE");$tokenLock->execute(['id'=>$record['token_id']]);if(!$tokenLock->fetchColumn())throw new RuntimeException('Cette invitation a expiré ou a déjà été utilisée.');
             if($needsPassword){$pdo->prepare("UPDATE users SET nom=:name,password=:password,statut='Actif',email_verified_at=COALESCE(email_verified_at,NOW()) WHERE id=:id")->execute(['name'=>$name,'password'=>password_hash($password,PASSWORD_DEFAULT),'id'=>$record['user_id']]);}else{$pdo->prepare('UPDATE users SET nom=:name WHERE id=:id')->execute(['name'=>$name,'id'=>$record['user_id']]);}
             $pdo->prepare("UPDATE tenant_memberships SET status='Actif',joined_at=COALESCE(joined_at,NOW()) WHERE id=:id")->execute(['id'=>$record['membership_id']]);
             $pdo->prepare('UPDATE team_invitation_tokens SET accepted_at=NOW() WHERE id=:id')->execute(['id'=>$record['token_id']]);

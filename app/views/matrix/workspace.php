@@ -31,6 +31,7 @@ $validated=count(array_filter($ideas,fn($i)=>$i['status']==='Validee'));
    </details>
 
    <?php if($matrix):?>
+   <?php require __DIR__.'/compatibility.php'; ?>
    <section class="mx-tabs panel">
     <div class="mx-tabbar"><button type="button" class="active" data-tab="single">Idee manuelle</button><button type="button" data-tab="auto">Combinaisons automatiques</button></div>
     <div data-pane="single">

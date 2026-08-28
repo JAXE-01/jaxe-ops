@@ -43,6 +43,15 @@ class MatrixController extends Controller {
         $matrixId = (int) ($_POST['matrix_id'] ?? 0);
         $matrix = $this->findMatrix($matrixId, $clientId);
         if (!$matrix) { throw new RuntimeException('Matrice introuvable pour ce client.'); }
+        if($action==='save_compatibility'){
+            $rules=MatrixCompatibility::fromSelection($matrix,(array)($_POST['compatibility']??[]));
+            $this->pdo->prepare('UPDATE content_matrices SET compatibility_json=:rules WHERE id=:id AND tenant_id=:tenant')->execute(['rules'=>json_encode($rules,JSON_UNESCAPED_UNICODE),'id'=>$matrixId,'tenant'=>$this->tenantId]);
+            $this->flash('success','Compatibilités enregistrées.');return;
+        }
+        if(in_array($action,['add_idea','update_idea'],true))MatrixCompatibility::assertIdea($matrix,$_POST);
+        if(in_array($action,['validate_ideas','assign_ideas','sync_ideas'],true)){
+            foreach(array_unique(array_map('intval',(array)($_POST['idea_ids']??[])))as$ideaId){$q=$this->pdo->prepare('SELECT product_offer,target_audience FROM matrix_ideas WHERE id=:id AND matrix_id=:matrix AND tenant_id=:tenant');$q->execute(['id'=>$ideaId,'matrix'=>$matrixId,'tenant'=>$this->tenantId]);$idea=$q->fetch(PDO::FETCH_ASSOC);if($idea)MatrixCompatibility::assertIdea($matrix,$idea);}
+        }
         if ($action === 'update_matrix') { $this->updateMatrix($matrix); return; }
         if ($action === 'clone_matrix') { $this->cloneMatrix($matrix); return; }
         if ($action === 'delete_matrix') { $this->deleteMatrix($matrix); return; }
@@ -71,7 +80,7 @@ class MatrixController extends Controller {
     }
 
     private function cloneMatrix(array $matrix) {
-        $stmt = $this->pdo->prepare("INSERT INTO content_matrices (tenant_id,owner_organization_id,client_id,name,description,target_options,objective_options,problem_options,product_options,format_options,cta_options,platform_options,default_deliverable_type,default_format,created_by) SELECT tenant_id,owner_organization_id,client_id,CONCAT(name, ' - copie'),description,target_options,objective_options,problem_options,product_options,format_options,cta_options,platform_options,default_deliverable_type,default_format,:user FROM content_matrices WHERE id=:id AND tenant_id=:tenant");
+        $stmt = $this->pdo->prepare("INSERT INTO content_matrices (tenant_id,owner_organization_id,client_id,name,description,target_options,objective_options,problem_options,product_options,format_options,cta_options,platform_options,default_deliverable_type,default_format,compatibility_json,created_by) SELECT tenant_id,owner_organization_id,client_id,CONCAT(name, ' - copie'),description,target_options,objective_options,problem_options,product_options,format_options,cta_options,platform_options,default_deliverable_type,default_format,compatibility_json,:user FROM content_matrices WHERE id=:id AND tenant_id=:tenant");
         $stmt->execute(['user'=>(int)($this->currentUser()['id']??0)?:null,'id'=>(int)$matrix['id'],'tenant'=>$this->tenantId]);
         $_POST['matrix_id'] = (int) $this->pdo->lastInsertId();
         $this->flash('success', 'Matrice dupliquee. Vous pouvez maintenant adapter la copie.');
@@ -144,11 +153,13 @@ class MatrixController extends Controller {
         }
         $count = max(1, min(30, (int)($_POST['combination_count'] ?? 6)));
         $withScript = !empty($_POST['with_script']);
+        $compatibleGroups=MatrixCompatibility::pairs($matrix,$anchorType,$anchorValues);
         $insert = $this->pdo->prepare("INSERT INTO matrix_ideas (matrix_id,tenant_id,client_id,projet_id,target_month,target_audience,objective,problem_need,product_offer,creative_format,deliverable_type,platform,hook_idea,call_to_action,generated_brief,script_content,generation_mode,anchor_type,anchor_value,priority,created_by) VALUES (:matrix,:tenant,:client,:project,:month,:target,:objective,:problem,:product,:format,:type,:platform,:hook,:cta,:brief,:script,'Combinaison',:anchor_type,:anchor_value,'Moyenne',:user)");
         for ($i=0; $i<$count; $i++) {
             $anchorValue = $anchorValues[$i % count($anchorValues)];
-            $target = $anchorType === 'Cible' ? $anchorValue : ($matrix['target_list'][$i % max(1,count($matrix['target_list']))] ?? 'Audience cible');
-            $product = $anchorType === 'Produit' ? $anchorValue : ($matrix['product_list'][$i % max(1,count($matrix['product_list']))] ?? 'Offre principale');
+            $group=$compatibleGroups[$i % count($compatibleGroups)];
+            $pair=$group[intdiv($i,count($compatibleGroups)) % count($group)];
+            $target=$pair['target'];$product=$pair['product'];
             $objective = $matrix['objective_list'][$i % max(1,count($matrix['objective_list']))] ?? 'Visibilite';
             $problem = $matrix['problem_list'][($i+1) % max(1,count($matrix['problem_list']))] ?? 'Besoin a preciser';
             $format = $matrix['format_list'][($i+2) % max(1,count($matrix['format_list']))] ?? $matrix['default_format'];
@@ -175,7 +186,7 @@ class MatrixController extends Controller {
         $stmt=$this->pdo->prepare("SELECT * FROM matrix_ideas WHERE matrix_id=? AND tenant_id=? AND (projet_id=? OR projet_id IS NULL) AND synced_deliverable_id IS NULL AND id IN ($marks) ORDER BY FIELD(priority,'Haute','Moyenne','Basse'),id");
         $stmt->execute(array_merge([(int)$matrix['id'],$this->tenantId,$projectId],$ids)); $ideas=$stmt->fetchAll(PDO::FETCH_ASSOC);
         if(count($ideas)!==count($ids)) throw new RuntimeException('Une idee selectionnee a deja ete affectee ou n est plus disponible.');
-        $planIds=[]; for($m=0;$m<$spread;$m++){ $month=(new DateTime($start.'-01'))->modify('+'.$m.' month')->format('Y-m-01'); $q=$this->pdo->prepare('SELECT id FROM plans_mensuels WHERE projet_id=:project AND periode_mois=:month');$q->execute(['project'=>$projectId,'month'=>$month]);$planIds[$month]=(int)$q->fetchColumn();if(!$planIds[$month])throw new RuntimeException('Le mois '.substr($month,0,7).' est hors de la periode du projet.'); }
+        foreach($ideas as $compatibleIdea) MatrixCompatibility::assertIdea($matrix,$compatibleIdea); $planIds=[]; for($m=0;$m<$spread;$m++){ $month=(new DateTime($start.'-01'))->modify('+'.$m.' month')->format('Y-m-01'); $q=$this->pdo->prepare('SELECT id FROM plans_mensuels WHERE projet_id=:project AND periode_mois=:month');$q->execute(['project'=>$projectId,'month'=>$month]);$planIds[$month]=(int)$q->fetchColumn();if(!$planIds[$month])throw new RuntimeException('Le mois '.substr($month,0,7).' est hors de la periode du projet.'); }
         $this->pdo->beginTransaction(); $touched=[];
         try { foreach($ideas as $index=>$idea){$targetMonth=(new DateTime($start.'-01'))->modify('+'.($index%$spread).' month')->format('Y-m-01');$planId=$planIds[$targetMonth];$slot=$this->pdo->prepare("SELECT li.id FROM livrable_items li LEFT JOIN matrix_ideas mi ON mi.synced_deliverable_id=li.id WHERE li.plan_mensuel_id=:plan AND li.type_livrable=:type AND mi.id IS NULL ORDER BY li.numero_ordre LIMIT 1 FOR UPDATE");$slot->execute(['plan'=>$planId,'type'=>$idea['deliverable_type']]);$deliverableId=(int)$slot->fetchColumn();if(!$deliverableId)throw new RuntimeException('Capacite '.$idea['deliverable_type'].' insuffisante pour '.substr($targetMonth,0,7).'. Aucune idee n a ete affectee.');$message=trim((string)$idea['generated_brief']);if(trim((string)$idea['script_content'])!=='')$message.="\n\nSCRIPT\n".$idea['script_content'];$this->pdo->prepare("UPDATE livrable_items SET titre=:title,sous_type=:format,canal=:platform,statut='Planifie' WHERE id=:id")->execute(['title'=>$idea['hook_idea'],'format'=>$idea['creative_format'],'platform'=>$idea['platform'],'id'=>$deliverableId]);$this->pdo->prepare("UPDATE contenus SET sujet=:subject,message=:message,objectif_publication=:objective,cible_libre=:target,reseau_cible=:platform,sous_type=:format WHERE livrable_item_id=:id")->execute(['subject'=>$idea['hook_idea'],'message'=>$message,'objective'=>$idea['objective'],'target'=>$idea['target_audience'],'platform'=>$idea['platform'],'format'=>$idea['creative_format'],'id'=>$deliverableId]);$this->pdo->prepare("INSERT INTO content_compositions (livrable_item_id,projet_id,client_id,method,target_audience,objective,problem_need,product_offer,content_format,call_to_action,platform,hook_idea,priority,idea_status,generated_brief) VALUES (:deliverable,:project,:client,'MATRIX',:target,:objective,:problem,:product,:format,:cta,:platform,:hook,:priority,'Planifiee',:brief) ON DUPLICATE KEY UPDATE generated_brief=VALUES(generated_brief),idea_status='Planifiee'")->execute(['deliverable'=>$deliverableId,'project'=>$projectId,'client'=>$matrix['client_id'],'target'=>$idea['target_audience'],'objective'=>$idea['objective'],'problem'=>$idea['problem_need'],'product'=>$idea['product_offer'],'format'=>$idea['creative_format'],'cta'=>$idea['call_to_action'],'platform'=>$idea['platform'],'hook'=>$idea['hook_idea'],'priority'=>$idea['priority'],'brief'=>$message]);$this->pdo->prepare("UPDATE matrix_ideas SET projet_id=:project,status='Synchronisee',target_month=:month,synced_deliverable_id=:deliverable WHERE id=:id")->execute(['project'=>$projectId,'month'=>$targetMonth,'deliverable'=>$deliverableId,'id'=>$idea['id']]);$touched[$planId]=true;} $this->pdo->commit(); foreach(array_keys($touched)as$planId)PipelineService::syncContentReadinessForPlan($planId);$this->flash('success',count($ideas).' idee(s) repartie(s) sur '.$spread.' mois et retirees de la banque.');}catch(Throwable$e){$this->pdo->rollBack();throw$e;}
     }
@@ -184,7 +195,7 @@ class MatrixController extends Controller {
         $stmt=$this->pdo->prepare('SELECT id FROM plans_mensuels WHERE projet_id=:project AND periode_mois=:month LIMIT 1'); $stmt->execute(['project'=>$projectId?:null,'month'=>$projectId>0?$month.'-01':null]); $planId=(int)$stmt->fetchColumn();
         if($planId<=0) throw new RuntimeException('Ce mois ne fait pas partie de la periode du projet.');
         $stmt=$this->pdo->prepare("SELECT * FROM matrix_ideas WHERE matrix_id=:matrix AND tenant_id=:tenant AND (projet_id=:project OR projet_id IS NULL) AND (target_month=:month OR target_month IS NULL) AND status='Validee' AND synced_deliverable_id IS NULL ORDER BY FIELD(priority,'Haute','Moyenne','Basse'),id"); $stmt->execute(['matrix'=>$matrix['id'],'tenant'=>$this->tenantId,'project'=>$projectId,'month'=>$month.'-01']); $ideas=$stmt->fetchAll(PDO::FETCH_ASSOC);
-        if(!$ideas) throw new RuntimeException('Aucune idee validee a synchroniser.');
+        foreach($ideas as $compatibleIdea) MatrixCompatibility::assertIdea($matrix,$compatibleIdea); if(!$ideas) throw new RuntimeException('Aucune idee validee a synchroniser.');
         $this->pdo->beginTransaction();
         try {
             foreach($ideas as $idea){

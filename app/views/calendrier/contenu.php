@@ -14,15 +14,12 @@ if ($selectedObjective !== '' && !in_array($selectedObjective, $contentObjective
     $contentObjectiveOptions[] = $selectedObjective;
 }
 $contentRequirements = ContentCompletion::requirements($deliverable);
-$tpackRefs = [
- 'targets'=>['Restaurants','Agroalimentaire','Marques locales','Cosmétique','Événementiel','Grand public','Pâtisseries','Traiteurs','Transformateurs locaux','Entrepreneurs débutants'],
- 'objectives'=>['Visibilité','Notoriété','Autorité','Confiance','Conversion','Engagement','Référencement','Mémorisation','Prospects','Vente'],
- 'problems'=>['Présentation peu professionnelle','Mauvaise conservation','Produit peu visible en rayon','Manque de crédibilité','Emballage inadapté à la livraison','Fuite ou fermeture fragile','Coût d emballage mal maîtrisé','Expérience client insuffisante','Choix du mauvais format','Image trop artisanale'],
- 'products'=>['Kraft bowl','Doypack','Sachet sous vide','Plastic box','Emballage take-away','Gobelet','Packaging premium','Boîte alimentaire','Sachet zip','Emballage personnalisé'],
- 'formats'=>['Avant / après','Démonstration','Conseil rapide','Storytelling','Humour','Témoignage','Comparaison','Test produit','Erreur à éviter','Coulisses'],
- 'ctas'=>['Demandez conseil à T-PACK','Écrivez-nous pour choisir le bon format','Visitez le showroom T-PACK','Commentez avec votre type de produit','Demandez les formats disponibles','Enregistrez cette vidéo','Partagez à un entrepreneur','Contactez l équipe commerciale','Découvrez les modèles en boutique','Suivez T-PACK pour plus de conseils'],
- 'platforms'=>['Facebook','Instagram','TikTok','LinkedIn','YouTube','Facebook + Instagram','TikTok + Instagram','LinkedIn + YouTube','Les 5 canaux','Selon le contenu'],
-];
+$compositionContext=ContentMatrixReferences::load((int)$deliverable['client_id'],(int)($_GET['composition_matrix_id']??0));
+$tpackRefs=$compositionContext['refs'];
+foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_problem'=>'problems','tpack_product'=>'products','tpack_format'=>'formats','tpack_cta'=>'ctas','tpack_platform'=>'platforms'] as $field=>$key){
+ $saved=trim((string)($_POST[$field]??$deliverable[$field]??''));
+ if($saved!==''&&!in_array($saved,$tpackRefs[$key],true))$tpackRefs[$key][]=$saved;
+}
 ?>
 <section class="panel content-workspace-hero">
     <div class="panel-head">
@@ -53,6 +50,7 @@ $tpackRefs = [
     </div>
 </section>
 
+<?php require __DIR__.'/content-overview.php'; require __DIR__.'/matrix-selector.php'; ?>
 <section class="panel content-history-panel">
     <div class="panel-head">
         <div>
@@ -101,12 +99,7 @@ $tpackRefs = [
         </div>
     </div>
 
-    <?php if (!$canEdit): ?>
-        <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-completion.css')) ?>">
-        <div data-content-completion aria-live="polite"></div>
-        <script type="application/json" data-completion-initial><?= json_encode($contentRequirements,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
-        <script src="<?= htmlspecialchars(app_url('/public/assets/content-completion.js')) ?>"></script>
-    <?php endif; ?>
+
 
     <form method="post" class="form-grid" data-autosave-form="true" data-autosave-label="Fiche contenu" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/contenu/' . (int) ($deliverable['id'] ?? 0))) ?>">
         <div class="autosave-status" data-autosave-status>Modifications locales</div>
@@ -124,13 +117,13 @@ $tpackRefs = [
         </label>
 
         <details class="panel inset-panel tpack-composer-panel" open>
-            <summary class="collapsible-summary"><span><strong>Composition TPACK</strong><small>Combinez cible, objectif, besoin, produit, format et appel à l’action.</small></span><span class="collapsible-indicator">Afficher / masquer</span></summary>
+            <summary class="collapsible-summary"><span><strong>Composition à partir de la matrice client</strong><small>Combinez cible, objectif, besoin, produit, format et appel à l’action.</small></span><span class="collapsible-indicator">Afficher / masquer</span></summary>
             <input type="hidden" name="composition_method" value="TPACK">
             <div class="tpack-grid">
                 <?php foreach ([['tpack_target','Cible','targets'],['tpack_objective','Objectif','objectives'],['tpack_problem','Problème / besoin','problems'],['tpack_product','Produit / offre','products'],['tpack_format','Format','formats'],['tpack_cta','Appel à l action','ctas'],['tpack_platform','Plateforme','platforms']] as $definition): ?>
                 <label class="field"><span><?= htmlspecialchars($definition[1]) ?></span><select name="<?= $definition[0] ?>" data-tpack-input><option value="">Sélectionner</option><?php $selectedTpack=(string)($_POST[$definition[0]]??$deliverable[$definition[0]]??''); foreach($tpackRefs[$definition[2]] as $option): ?><option value="<?= htmlspecialchars($option) ?>" <?= $selectedTpack===$option?'selected':'' ?>><?= htmlspecialchars($option) ?></option><?php endforeach; ?></select></label>
                 <?php endforeach; ?>
-                <label class="field tpack-hook-field"><span>Accroche / idée</span><input type="text" name="tpack_hook" value="<?= htmlspecialchars((string)($_POST['tpack_hook']??$deliverable['tpack_hook']??'')) ?>" placeholder="Ex. Le même repas, deux perceptions"></label>
+                <label class="field tpack-hook-field"><span>Accroche / idée</span><input type="text" name="tpack_hook" value="<?= htmlspecialchars((string)($_POST['tpack_hook']??$deliverable['tpack_hook']??'')) ?>" placeholder="Accroche du contenu"></label>
                 <label class="field"><span>Priorité</span><select name="tpack_priority"><option>Haute</option><option <?= (($_POST['tpack_priority']??$deliverable['tpack_priority']??'Moyenne')==='Moyenne')?'selected':'' ?>>Moyenne</option><option>Basse</option></select></label>
                 <label class="field"><span>Statut de l idée</span><select name="tpack_status"><option>À discuter</option><option>Retenue</option><option>Planifiée</option><option>Écartée</option></select></label>
             </div>
@@ -141,7 +134,7 @@ $tpackRefs = [
             <div class="panel-head">
                 <div>
                     <h2>Informations specifiques du contenu</h2>
-                    <p class="panel-subtitle">Le brief ou le script ne doit apparaitre qu'une fois cette fiche suffisamment renseignee.</p>
+                    <p class="panel-subtitle">Préparez votre idée et son message. Les validations restent distinctes de la sauvegarde.</p>
                 </div>
             </div>
 
@@ -264,6 +257,7 @@ $tpackRefs = [
             }
 
             inFlight = true;
+            dirty = false;
             setStatus('Sauvegarde en cours...', 'saving');
             var payload = new FormData(form);
             payload.set('autosave_mode', '1');
@@ -282,7 +276,7 @@ $tpackRefs = [
                 });
             }).then(function (result) {
                 inFlight = false;
-                dirty = false;
+                var saveAgain = dirty;
                 if (!result.ok || !result.json || result.json.ok !== true) {
                     setStatus((result.json && result.json.message) ? result.json.message : 'Erreur de sauvegarde', 'error');
                     if (window.AppUI && typeof window.AppUI.toast === 'function') {
@@ -291,6 +285,7 @@ $tpackRefs = [
                     return;
                 }
                 if(window.updateContentCompletion)window.updateContentCompletion(result.json.requirements);
+                if(saveAgain)queueAutosave();
                 setStatus('Sauvegarde auto: ' + (result.json.at || ''), 'saved');
                 if (window.AppUI && typeof window.AppUI.toast === 'function') {
                     window.AppUI.toast('success', 'Sauvegarde auto reussie');
