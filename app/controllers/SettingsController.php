@@ -96,6 +96,8 @@ class SettingsController extends Controller {
                     $this->settingsModel->saveContentObjectiveOptions($_POST['content_objective_options'] ?? '');
                     $this->flash('success', 'Objectifs de contenu mis a jour.');
                     $activeSection = 'types';
+                } elseif ($action === 'save_validation_policy') {
+                    $this->requirePermission('settings.manage'); ValidationPolicy::saveDefaults($_POST); $this->flash('success','Règles de validation enregistrées pour les nouveaux contenus.'); $activeSection='types';
                 } elseif ($action === 'save_workflow_rules') {
                     $this->requirePermission('settings.manage');
                     $this->settingsModel->saveWorkflowRulesConfig([

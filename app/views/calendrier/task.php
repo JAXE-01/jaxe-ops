@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/project-calendar-compact.css')) ?>">
 <?php
 $taskType = (string) ($task['type_tache'] ?? '');
 $rawNetworks = $task['publication_reseaux'] ?? '';
@@ -356,17 +357,20 @@ function task_completion_note($taskType, $task) {
     <div class="panel-head">
         <div>
             <h2><?= htmlspecialchars($task['titre']) ?></h2>
-            <p class="panel-subtitle"><?= htmlspecialchars($task['client_nom']) ?> · <?= htmlspecialchars($task['projet_nom']) ?><?= !empty($task['periode_mois']) ? ' · ' . htmlspecialchars(date('F Y', strtotime($task['periode_mois']))) : '' ?></p>
+            <p class="panel-subtitle task-context-title"><strong><?= htmlspecialchars($task['client_nom']) ?></strong><span><?= htmlspecialchars($task['projet_nom']) ?><?= !empty($task['periode_mois']) ? ' · ' . htmlspecialchars(date('F Y', strtotime($task['periode_mois']))) : '' ?></span></p>
         </div>
         <div class="toolbar-actions">
             <?php if (!empty($previousTaskUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $previousTaskUrl) ?>" data-shortcut-prev>← <?= htmlspecialchars($taskType) ?> precedent</a>
+                <a class="button secondary" href="<?= htmlspecialchars((string) $previousTaskUrl) ?>" data-shortcut-prev title="Étape précédente" aria-label="Étape précédente">←</a>
             <?php endif; ?>
             <?php if (!empty($nextTaskUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $nextTaskUrl) ?>" data-shortcut-next><?= htmlspecialchars($taskType) ?> suivant →</a>
+                <a class="button secondary" href="<?= htmlspecialchars((string) $nextTaskUrl) ?>" data-shortcut-next title="Étape suivante" aria-label="Étape suivante">→</a>
             <?php endif; ?>
             <button class="button secondary" type="button" data-compact-toggle>Mode compact</button>
-            <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>">Retour au projet</a>
+            <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>" title="Retour au projet" aria-label="Retour au projet">↩</a>
+            <?php if (($taskType === 'Publication' && in_array((string) ($task['statut'] ?? ''), ['Terminee', 'Validée', 'Validee'], true)) || !empty($latestPublication)): ?>
+                <a class="button secondary" href="<?= htmlspecialchars(route_url('/reporting-metric') . '?project_id=' . (int) ($task['projet_id'] ?? 0)) ?>" title="Statistiques et rapports" aria-label="Statistiques et rapports">⌁</a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -444,7 +448,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 <?php endif; ?>
 
 <?php if (!empty($task['livrable_item_id'])): ?>
-    <details class="panel inset-panel collapsible-panel" open>
+    <details class="panel inset-panel collapsible-panel task-existing-context" open>
         <summary class="collapsible-summary">
             <span>
                 <strong>Informations existantes</strong>
@@ -454,7 +458,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
         </summary>
         <div class="panel-head">
             <div>
-                <h2>Informations existantes</h2>
+
                 <p class="panel-subtitle">Cette zone est en lecture seule pour la tache actuelle. Elle montre uniquement l amont utile a ton intervention.</p>
             </div>
             <a class="button secondary" href="<?= htmlspecialchars(route_url('/calendrier/contenu/' . $task['livrable_item_id'])) ?>">Fiche contenu</a>
@@ -528,7 +532,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                     </div>
                 </div>
                 <div class="detail-grid">
-                    <article class="detail-card"><span class="detail-label">Titre</span><div class="detail-value"><?= htmlspecialchars((string) ($deliverable['titre'] ?? '—')) ?></div></article>
+                    <?php if (($deliverable['titre'] ?? '') !== ($brief['titre_brief'] ?? '') && ($deliverable['titre'] ?? '') !== ($task['livrable_titre'] ?? '')): ?><article class="detail-card"><span class="detail-label">Titre</span><div class="detail-value"><?= htmlspecialchars((string) ($deliverable['titre'] ?? '—')) ?></div></article><?php endif; ?>
                     <article class="detail-card"><span class="detail-label">Format</span><div class="detail-value"><?= htmlspecialchars((string) (($deliverable['type_livrable'] ?? '') . (!empty($deliverable['sous_type']) ? ' · ' . $deliverable['sous_type'] : ''))) ?></div></article>
                     <article class="detail-card"><span class="detail-label">Pages</span><div class="detail-value"><?= htmlspecialchars((string) ($deliverable['nombre_pages'] ?? $brief['nombre_pages_carrousel'] ?? 1)) ?></div></article>
                     <article class="detail-card"><span class="detail-label">Statut livrable</span><div class="detail-value"><?= htmlspecialchars((string) ($deliverable['statut'] ?? 'Planifie')) ?></div></article>
@@ -608,7 +612,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
     </details>
 
     <?php if ($isBriefTask): ?>
-        <section class="panel">
+        <section class="panel task-workspace-compact">
             <div class="panel-head">
                 <div>
                     <h2><?= htmlspecialchars(task_action_title($taskType)) ?></h2>
@@ -616,7 +620,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 </div>
             </div>
             <div class="info-banner"><?= htmlspecialchars(task_completion_note($taskType, $task)) ?></div>
-            <form data-brief-editor="true" method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>">
+            <form data-brief-editor="true" method="post" class="form-grid task-brief-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>">
                 <div class="autosave-status" data-autosave-status>Modifications locales</div>
                 <label class="field">
                     <span>Titre</span>
@@ -725,7 +729,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 <?php endif; ?>
 
 <?php if ($taskType === 'Strategie'): ?>
-    <section class="panel">
+    <section class="panel task-workspace-compact">
         <div class="panel-head">
             <div>
                 <h2>Workspace strategie</h2>
@@ -799,7 +803,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
         </section>
     <?php endif; ?>
 
-    <section class="panel">
+    <section class="panel task-workspace-compact">
         <div class="panel-head">
             <div>
                 <h2><?= htmlspecialchars(task_action_title($taskType)) ?></h2>
@@ -1144,18 +1148,6 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
     <?php endif; ?>
 <?php endif; ?>
 
-<?php if (!empty($previousTaskUrl) || !empty($nextTaskUrl)): ?>
-    <section class="panel inset-panel">
-        <div class="toolbar-actions">
-            <?php if (!empty($previousTaskUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $previousTaskUrl) ?>">← <?= htmlspecialchars($taskType) ?> precedent</a>
-            <?php endif; ?>
-            <?php if (!empty($nextTaskUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $nextTaskUrl) ?>"><?= htmlspecialchars($taskType) ?> suivant →</a>
-            <?php endif; ?>
-        </div>
-    </section>
-<?php endif; ?>
 
 <script>
 (function () {
@@ -1605,3 +1597,5 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
         <div class="preview-modal-body" id="task-preview-body"></div>
     </div>
 </div>
+<?php if (in_array($taskType, ['Tournage', 'Montage'], true)) { require __DIR__ . '/production-inline.php'; } ?>
+<?php if (in_array($taskType, ['Validation interne', 'Validation client', 'Publication', 'Collecte KPI'], true)) { require __DIR__ . '/paired-task-inline.php'; } ?>

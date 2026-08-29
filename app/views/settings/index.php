@@ -592,7 +592,7 @@ usort($priorityRows, static function ($left, $right) {
                 </div>
             </form>
 
-            <form method="post" class="form-grid" id="workflow-video-rule">
+            <form method="post" class="form-grid"><input type="hidden" name="section" value="types"><input type="hidden" name="settings_action" value="save_validation_policy"><?php require __DIR__ . '/validation-policy.php'; ?><button class="button" type="submit">Enregistrer les validations</button></form><form method="post" class="form-grid" id="workflow-video-rule">
                 <input type="hidden" name="section" value="types">
                 <input type="hidden" name="settings_action" value="save_workflow_rules">
                 <label class="settings-checkbox">

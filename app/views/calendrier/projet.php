@@ -70,7 +70,7 @@ function calendrier_task_status_label(array $task) {
     return $status;
 }
 ?>
-<section class="panel">
+<link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/project-calendar-compact.css')) ?>"><section class="panel project-calendar-toolbar">
     <div class="panel-head">
         <div>
             <h2><?= htmlspecialchars($project['entreprise']) ?> · <?= htmlspecialchars($project['nom']) ?></h2>
@@ -78,29 +78,19 @@ function calendrier_task_status_label(array $task) {
         </div>
         <div class="toolbar-actions">
             <?php if ($previousCalendarUrl !== ''): ?>
-                <a class="button secondary" href="<?= htmlspecialchars($previousCalendarUrl) ?>" data-calendar-async-link>← Calendrier precedent</a>
+                <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars($previousCalendarUrl) ?>" data-calendar-async-link title="← Calendrier precedent" aria-label="← Calendrier precedent"><span aria-hidden="true">←</span></a>
             <?php endif; ?>
             <?php if ($nextCalendarUrl !== ''): ?>
-                <a class="button secondary" href="<?= htmlspecialchars($nextCalendarUrl) ?>" data-calendar-async-link>Calendrier suivant →</a>
+                <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars($nextCalendarUrl) ?>" data-calendar-async-link title="Calendrier suivant →" aria-label="Calendrier suivant →"><span aria-hidden="true">→</span></a>
             <?php endif; ?>
-            <a class="button secondary" href="<?= htmlspecialchars(route_url('/projet/edit/' . $project['id']) . '?return_to=' . urlencode($currentReturn)) ?>">Modifier le projet</a>
-            <a class="button secondary" href="<?= htmlspecialchars(route_url('/projet/extend/' . $project['id']) . '?return_to=' . urlencode($currentReturn)) ?>">Prolonger d un mois</a>
-            <a class="button secondary" href="<?= htmlspecialchars(route_url('/projet/regenerate/' . $project['id']) . '?return_to=' . urlencode($currentReturn)) ?>">Resynchroniser le pipeline</a>
-            <a class="button secondary" href="<?= htmlspecialchars(route_url('/calendrier/publicationCalendar/' . $project['id']) . ($selectedMonth ? '?month=' . urlencode($selectedMonth) : '')) ?>">Calendrier publication</a>
-            <a class="button secondary" href="<?= htmlspecialchars(route_url('/calendrier/client/' . $project['client_id'])) ?>">Retour au client</a>
+            <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars(route_url('/projet/edit/' . $project['id']) . '?return_to=' . urlencode($currentReturn)) ?>" title="Modifier le projet" aria-label="Modifier le projet"><span aria-hidden="true">✎</span></a>
+            <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars(route_url('/projet/extend/' . $project['id']) . '?return_to=' . urlencode($currentReturn)) ?>" title="Prolonger d un mois" aria-label="Prolonger d un mois"><span aria-hidden="true">＋</span></a>
+            <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars(route_url('/projet/regenerate/' . $project['id']) . '?return_to=' . urlencode($currentReturn)) ?>" title="Resynchroniser le pipeline" aria-label="Resynchroniser le pipeline"><span aria-hidden="true">⟳</span></a>
+            <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars(route_url('/calendrier/publicationCalendar/' . $project['id']) . ($selectedMonth ? '?month=' . urlencode($selectedMonth) : '')) ?>" title="Calendrier publication" aria-label="Calendrier publication"><span aria-hidden="true">▦</span></a>
+            <a class="button secondary calendar-icon-action" href="<?= htmlspecialchars(route_url('/calendrier/client/' . $project['client_id'])) ?>" title="Retour au client" aria-label="Retour au client"><span aria-hidden="true">↩</span></a>
         </div>
     </div>
-    <div class="chips-row">
-        <span class="chip">Charge de communication: <?= htmlspecialchars($project['charge_compte_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">Charge de clientele: <?= htmlspecialchars($project['charge_clientele_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">CM: <?= htmlspecialchars($project['cm_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">Createur: <?= htmlspecialchars($project['createur_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">Cadreur: <?= htmlspecialchars($project['cadreur_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">Videaste: <?= htmlspecialchars($project['videaste_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">Designer: <?= htmlspecialchars($project['designer_nom'] ?: 'Non assigne') ?></span>
-        <span class="chip">Quota: <?= htmlspecialchars((string) $project['quota_videos_mensuel']) ?> video(s) / <?= htmlspecialchars((string) $project['quota_visuels_mensuel']) ?> visuel(x)</span>
-    </div>
-    <?php if (!empty($availableMonths)): ?>
+    <details class="project-month-options"><summary title="Choisir parmi les mois du projet">Mois du projet</summary><?php if (!empty($availableMonths)): ?>
         <form method="get" action="<?= htmlspecialchars(route_url('/calendrier/projet/' . $project['id'])) ?>" class="list-toolbar" data-calendar-async-form>
             <label class="field toolbar-field">
                 <span>Mois</span>
@@ -116,7 +106,7 @@ function calendrier_task_status_label(array $task) {
                 <a class="button secondary" href="<?= htmlspecialchars(route_url('/calendrier/projet/' . $project['id'])) ?>" data-calendar-async-link>Voir tout</a>
             </div>
         </form>
-    <?php endif; ?>
+    <?php endif; ?></details>
 </section>
 
 <div id="project-calendar-board" data-calendar-board>

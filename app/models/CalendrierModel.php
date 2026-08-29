@@ -728,7 +728,7 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
                 : ['Brief', 'Production', 'Validation interne', 'Validation client'];
 
             $allReady = true;
-            foreach ($requiredReadyStages as $stage) {
+            foreach ($requiredReadyStages as $stage) { if(in_array($stage,['Validation interne','Validation client'],true) && !ValidationPolicy::contentRequires($this->db,(int)$deliverableId,$stage))continue;
                 if (($taskStatuses[$stage] ?? null) !== 'Terminee') {
                     $allReady = false;
                     break;
@@ -1381,11 +1381,11 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
                 COALESCE(ct.reseau_cible, p.canal_principal, 'Non defini') AS canal
             FROM livrable_items li
             JOIN projets p ON p.id = li.projet_id
-            JOIN taches_pipeline tvi ON tvi.livrable_item_id = li.id AND tvi.type_tache = 'Validation interne'
+            LEFT JOIN taches_pipeline tvi ON tvi.livrable_item_id = li.id AND tvi.type_tache = 'Validation interne'
             JOIN taches_pipeline tvc ON tvc.livrable_item_id = li.id AND tvc.type_tache = 'Validation client'
             LEFT JOIN contenus ct ON ct.livrable_item_id = li.id
             WHERE li.plan_mensuel_id = :plan_id
-              AND tvi.statut = 'Terminee'
+              AND (tvi.statut = 'Terminee' OR (tvi.id IS NULL AND EXISTS(SELECT 1 FROM app_settings vp JOIN clients vc ON vc.id=p.client_id WHERE vp.setting_key=CONCAT('validation_content_',vc.tenant_id,'_',li.id) AND JSON_EXTRACT(vp.setting_value,'$.internal')=false)))
               AND tvc.statut <> 'Bloquee'
             ORDER BY li.date_prevue ASC, li.numero_ordre ASC");
         $stmt->execute(['plan_id' => (int) $planId]);

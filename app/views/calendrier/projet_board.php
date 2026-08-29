@@ -120,7 +120,6 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
     }
 }
 ?>
-<section class="page-intro-card project-board-intro"><div><span class="page-eyebrow">Espace projet</span><h2><?= htmlspecialchars($project['nom'] ?? 'Projet') ?></h2><p><?= htmlspecialchars($project['entreprise'] ?? $project['client_nom'] ?? '') ?> · Suivi mensuel, production, validations et publication.</p></div><span class="context-pill"><?= count($plans) ?> mois planifié<?= count($plans) > 1 ? 's' : '' ?></span></section>
 <?php if ($selectedPlanId > 0): ?>
     <section class="panel public-validation-panel">
         <div class="panel-head">
@@ -131,11 +130,11 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
         </div>
 
         <form method="post" action="<?= htmlspecialchars(route_url('/calendrier/createPublicValidationLink')) ?>" class="form-grid">
-            <input type="hidden" name="plan_id" value="<?= htmlspecialchars((string) $selectedPlanId) ?>">
+            <h2 class="public-link-heading">Lien public client</h2><input type="hidden" name="plan_id" value="<?= htmlspecialchars((string) $selectedPlanId) ?>">
             <input type="hidden" name="return_to" value="<?= htmlspecialchars($currentReturn) ?>">
 
             <label class="field">
-                <span>Expiration du lien (jours)</span>
+                <span>Expiration · jours</span>
                 <input type="number" min="1" max="365" name="expiry_days" value="45">
             </label>
 
@@ -243,7 +242,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
             </article>
         </div>
 
-        <div class="workflow-strip">
+        <details class="monthly-tasks-extra"><summary>Suivi mensuel complémentaire</summary><div class="workflow-strip">
             <?php foreach ($plan['month_tasks'] as $task): ?>
                 <?php $taskStatusClass = calendrier_task_status_class($task); ?>
                 <?php $taskStatusLabel = calendrier_task_status_label($task); ?>
@@ -256,7 +255,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                         <?php $taskReassignmentOptions = calendrier_reassignment_options_for_task((string) ($task['type_tache'] ?? ''), $boardReassignmentOptions); ?>
                         <?php if (!empty($taskReassignmentOptions)): ?>
                             <details class="mini-reassign-panel">
-                                <summary class="mini-reassign-trigger">Responsable: <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?></summary>
+                                <summary class="mini-reassign-trigger" title="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>" aria-label="Modifier le responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>">👤 <?= htmlspecialchars(explode(' ', trim($task['auteur_nom'] ?: 'Non assigné'))[0]) ?></summary>
                                 <form method="post" class="mini-inline-form mini-reassign-ajax" data-ajax-url="<?= htmlspecialchars(route_url('/calendrier/reassignTask/' . (int) ($task['id'] ?? 0))) ?>">
                                     <select name="auteur_id" class="mini-select" aria-label="Reattribuer la tache">
                                         <?php foreach ($taskReassignmentOptions as $optionValue => $optionLabel): ?>
@@ -267,10 +266,10 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                 </form>
                             </details>
                         <?php else: ?>
-                            <span>Responsable: <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?></span>
+                            <span tabindex="0" title="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>" aria-label="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>">👤 <?= htmlspecialchars(explode(' ', trim($task['auteur_nom'] ?: 'Non assigné'))[0]) ?></span>
                         <?php endif; ?>
                     <?php else: ?>
-                        <span>Responsable: <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?></span>
+                        <span tabindex="0" title="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>" aria-label="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>">👤 <?= htmlspecialchars(explode(' ', trim($task['auteur_nom'] ?: 'Non assigné'))[0]) ?></span>
                     <?php endif; ?>
                     <a class="icon-link" href="<?= htmlspecialchars(route_url('/calendrier/task/' . $task['id'])) ?>" aria-label="Ouvrir" title="Ouvrir">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -279,9 +278,13 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
             <?php endforeach; ?>
         </div>
 
+        </details>
         <?php $deliverableGroups = calendrier_group_deliverables($plan['deliverables']); ?>
         <?php foreach ($deliverableGroups as $deliverableType => $deliverables): ?>
-            <?php $visibleStageColumns = calendrier_visible_stage_columns($deliverableType, $deliverables, $showAllPipelineStages); ?>
+            <?php $visibleStageColumns = calendrier_visible_stage_columns($deliverableType, $deliverables, $showAllPipelineStages);
+if ($deliverableType === 'Video') {
+ $visibleStageColumns = array_values(array_unique(array_map(static fn($stage) => in_array($stage,['Tournage','Montage'],true) ? 'Production vidéo' : $stage,$visibleStageColumns)));
+} ?>
             <div class="list-group">
                 <div class="list-group-head">
                     <div>
@@ -313,14 +316,14 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                 }
                                 ?>
                                 <tr id="deliverable-<?= htmlspecialchars((string) ($deliverable['id'] ?? 0)) ?>" class="<?= $focusedDeliverableId === (int) ($deliverable['id'] ?? 0) ? 'focus-deliverable-row' : '' ?>">
-                                    <td>
+                                    <td data-label="Contenu">
                                         <strong><?= htmlspecialchars($deliverable['titre']) ?></strong>
                                         <div class="mini-text">Statut: <span class="status-badge status-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $deliverable['statut']))) ?>"><?= htmlspecialchars($deliverable['statut']) ?></span></div>
                                     </td>
-                                    <td>
+                                    <td data-label="Format">
                                         <?= htmlspecialchars($deliverable['type_livrable']) ?><?= !empty($deliverable['sous_type']) ? ' · ' . htmlspecialchars($deliverable['sous_type']) : '' ?>
                                     </td>
-                                    <td>
+                                    <td data-label="Date prévue">
                                         <?php $plannedDate = (string) ($deliverable['date_prevue'] ?? ''); ?>
                                         <?php $canManageDate = calendrier_can_manage_deliverable_date($deliverable, $boardCurrentUserId, $boardCanManageAsCC); ?>
                                         <span><?= htmlspecialchars($plannedDate !== '' ? $plannedDate : 'N/A') ?></span>
@@ -336,7 +339,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                             </details>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="Fiche">
                                         <div class="task-cell status-<?= !empty($deliverable['content_ready']) ? 'terminee' : 'bloquee' ?>">
                                             <strong><span class="status-badge status-<?= !empty($deliverable['content_ready']) ? 'terminee' : 'bloquee' ?>"><?= !empty($deliverable['content_ready']) ? 'Pret' : 'A completer' ?></span></strong>
                                             <span><?= htmlspecialchars($deliverable['contenu_statut'] ?? 'Strategique defini') ?></span>
@@ -345,7 +348,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                             </a>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td data-label="Progression">
                                         <?php $missingAssets = $deliverable['missing_assets'] ?? ['count' => 0, 'items' => [], 'complete' => true]; ?>
                                         <?php $progress = $deliverable['progress'] ?? ['percent' => 0, 'done' => 0, 'total' => 0, 'current_stage' => null, 'blocked' => 0]; ?>
                                         <div class="deliverable-progress-card">
@@ -363,7 +366,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td data-label="Aperçus">
                                         <?php $previewFiles = $deliverable['preview_files'] ?? []; ?>
                                         <?php if (!empty($previewFiles)): ?>
                                             <div class="preview-grid">
@@ -388,12 +391,16 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                         <?php endif; ?>
                                     </td>
                                     <?php foreach ($visibleStageColumns as $column): ?>
-                                        <?php $task = $taskMap[$column] ?? null; ?>
-                                        <td>
+                                        <td data-label="<?= htmlspecialchars($column) ?>">
+                                        <?php if ($column === 'Production vidéo'): ?>
+                                            <?php require __DIR__ . '/production-card.php'; ?>
+                                        <?php else: ?>
+                                        <?php foreach ([$column] as $substage): $task = $taskMap[$substage] ?? null; ?>
+                                        <?php if ($column === 'Production vidéo'): ?><p class="production-substage"><?= htmlspecialchars($substage) ?></p><?php endif; ?>
                                             <?php if ($task): ?>
                                                 <?php $taskStatusClass = calendrier_task_status_class($task); ?>
                                                 <?php $taskStatusLabel = calendrier_task_status_label($task); ?>
-                                                <div class="task-cell status-<?= htmlspecialchars($taskStatusClass) ?>">
+                                                <?php $completed = ($task['statut'] ?? '') === 'Terminee'; if ($completed): ?><details class="pipeline-completed"><summary>✓ Terminée · détails</summary><?php endif; ?><div class="task-cell status-<?= htmlspecialchars($taskStatusClass) ?>">
                                                     <strong><span class="status-badge status-<?= htmlspecialchars($taskStatusClass) ?>"><?= htmlspecialchars($taskStatusLabel) ?></span></strong>
                                                     <span><?= htmlspecialchars($task['deadline'] ?: 'N/A') ?></span>
                                                     <?php $canManageTask = calendrier_can_manage_task($task, $boardCurrentUserId, $boardCanManageAsCC); ?>
@@ -401,7 +408,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                                         <?php $taskReassignmentOptions = calendrier_reassignment_options_for_task((string) ($task['type_tache'] ?? ''), $boardReassignmentOptions); ?>
                                                         <?php if (!empty($taskReassignmentOptions)): ?>
                                                             <details class="mini-reassign-panel">
-                                                                <summary class="mini-reassign-trigger">Responsable: <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?></summary>
+                                                                <summary class="mini-reassign-trigger" title="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>" aria-label="Modifier le responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>">👤 <?= htmlspecialchars(explode(' ', trim($task['auteur_nom'] ?: 'Non assigné'))[0]) ?></summary>
                                                                 <form method="post" class="mini-inline-form mini-reassign-ajax" data-ajax-url="<?= htmlspecialchars(route_url('/calendrier/reassignTask/' . (int) ($task['id'] ?? 0))) ?>">
                                                                     <select name="auteur_id" class="mini-select" aria-label="Reattribuer la tache">
                                                                         <?php foreach ($taskReassignmentOptions as $optionValue => $optionLabel): ?>
@@ -412,10 +419,10 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                                                 </form>
                                                             </details>
                                                         <?php else: ?>
-                                                            <span>Responsable: <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?></span>
+                                                            <span tabindex="0" title="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>" aria-label="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>">👤 <?= htmlspecialchars(explode(' ', trim($task['auteur_nom'] ?: 'Non assigné'))[0]) ?></span>
                                                         <?php endif; ?>
                                                     <?php else: ?>
-                                                        <span>Responsable: <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?></span>
+                                                        <span tabindex="0" title="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>" aria-label="Responsable : <?= htmlspecialchars($task['auteur_nom'] ?: 'Non assigne') ?>">👤 <?= htmlspecialchars(explode(' ', trim($task['auteur_nom'] ?: 'Non assigné'))[0]) ?></span>
                                                     <?php endif; ?>
                                                     <?php
                                                     $targetHref = route_url('/calendrier/task/' . $task['id']);
@@ -424,10 +431,11 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
                                                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
                                                     </a>
                                                 </div>
+                                            <?php if ($completed): ?></details><?php endif; ?>
                                             <?php else: ?>
                                                 <span class="mini-text">Non genere</span>
                                             <?php endif; ?>
-                                        </td>
+                                        <?php endforeach; ?><?php endif; ?></td>
                                     <?php endforeach; ?>
                                 </tr>
                             <?php endforeach; ?>
@@ -499,7 +507,7 @@ if (!function_exists('calendrier_can_manage_deliverable_date')) {
             if (btn) { btn.disabled = false; btn.textContent = originalBtnText; }
             if (result.ok && result.json && result.json.ok) {
                 var name = authorLabel.split(' \u00b7 ')[0] || authorLabel;
-                if (summary) { summary.textContent = 'Responsable\u00a0: ' + (name || 'Inconnu'); }
+                if (summary) { summary.textContent = '👤 ' + (name || 'Non assigné').split(' ')[0]; summary.title = 'Responsable : ' + (name || 'Non assigné'); summary.setAttribute('aria-label',summary.title); }
                 if (details) { details.open = false; }
                 if (window.AppUI && window.AppUI.toast) {
                     window.AppUI.toast('success', 'Responsable mis a jour.');

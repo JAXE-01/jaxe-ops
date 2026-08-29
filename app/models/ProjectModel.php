@@ -26,7 +26,7 @@ class ProjectModel extends CrudModel {
     public function create(array $data) {
         $this->db->beginTransaction();
         try {
-            $id=parent::create($this->normalizeProjectPayload($data)); EditorialCadence::save($this->db,(int)$id,$data);
+            $id=parent::create($this->normalizeProjectPayload($data)); EditorialCadence::save($this->db,(int)$id,$data); ValidationPolicy::saveProject((int)$id,$data);
             if(isset($data['social_pages_present'])) ProjectSocialPages::save((int)$id,(int)$data['client_id'],(array)($data['social_page_ids']??[]));
             $this->db->commit();return $id;
         } catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
@@ -37,7 +37,7 @@ class ProjectModel extends CrudModel {
         if(!$previous) throw new RuntimeException('Projet inaccessible.');
         $this->db->beginTransaction();
         try {
-            $result=parent::update($id,$this->normalizeProjectPayload($data)); EditorialCadence::save($this->db,(int)$id,$data);
+            $result=parent::update($id,$this->normalizeProjectPayload($data)); EditorialCadence::save($this->db,(int)$id,$data); ValidationPolicy::saveProject((int)$id,$data);
             if(isset($data['social_pages_present'])) ProjectSocialPages::save((int)$id,(int)$data['client_id'],(array)($data['social_page_ids']??[]));
             elseif(isset($data['client_id'])&&(int)$data['client_id']!==(int)$previous['client_id']) ProjectSocialPages::save((int)$id,(int)$data['client_id'],[]);
             if(CadenceRevision::hasHistory($this->db,(int)$id))PipelineService::syncProject((int)$id);

@@ -373,6 +373,24 @@ class CalendrierController extends Controller {
             (int) ($workspace['client_id'] ?? 0),
             (int) ($workspace['persona_id'] ?? 0)
         );
+        $editorialUserOptions = [];
+        foreach ((new ManagedUserModel())->getAll() as $managedUser) {
+            $userStatus = strtolower(trim((string) ($managedUser['statut'] ?? $managedUser['status'] ?? 'Actif')));
+            $membershipStatus = strtolower(trim((string) ($managedUser['membership_status'] ?? 'Active')));
+            if (in_array($userStatus, ['suspendu', 'suspended', 'inactif', 'inactive'], true)
+                || in_array($membershipStatus, ['suspendu', 'suspended', 'inactif', 'inactive', 'revoked'], true)) {
+                continue;
+            }
+            $name = trim((string) ($managedUser['nom'] ?? $managedUser['name'] ?? ''));
+            if ($name !== '') {
+                $editorialUserOptions[$name] = $name;
+            }
+        }
+        $currentEditorialOwner = trim((string) ($workspace['contenu_responsable'] ?? ''));
+        if ($currentEditorialOwner !== '' && !isset($editorialUserOptions[$currentEditorialOwner])) {
+            $editorialUserOptions[$currentEditorialOwner] = $currentEditorialOwner;
+        }
+        natcasesort($editorialUserOptions);
         $contentObjectiveOptions = (new SettingsModel())->getContentObjectiveOptions();
         $canEdit = $this->canManageContentSetup($currentUser);
         $canManagerInvalidate = $this->canManagerInvalidateContent($currentUser);
@@ -453,6 +471,7 @@ class CalendrierController extends Controller {
             'returnTo' => $returnTo,
             'campaignOptions' => $campaignOptions,
             'personaOptions' => $personaOptions,
+            'editorialUserOptions' => $editorialUserOptions,
             'contentObjectiveOptions' => $contentObjectiveOptions,
             'canEditContentSetup' => $canEdit,
             'canManagerInvalidate' => $canManagerInvalidate,

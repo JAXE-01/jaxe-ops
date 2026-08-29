@@ -1,3 +1,4 @@
+<style>.global-calendar-weekdays{padding:8px 0;overflow:visible}.global-calendar-weekdays>span{display:block;padding:0 10px;min-width:0;line-height:1.5}.global-calendar-scroll{padding-inline:2px;box-sizing:border-box}</style>
 <?php
 $globalStats = is_array($globalStats ?? null) ? $globalStats : [];
 $projects = is_array($projects ?? null) ? $projects : [];
@@ -266,7 +267,7 @@ if (!function_exists('cal_global_type_icon')) {
     $gridEnd->modify('sunday this week');
     $itemsByDate = (array) ($globalMonthCalendar['items_by_date'] ?? []);
     $groupByClient = (($filters['group_by_client'] ?? '0') === '1');
-    $dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    $dayLabels = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     ?>
 
     <div class="global-calendar-scroll">

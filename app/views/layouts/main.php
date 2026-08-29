@@ -48,7 +48,15 @@ $mainNavItems = [
         'match' => [route_url('/onboarding')],
         'permission' => 'dashboard.view',
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3h4v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    ],    [
+    ],
+    [
+        'label' => 'Statistiques & rapports',
+        'href' => route_url('/reporting-metric'),
+        'match' => [route_url('/reporting-metric')],
+        'permission' => 'reporting.view',
+        'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    ],
+    [
         'label' => 'Calendrier global',
         'href' => route_url('/calendrier-global'),
         'match' => [route_url('/calendrier-global')],
@@ -264,7 +272,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
                     $navLabel = (string) ($item['label'] ?? '');
                     if (in_array($navLabel, ['Dashboard', 'Démarrage', 'Calendrier global', 'Pilotage', 'Clients', 'Projets'], true)) {
                         $navGroup = 'Espace de travail';
-                    } elseif (in_array($navLabel, ['Matrice de creation', 'Publication sociale', 'Documentation', 'Realisations', 'Export documents'], true)) {
+                    } elseif (in_array($navLabel, ['Matrice de creation', 'Publication sociale', 'Statistiques & rapports', 'Documentation', 'Realisations', 'Export documents'], true)) {
                         $navGroup = 'Contenus & livrables';
                     } else {
                         $navGroup = 'Administration';
@@ -489,7 +497,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
 
     document.querySelectorAll('[data-compact-toggle]').forEach(function (button) {
         var refreshLabel = function () {
-            button.textContent = document.body.classList.contains('compact-mode') ? 'Mode etendu' : 'Mode compact';
+            const label = document.body.classList.contains('compact-mode') ? 'Mode étendu' : 'Mode compact'; button.textContent = button.hasAttribute('data-icon-toggle') ? '▤' : label; button.title=label; button.setAttribute('aria-label',label);
         };
         refreshLabel();
         button.addEventListener('click', function () {

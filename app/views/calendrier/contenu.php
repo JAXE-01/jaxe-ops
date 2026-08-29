@@ -29,14 +29,14 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
         </div>
         <div class="toolbar-actions">
             <?php if (!empty($previousContentUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $previousContentUrl) ?>" data-shortcut-prev>← Contenu precedent</a>
+                <a class="button secondary" href="<?= htmlspecialchars((string) $previousContentUrl) ?>" data-shortcut-prev title="Contenu précédent" aria-label="Contenu précédent">←</a>
             <?php endif; ?>
             <?php if (!empty($nextContentUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $nextContentUrl) ?>" data-shortcut-next>Contenu suivant →</a>
+                <a class="button secondary" href="<?= htmlspecialchars((string) $nextContentUrl) ?>" data-shortcut-next title="Contenu suivant" aria-label="Contenu suivant">→</a>
             <?php endif; ?>
-            <button class="button secondary" type="button" data-compact-toggle>Mode compact</button>
+            <button class="button secondary" type="button" data-compact-toggle data-icon-toggle title="Changer la densité" aria-label="Changer la densité">▤</button>
             <?php if (!empty($briefEditUrl)): ?>
-                <a class="button secondary" href="#inline-content-brief" data-open-inline-brief>Voir / editer le <?= (($deliverable['type_livrable'] ?? '') === 'Video') ? 'script' : 'brief' ?></a>
+                <a class="button secondary" href="#inline-content-brief" data-open-inline-brief title="Voir ou modifier le script / brief" aria-label="Voir ou modifier le script / brief">✎</a>
             <?php endif; ?>
             <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>" title="Retour au projet" aria-label="Retour au projet">↩</a>
         </div>
@@ -152,12 +152,24 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <label class="field">
-                    <span>Date de publication prevue</span>
-                    <input type="date" name="date_prevue" value="<?= htmlspecialchars((string) ($_POST['date_prevue'] ?? $deliverable['date_prevue'] ?? '')) ?>" <?= !$canEdit ? 'disabled' : '' ?>>
-                    <small class="field-help">Tu peux planifier la publication au-dela du mois courant si necessaire.</small>
-                    <?php require __DIR__.'/date-occupancy-calendar.php'; ?>
-                </label>
+                <div class="content-schedule-stack">
+                    <label class="field">
+                        <span>Date de publication prevue</span>
+                        <input type="date" name="date_prevue" value="<?= htmlspecialchars((string) ($_POST['date_prevue'] ?? $deliverable['date_prevue'] ?? '')) ?>" <?= !$canEdit ? 'disabled' : '' ?>>
+                        <small class="field-help">Planification possible au-dela du mois courant.</small>
+                        <?php require __DIR__.'/date-occupancy-calendar.php'; ?>
+                    </label>
+                    <label class="field">
+                        <span>Responsable editorial</span>
+                        <?php $selectedEditorialOwner = (string) ($_POST['responsable'] ?? $deliverable['contenu_responsable'] ?? ''); ?>
+                        <select name="responsable" <?= !$canEdit ? 'disabled' : '' ?>>
+                            <option value="">Non assigne</option>
+                            <?php foreach (($editorialUserOptions ?? []) as $optionValue => $optionLabel): ?>
+                                <option value="<?= htmlspecialchars((string) $optionValue) ?>" <?= $selectedEditorialOwner === (string) $optionValue ? 'selected' : '' ?>><?= htmlspecialchars((string) $optionLabel) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                </div>
                 <label class="field">
                     <span>Persona cible</span>
                     <select name="persona_id" <?= !$canEdit ? 'disabled' : '' ?>>
@@ -180,10 +192,6 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
                     <span>Message a vehiculer</span>
                     <textarea name="message" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['message'] ?? $deliverable['contenu_message'] ?? '')) ?></textarea>
                 </label>
-                <label class="field">
-                    <span>Responsable editorial</span>
-                    <input type="text" name="responsable" value="<?= htmlspecialchars((string) ($_POST['responsable'] ?? $deliverable['contenu_responsable'] ?? '')) ?>" <?= !$canEdit ? 'disabled' : '' ?>>
-                </label>
             </div>
         </div>
 
@@ -203,18 +211,6 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
 </details>
 
 <?php require __DIR__.'/inline-brief.php'; ?>
-<?php if (!empty($previousContentUrl) || !empty($nextContentUrl)): ?>
-    <section class="panel inset-panel">
-        <div class="toolbar-actions">
-            <?php if (!empty($previousContentUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $previousContentUrl) ?>">← Contenu precedent</a>
-            <?php endif; ?>
-            <?php if (!empty($nextContentUrl)): ?>
-                <a class="button secondary" href="<?= htmlspecialchars((string) $nextContentUrl) ?>">Contenu suivant →</a>
-            <?php endif; ?>
-        </div>
-    </section>
-<?php endif; ?>
 
 <script>
 (function () {

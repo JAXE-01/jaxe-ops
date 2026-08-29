@@ -392,7 +392,7 @@ class PipelineService {
 
         for ($index = 1; $index <= $quantity; $index++) {
             $itemId = self::ensureDeliverableItem($pdo, $project, $planId, $type, $index, $period);
-            self::ensureContentItem($pdo, $project, $planId, $itemId, $type, $index, $period);
+            $validationPolicy=ValidationPolicy::forContent($pdo,(int)$project['id'],(int)$itemId); self::ensureContentItem($pdo, $project, $planId, $itemId, $type, $index, $period);
             $cadenceDate=null;if(isset($project['_cadence'])){$dateQuery=$pdo->prepare('SELECT date_prevue FROM livrable_items WHERE id=:id');$dateQuery->execute(['id'=>$itemId]);$cadenceDate=$dateQuery->fetchColumn();}
             if ($type === 'Video') {
                 $scriptId = self::ensureTask($pdo, [
@@ -466,7 +466,7 @@ class PipelineService {
                 ]);
             }
 
-            $validationInternalId = self::ensureTask($pdo, [
+            $validationInternalId = $productionId; if ($validationPolicy['internal']) { $validationInternalId = self::ensureTask($pdo, [
                 'projet_id' => $project['id'],
                 'plan_mensuel_id' => $planId,
                 'livrable_item_id' => $itemId,
@@ -481,7 +481,7 @@ class PipelineService {
                     ? 'Verifier script, montage, habillage et conformite avant envoi client.'
                     : 'Verifier la coherence strategique, le branding et la qualite avant envoi client.'
             ]);
-            $validationClientId = self::ensureTask($pdo, [
+            } $validationClientId = $validationInternalId; if ($validationPolicy['client']) { $validationClientId = self::ensureTask($pdo, [
                 'projet_id' => $project['id'],
                 'plan_mensuel_id' => $planId,
                 'livrable_item_id' => $itemId,
@@ -494,7 +494,7 @@ class PipelineService {
                 'ordre_pipeline' => $type === 'Video' ? 7 : 6,
                 'notes' => 'Envoyer au client, recueillir les retours et valider la version finale.'
             ]);
-            $publicationId = self::ensureTask($pdo, [
+            } $publicationId = self::ensureTask($pdo, [
                 'projet_id' => $project['id'],
                 'plan_mensuel_id' => $planId,
                 'livrable_item_id' => $itemId,

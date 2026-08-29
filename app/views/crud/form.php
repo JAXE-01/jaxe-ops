@@ -41,7 +41,7 @@ function field_multiselect_values($value) {
         <?php if (!empty($returnTo)): ?>
             <input type="hidden" name="return_to" value="<?= htmlspecialchars($returnTo) ?>">
         <?php endif; ?>
-        <?php if(($module['table']??'')==='projets')require __DIR__.'/editorial-cadence.php'; ?>
+        <?php if(($module['table']??'')==='projets')require __DIR__.'/editorial-cadence.php'; ?><?php if(($module['table']??'')==='projets')require __DIR__.'/validation-policy.php'; ?>
         <?php foreach ($module['formFields'] as $field => $meta): ?>
             <?php $value = field_value($record, $field); ?>
             <?php $isVisible = field_is_visible($meta, $record); ?>

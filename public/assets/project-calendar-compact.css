@@ -1,0 +1,193 @@
+.project-calendar-toolbar{padding:12px 16px!important}
+.project-calendar-toolbar .panel-head{margin:0;align-items:center;gap:12px}
+.project-calendar-toolbar h2{font-size:17px;margin:0}
+.project-calendar-toolbar .panel-subtitle{font-size:11px;margin:4px 0 0}
+.project-calendar-toolbar .toolbar-actions{flex-shrink:0;gap:6px;flex-wrap:wrap}
+.project-calendar-toolbar .calendar-icon-action{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border-radius:9px}
+.project-calendar-toolbar .list-toolbar{margin:8px 0 0;gap:8px}
+.project-calendar-toolbar .toolbar-field{max-width:190px}
+.project-calendar-toolbar .toolbar-field>span{display:none}
+#project-calendar-board .public-validation-panel{padding:12px 16px}
+#project-calendar-board .public-validation-panel>.panel-head{display:none}
+#project-calendar-board .public-validation-panel form.form-grid{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+#project-calendar-board .public-link-heading{font-size:15px;margin:0}
+#project-calendar-board .public-validation-panel input[name=expiry_days]{width:76px}
+#project-calendar-board .public-validation-panel form.form-grid>.field:nth-of-type(2){flex:1;min-width:180px}
+#project-calendar-board .public-validation-panel .empty-state{padding:4px;margin:0;border:0;text-align:left}
+#project-calendar-board .public-validation-panel .form-actions{margin:0;padding:0}
+#project-calendar-board .public-validation-panel .checkbox-grid{max-height:100px;overflow:auto}
+#project-calendar-board .month-panel{padding:12px}
+#project-calendar-board .month-panel>.panel-head{display:none}
+#project-calendar-board .month-panel>.stats-grid{display:flex;flex-wrap:wrap;gap:16px;margin:8px 0}
+#project-calendar-board .month-panel>.stats-grid .stat-card{padding:4px 8px;box-shadow:none;border:0;display:flex;gap:8px;align-items:center;background:transparent}
+#project-calendar-board .month-panel>.stats-grid .stat-value{font-size:14px}
+#project-calendar-board .monthly-tasks-extra{margin:8px 0;font-size:12px}
+#project-calendar-board .monthly-tasks-extra summary{cursor:pointer;color:#536b88}
+#project-calendar-board .calendar-table-wrap{overflow:visible}
+#project-calendar-board .calendar-table{display:block;width:100%;min-width:0!important;table-layout:fixed}
+#project-calendar-board .calendar-table thead{display:none}
+#project-calendar-board .calendar-table tbody{display:grid;gap:12px}
+#project-calendar-board .calendar-table tr{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;border:1px solid #dce5f0;border-radius:12px;padding:10px;background:#fff}
+#project-calendar-board .calendar-table td{display:block;grid-column:span 2;min-width:0!important;width:auto!important;padding:4px;border:0;white-space:normal!important;overflow-wrap:anywhere}
+#project-calendar-board .calendar-table td:before{content:attr(data-label);display:block;font-size:10px;font-weight:700;color:#60758d;margin-bottom:5px}
+#project-calendar-board .calendar-table td[colspan]{grid-column:1/-1}
+#project-calendar-board .task-cell{min-width:0!important;padding:7px;gap:5px;border-radius:8px;font-size:11px;box-shadow:none}
+#project-calendar-board .task-cell .icon-link{width:26px;height:26px}
+#project-calendar-board .task-cell .mini-reassign-trigger{font-size:11px;white-space:normal}
+#project-calendar-board .deliverable-progress-card{min-width:0!important;font-size:11px}
+#project-calendar-board .preview-grid{display:flex;flex-wrap:wrap;gap:4px}
+#project-calendar-board .preview-card{max-width:60px;min-width:0}
+#project-calendar-board .production-substage{font-size:10px;margin:0;color:#526a86}
+#project-calendar-board .mini-inline-form{flex-wrap:wrap}
+#project-calendar-board .mini-select{width:100%;min-width:0}
+.task-workspace-compact>.panel-head h2{font-size:19px}
+.task-workspace-compact .task-meta-grid{gap:8px}
+.task-workspace-compact .form-grid{gap:12px}
+.task-workspace-compact .field textarea{min-height:80px}
+@media(max-width:1000px){#project-calendar-board .calendar-table td{grid-column:span 4}.project-calendar-toolbar .panel-head{flex-wrap:wrap}}
+@media(max-width:600px){#project-calendar-board .calendar-table td{grid-column:span 6}#project-calendar-board .calendar-table td:first-child{grid-column:1/-1}.project-calendar-toolbar .toolbar-actions{gap:4px}}
+
+.content:has(.project-calendar-toolbar)>.topbar{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.project-calendar-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.project-calendar-toolbar>.panel-head{flex:1;min-width:0}
+.project-month-options{font-size:11px;position:relative}
+.project-month-options>summary{cursor:pointer;color:#526b88}
+.project-month-options[open]{flex-basis:100%}
+.task-workspace-hero{padding:12px 16px!important}
+.task-workspace-hero h2{font-size:19px;margin:0}
+.task-workspace-hero .panel-head{margin-bottom:8px}
+.task-workspace-hero .detail-grid{display:flex;flex-wrap:wrap;gap:8px}
+.task-workspace-hero .detail-card{padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:none;min-width:0}
+.task-workspace-hero .detail-value{font-size:12px;overflow-wrap:anywhere}
+.task-workspace-hero .toolbar-actions .button{padding:7px 10px}
+.task-guided-panel{padding:12px!important}
+.task-guided-panel .panel-head{margin-bottom:8px}
+.task-guided-panel h2{font-size:16px}
+.task-guided-panel .requirement-list{display:flex;flex-wrap:wrap;gap:6px}
+.task-guided-panel .requirement-item{padding:6px 9px;flex:1 1 180px;font-size:12px}
+/* Dense, horizontally scrollable pipeline; preserve real table semantics. */
+#project-calendar-board .calendar-table-wrap{overflow-x:auto;overflow-y:visible;max-width:100%;padding-bottom:8px}
+#project-calendar-board .calendar-table{display:table;table-layout:auto;width:max-content;min-width:100%!important}
+#project-calendar-board .calendar-table thead{display:table-header-group}
+#project-calendar-board .calendar-table tbody{display:table-row-group}
+#project-calendar-board .calendar-table tr{display:table-row;border:0;padding:0}
+#project-calendar-board .calendar-table th,#project-calendar-board .calendar-table td{display:table-cell;width:170px!important;min-width:150px!important;max-width:220px;padding:9px 7px;vertical-align:top;border-bottom:1px solid #e3eaf3}
+#project-calendar-board .calendar-table td:before{display:none}
+#project-calendar-board .task-cell{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px;min-height:0!important}
+#project-calendar-board .task-cell>strong{min-width:0}
+#project-calendar-board .task-cell>span{font-size:10px}
+#project-calendar-board .task-cell>.mini-reassign-panel{min-width:0}
+#project-calendar-board .task-cell>.icon-link{justify-self:end}
+#project-calendar-board .task-cell .status-badge{font-size:10px;padding:3px 6px}
+#project-calendar-board .calendar-table td:first-child{min-width:160px!important}
+.task-workspace-hero .detail-card{min-height:0!important;margin:0}
+.task-workspace-hero .detail-label,.task-workspace-hero .detail-value{margin:0}
+.task-guided-panel .requirement-item{flex:0 1 auto;width:auto;min-height:0}
+.task-workspace-compact .field:has(input[type=number]){max-width:150px}
+.task-workspace-compact .field:has(input[name=format]),.task-workspace-compact .field:has(select[name=statut]){max-width:280px}
+.task-workspace-compact .detail-card{padding:8px 10px;min-height:0}
+.task-workspace-compact .detail-grid{gap:8px}
+.production-people{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.production-people a{font-size:11px}
+.pipeline-completed{margin:0;font-size:11px}
+.pipeline-completed>summary{cursor:pointer;color:#33775d;padding:5px}
+html{scroll-padding-top:76px}
+#project-calendar-board .calendar-table td[data-label="Fiche"] .task-cell{display:flex;flex-direction:column;align-items:flex-start}
+#project-calendar-board .calendar-table td[data-label="Fiche"] .task-cell>*{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+#project-calendar-board .calendar-table th:nth-child(2),#project-calendar-board .calendar-table td:nth-child(2){display:none}
+#project-calendar-board .calendar-table th:nth-child(3),#project-calendar-board .calendar-table td:nth-child(3){width:110px!important;min-width:110px!important}
+.production-people a{color:#466887;text-decoration:none;padding:3px 5px;border-radius:4px;background:#eaf0f7}
+.task-workspace-compact .detail-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.task-workspace-compact .inset-panel{padding:10px}
+.task-existing-context{padding:10px 12px!important}
+.task-existing-context .stack-panel{padding:10px 12px!important;margin:8px 0!important;border-radius:10px;box-shadow:none}
+.task-existing-context .panel-head{margin-bottom:6px!important}
+.task-existing-context h3{font-size:14px;margin:0}
+.task-existing-context .stack-panel .panel-subtitle{display:none}
+.task-existing-context .detail-grid{gap:6px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.task-existing-context .detail-card{padding:7px 9px!important;min-height:0!important;box-shadow:none;border-radius:7px}
+.task-existing-context .detail-value{font-size:12px;margin-top:3px;overflow-wrap:anywhere}
+.task-existing-context .detail-card:has(.detail-value:empty){display:none}
+#project-calendar-board td[data-label="Fiche"] .status-badge{white-space:normal;line-height:1.3}
+
+/* Shared compact task workspace. */
+.task-workspace-hero{position:sticky;top:58px;z-index:24;box-shadow:0 10px 24px rgba(30,55,86,.08)}
+.task-workspace-hero>.panel-head{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:center}
+.task-context-title{display:flex;flex-direction:column;gap:2px;margin-top:3px!important}
+.task-context-title strong{font-size:12px;color:#243b59}
+.task-context-title span{font-size:11px;color:#708198}
+.task-workspace-hero .toolbar-actions{gap:5px;flex-wrap:nowrap}
+.task-workspace-hero .toolbar-actions .button{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.task-guided-panel{display:grid;grid-template-columns:auto minmax(180px,320px) minmax(0,1fr) auto;align-items:center;gap:10px}
+.task-guided-panel>.panel-head{display:contents}
+.task-guided-panel>.panel-head>div{grid-column:1}.task-guided-panel>.panel-head .panel-subtitle{display:none}
+.task-guided-panel>.panel-head>.status-badge{grid-column:4;grid-row:1}
+.task-guided-panel>.deliverable-progress-card{grid-column:2;grid-row:1;max-width:none!important;width:100%}
+.task-guided-panel>.requirement-list{grid-column:3;grid-row:1;margin:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.task-guided-panel .requirement-item{white-space:nowrap;padding:5px 7px;font-size:10px}
+.task-guided-panel .requirement-state{font-size:9px}
+.task-workspace-compact{padding:12px 14px!important}
+.task-workspace-compact>.panel-head{margin-bottom:7px!important}
+.task-workspace-compact>.info-banner{padding:8px 10px;margin:6px 0;font-size:11px}
+.task-brief-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px 10px!important}
+.task-brief-grid>.field{grid-column:auto!important;min-width:0}
+.task-brief-grid textarea{min-height:68px!important;height:68px;overflow:auto;resize:vertical}
+.task-brief-grid input,.task-brief-grid select{min-height:38px}
+.task-brief-grid>.autosave-status,.task-brief-grid>.form-actions,.task-brief-grid>.file-list{grid-column:1/-1!important}
+.task-brief-grid .field:has(input[type=number]){max-width:130px}
+.task-brief-grid .field:has(select[name=statut]){max-width:220px}
+.production-inline-panel{padding:12px 14px!important}
+.production-inline-panel [data-production-host] form,.task-workspace-compact form[data-task-type="Tournage"],.task-workspace-compact form[data-task-type="Montage"]{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 10px}
+.production-inline-panel textarea,.task-workspace-compact form[data-task-type="Tournage"] textarea,.task-workspace-compact form[data-task-type="Montage"] textarea{height:68px;min-height:68px;overflow:auto}
+.task-existing-context .stack-panel{margin:6px 0!important}
+.task-existing-context .detail-grid{grid-template-columns:repeat(5,minmax(130px,1fr));overflow-x:auto}
+.task-existing-context .detail-card{min-width:130px}
+@media(max-width:1100px){.task-guided-panel{grid-template-columns:1fr auto}.task-guided-panel>.deliverable-progress-card,.task-guided-panel>.requirement-list{grid-column:1/-1;grid-row:auto}.task-guided-panel>.requirement-list{flex-wrap:wrap}}
+@media(max-width:760px){.task-brief-grid{grid-template-columns:1fr!important}.production-inline-panel [data-production-host] form,.task-workspace-compact form[data-task-type="Tournage"],.task-workspace-compact form[data-task-type="Montage"]{grid-template-columns:1fr}.task-workspace-hero{top:48px}}
+.paired-task-inline{border-top:3px solid #8dbbe2}
+.paired-task-inline [data-paired-host]>.form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 10px}
+.paired-task-inline [data-paired-host] textarea{min-height:68px;height:68px;overflow:auto}
+.paired-task-inline [data-paired-host] .info-banner,.paired-task-inline [data-paired-host] .autosave-status,.paired-task-inline [data-paired-host] .form-actions,.paired-task-inline [data-paired-host] .panel{grid-column:1/-1}
+.paired-task-inline [data-paired-host] .field:has(input[type=number]){max-width:140px}
+@media(max-width:800px){.paired-task-inline [data-paired-host]>.form-grid{grid-template-columns:1fr}}
+
+/* Shared compact task workspace. */
+.task-workspace-hero{position:sticky;top:58px;z-index:24;box-shadow:0 10px 24px rgba(30,55,86,.08)}
+.task-workspace-hero>.panel-head{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:center}
+.task-context-title{display:flex;flex-direction:column;gap:2px;margin-top:3px!important}
+.task-context-title strong{font-size:12px;color:#243b59}
+.task-context-title span{font-size:11px;color:#708198}
+.task-workspace-hero .detail-grid{position:absolute;left:min(42vw,620px);right:220px;top:50%;transform:translateY(-50%);flex-wrap:nowrap;overflow:hidden}
+.task-workspace-hero .detail-card{background:#f5f8fc;border-color:#e2e9f1;white-space:nowrap}
+.task-workspace-hero .detail-card .detail-value{max-width:190px;overflow:hidden;text-overflow:ellipsis}
+.task-workspace-hero .toolbar-actions{gap:5px;flex-wrap:nowrap}
+.task-workspace-hero .toolbar-actions .button{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:0}
+.task-workspace-hero .toolbar-actions .button::first-letter{font-size:15px}
+.task-workspace-hero .toolbar-actions [data-compact-toggle]{font-size:0}
+.task-workspace-hero .toolbar-actions [data-compact-toggle]::before{content:'↔';font-size:16px}
+.task-guided-panel{display:grid;grid-template-columns:auto minmax(180px,320px) minmax(0,1fr) auto;align-items:center;gap:10px}
+.task-guided-panel>.panel-head{display:contents}
+.task-guided-panel>.panel-head>div{grid-column:1}.task-guided-panel>.panel-head .panel-subtitle{display:none}
+.task-guided-panel>.panel-head>.status-badge{grid-column:4;grid-row:1}
+.task-guided-panel>.deliverable-progress-card{grid-column:2;grid-row:1;max-width:none!important;width:100%}
+.task-guided-panel>.requirement-list{grid-column:3;grid-row:1;margin:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.task-guided-panel .requirement-item{white-space:nowrap;padding:5px 7px;font-size:10px}
+.task-guided-panel .requirement-state{font-size:9px}
+.task-workspace-compact{padding:12px 14px!important}
+.task-workspace-compact>.panel-head{margin-bottom:7px!important}
+.task-workspace-compact>.info-banner{padding:8px 10px;margin:6px 0;font-size:11px}
+.task-brief-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px 10px!important}
+.task-brief-grid>.field{grid-column:auto!important;min-width:0}
+.task-brief-grid textarea{min-height:68px!important;height:68px;overflow:auto;resize:vertical}
+.task-brief-grid input,.task-brief-grid select{min-height:38px}
+.task-brief-grid>.autosave-status,.task-brief-grid>.form-actions,.task-brief-grid>.file-list{grid-column:1/-1!important}
+.task-brief-grid .field:has(input[type=number]){max-width:130px}
+.task-brief-grid .field:has(select[name=statut]){max-width:220px}
+.production-inline-panel{padding:12px 14px!important}
+.production-inline-panel [data-production-host] form,.task-workspace-compact form[data-task-type="Tournage"],.task-workspace-compact form[data-task-type="Montage"]{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 10px}
+.production-inline-panel textarea,.task-workspace-compact form[data-task-type="Tournage"] textarea,.task-workspace-compact form[data-task-type="Montage"] textarea{height:68px;min-height:68px;overflow:auto}
+.task-existing-context .stack-panel{margin:6px 0!important}
+.task-existing-context .detail-grid{grid-template-columns:repeat(5,minmax(130px,1fr));overflow-x:auto}
+.task-existing-context .detail-card{min-width:130px}
+@media(max-width:1100px){.task-workspace-hero .detail-grid{position:static;transform:none;grid-column:1/-1;overflow-x:auto}.task-workspace-hero>.panel-head{grid-template-columns:1fr auto}.task-guided-panel{grid-template-columns:1fr auto}.task-guided-panel>.deliverable-progress-card,.task-guided-panel>.requirement-list{grid-column:1/-1;grid-row:auto}.task-guided-panel>.requirement-list{flex-wrap:wrap}}
+@media(max-width:760px){.task-brief-grid{grid-template-columns:1fr!important}.production-inline-panel [data-production-host] form,.task-workspace-compact form[data-task-type="Tournage"],.task-workspace-compact form[data-task-type="Montage"]{grid-template-columns:1fr}.task-workspace-hero{top:48px}}
