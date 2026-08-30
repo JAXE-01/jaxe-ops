@@ -12,9 +12,12 @@ class ReportingMetricController extends Controller {
     public function index() {
         $networkConfig = $this->reportingMetricModel->getNetworkKpiConfig();
         $defaultNetwork = array_key_first($networkConfig) ?: 'facebook';
+        $publicationRef = trim((string) ($_GET['publication_ref'] ?? ''));
         $filters = [
             'campagne_id' => (int) ($_GET['campagne_id'] ?? 0),
-            'contenu_id' => (int) ($_GET['contenu_id'] ?? 0),
+            'contenu_id' => ctype_digit($publicationRef) ? (int) $publicationRef : 0,
+            'social_publication_id' => preg_match('/^social-(\d+)$/', $publicationRef, $match) ? (int) $match[1] : 0,
+            'publication_ref' => $publicationRef,
             'plateforme' => strtolower(trim((string) ($_GET['plateforme'] ?? ''))),
             'from' => trim((string) ($_GET['from'] ?? '')),
             'to' => trim((string) ($_GET['to'] ?? '')),
@@ -42,6 +45,7 @@ class ReportingMetricController extends Controller {
             'canManage' => $this->can('reporting.manage'),
             'campaignOptions' => $this->reportingMetricModel->getCampaignOptions(),
             'publicationOptions' => $this->reportingMetricModel->getPublicationOptions($filters['campagne_id']),
+            'socialPublicationOptions' => $this->reportingMetricModel->getSocialPublicationOptions($filters['campagne_id']),
             'platformOptions' => $this->reportingMetricModel->getPlatformOptions(),
             'networkConfig' => $networkConfig,
             'defaultNetwork' => $defaultNetwork,

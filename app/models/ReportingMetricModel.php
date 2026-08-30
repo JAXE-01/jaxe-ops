@@ -57,6 +57,33 @@ class ReportingMetricModel extends Model {
         return $options;
     }
 
+    public function getSocialPublicationOptions($campaignId = 0) {
+        $scope = AgencyAccessPolicy::clientSqlScope('scope_client', 'analytics', 'analytics_social_publications');
+        $sql = 'SELECT sp.id, sp.master_title, scope_client.entreprise AS client_nom
+            FROM social_publications sp
+            JOIN clients scope_client ON scope_client.id = sp.client_id
+            LEFT JOIN projets pr ON pr.id = sp.project_id
+            WHERE sp.tenant_id = :tenant
+              AND (:campagne_id = 0 OR pr.campagne_id = :campagne_id)
+              AND ' . $scope['sql'] . '
+            ORDER BY sp.id DESC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(array_merge([
+            'tenant' => TenantGuard::tenantId(),
+            'campagne_id' => (int) $campaignId,
+        ], $scope['params']));
+
+        $options = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) continue;
+            $title = trim((string) ($row['master_title'] ?? 'Publication sociale'));
+            $client = trim((string) ($row['client_nom'] ?? ''));
+            $options['social-' . $id] = $client !== '' ? ($title . ' - ' . $client) : $title;
+        }
+        return $options;
+    }
+
     public function getPlatformOptions() {
         $config = $this->getNetworkKpiConfig();
         $options = [];
@@ -585,6 +612,12 @@ class ReportingMetricModel extends Model {
         if ($contenuId > 0) {
             $clauses[] = 'rm.contenu_id = :contenu_id';
             $params['contenu_id'] = $contenuId;
+        }
+
+        $socialPublicationId = (int) ($filters['social_publication_id'] ?? 0);
+        if ($socialPublicationId > 0) {
+            $clauses[] = 'rm.social_publication_id = :social_publication_id';
+            $params['social_publication_id'] = $socialPublicationId;
         }
 
         $plateforme = trim((string) ($filters['plateforme'] ?? ''));

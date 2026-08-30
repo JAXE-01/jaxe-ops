@@ -8,6 +8,7 @@ $monthlyReport = is_array($monthlyReport ?? null) ? $monthlyReport : [];
 $analysisDashboard = is_array($analysisDashboard ?? null) ? $analysisDashboard : [];
 $campaignOptions = is_array($campaignOptions ?? null) ? $campaignOptions : [];
 $publicationOptions = is_array($publicationOptions ?? null) ? $publicationOptions : [];
+$socialPublicationOptions = is_array($socialPublicationOptions ?? null) ? $socialPublicationOptions : [];
 $platformOptions = is_array($platformOptions ?? null) ? $platformOptions : [];
 $networkConfig = is_array($networkConfig ?? null) ? $networkConfig : [];
 $defaultNetwork = (string) ($defaultNetwork ?? (array_key_first($networkConfig) ?: 'facebook'));
@@ -15,7 +16,7 @@ $canManage = !empty($canManage);
 
 $filterQuery = http_build_query(array_filter([
     'campagne_id' => (int) ($filters['campagne_id'] ?? 0) > 0 ? (int) $filters['campagne_id'] : null,
-    'contenu_id' => (int) ($filters['contenu_id'] ?? 0) > 0 ? (int) $filters['contenu_id'] : null,
+    'publication_ref' => trim((string) ($filters['publication_ref'] ?? '')),
     'plateforme' => trim((string) ($filters['plateforme'] ?? '')),
     'from' => trim((string) ($filters['from'] ?? '')),
     'to' => trim((string) ($filters['to'] ?? '')),
@@ -131,11 +132,18 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </label>
         <label>
             Publication
-            <select name="contenu_id">
+            <select name="publication_ref">
                 <option value="">Toutes</option>
+                <?php if ($publicationOptions): ?><optgroup label="Contenus du calendrier"><?php endif; ?>
                 <?php foreach ($publicationOptions as $id => $label): ?>
-                    <option value="<?= (int) $id ?>" <?= ((int) ($filters['contenu_id'] ?? 0) === (int) $id) ? 'selected' : '' ?>><?= htmlspecialchars((string) $label) ?></option>
+                    <option value="<?= (int) $id ?>" <?= ((string) ($filters['publication_ref'] ?? '') === (string) $id) ? 'selected' : '' ?>><?= htmlspecialchars((string) $label) ?></option>
                 <?php endforeach; ?>
+                <?php if ($publicationOptions): ?></optgroup><?php endif; ?>
+                <?php if ($socialPublicationOptions): ?><optgroup label="Publications créées directement"><?php endif; ?>
+                <?php foreach ($socialPublicationOptions as $id => $label): ?>
+                    <option value="<?= htmlspecialchars((string) $id) ?>" <?= ((string) ($filters['publication_ref'] ?? '') === (string) $id) ? 'selected' : '' ?>><?= htmlspecialchars((string) $label) ?></option>
+                <?php endforeach; ?>
+                <?php if ($socialPublicationOptions): ?></optgroup><?php endif; ?>
             </select>
         </label>
         <label>
