@@ -97,6 +97,9 @@ $barMax = max(1, max(array_map(static function ($item) {
 }, $analysisNetworkComparison) ?: [0]));
 $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 ?>
+<style>
+.reporting-filter-row{display:grid!important;grid-template-columns:minmax(170px,1fr) minmax(210px,1.35fr) minmax(130px,.75fr) minmax(140px,.72fr) minmax(140px,.72fr) auto;gap:10px;align-items:end}.reporting-filter-row label{min-width:0}.reporting-filter-row select,.reporting-filter-row input{width:100%;box-sizing:border-box}.reporting-filter-row.is-loading{opacity:.62;pointer-events:none}@media(max-width:1100px){.reporting-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.reporting-filter-row{grid-template-columns:1fr}}
+</style>
 
 <section class="panel">
     <div class="panel-head">
@@ -116,7 +119,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </div>
     </div>
 
-    <form class="compact-filters" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
+    <form class="compact-filters reporting-filter-row" id="reporting-filter-form" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
         <label>
             Campagne
             <select name="campagne_id">
@@ -218,6 +221,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 </details>
 <?php endif; ?>
 
+<div id="reporting-results" aria-live="polite">
 <section class="panel" style="margin-top:14px;">
     <div class="panel-head">
         <div>
@@ -503,6 +507,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     </div>
 </section>
 
+</div>
 <script>
 (function () {
     var config = <?= json_encode($networkConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -546,4 +551,5 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     networkSelect.addEventListener('change', renderKpiFields);
     renderKpiFields();
 })();
+(function(){var form=document.getElementById('reporting-filter-form');var results=document.getElementById('reporting-results');if(!form||!results||!window.fetch||!window.DOMParser)return;form.addEventListener('submit',function(event){event.preventDefault();var url=form.action+'?'+new URLSearchParams(new FormData(form)).toString();form.classList.add('is-loading');fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(response){if(!response.ok)throw new Error('HTTP '+response.status);return response.text();}).then(function(html){var copy=new DOMParser().parseFromString(html,'text/html');var next=copy.getElementById('reporting-results');if(!next)throw new Error('Résultats indisponibles');results.replaceWith(next);results=next;history.replaceState({},'',url);}).catch(function(){window.location.href=url;}).finally(function(){form.classList.remove('is-loading');});});})();
 </script>
