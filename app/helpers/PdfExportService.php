@@ -1,5 +1,20 @@
 <?php
 class PdfExportService {
+    public static function outputCalendarPdf(string $title, array $rows, string $fileName = 'calendrier-editorial.pdf'): void {
+        if (class_exists('Dompdf\\Dompdf')) {
+            self::renderWithDompdf(self::buildCalendarHtml($title, $rows), $fileName, 'landscape');
+            return;
+        }
+        self::outputTablePdf($title, $rows, ['date_prevue','client','projet','titre','type_livrable','reseau','sujet'], $fileName);
+    }
+
+    public static function outputBriefsPdf(string $title, array $rows, string $fileName = 'briefs-et-scripts.pdf'): void {
+        if (class_exists('Dompdf\\Dompdf')) {
+            self::renderWithDompdf(self::buildBriefsHtml($title, $rows), $fileName, 'portrait');
+            return;
+        }
+        self::outputTablePdf($title, $rows, ['client','projet','periode_mois','titre','script_contenu'], $fileName);
+    }
     public static function outputTablePdf($title, array $rows, array $columns, $fileName = 'export.pdf') {
         if (class_exists('Dompdf\\Dompdf')) {
             $html = self::buildTableHtml($title, $rows, $columns);
@@ -148,10 +163,10 @@ class PdfExportService {
         self::renderSimplePdfLines($lines, $fileName);
     }
 
-    private static function renderWithDompdf($html, $fileName) {
+    private static function renderWithDompdf($html, $fileName, string $orientation = 'landscape') {
         $dompdf = new Dompdf\Dompdf();
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->setPaper('A4', $orientation);
         $dompdf->render();
 
         header('Content-Type: application/pdf');
@@ -161,6 +176,38 @@ class PdfExportService {
         header('Expires: 0');
         echo $dompdf->output();
         exit;
+    }
+
+    private static function documentCss(): string {
+        return '@page{margin:16mm 13mm 15mm}body{font-family:DejaVu Sans,Arial,sans-serif;color:#13233d;font-size:9.5px;margin:0}.head{background:#102743;color:#fff;padding:15px 18px;border-radius:10px;margin-bottom:12px}.head h1{font-size:19px;margin:0 0 4px}.head p{margin:0;color:#d7e6f5}.meta{color:#61738b;font-size:8.5px}.section-title{font-size:12px;margin:12px 0 6px}.chip{display:inline-block;padding:3px 7px;border-radius:10px;background:#eaf2fb;color:#244d78;margin-right:4px}.empty{padding:18px;border:1px dashed #b8c7d8;text-align:center;color:#61738b}.footer{position:fixed;bottom:-9mm;left:0;right:0;color:#718198;font-size:8px;text-align:right}';
+    }
+
+    private static function buildCalendarHtml(string $title, array $rows): string {
+        $groups = [];
+        foreach ($rows as $row) {
+            $key = trim((string)($row['periode_mois'] ?? '')) ?: 'Période non définie';
+            $groups[$key][] = $row;
+        }
+        ob_start(); ?>
+        <!doctype html><html lang="fr"><head><meta charset="UTF-8"><style>
+        <?= self::documentCss() ?>
+        table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:10px}th{background:#e9f0f7;color:#38516f;text-transform:uppercase;font-size:8px;letter-spacing:.03em}th,td{padding:6px;border-bottom:1px solid #dce5ef;vertical-align:top}tr:nth-child(even) td{background:#f7f9fc}.date{width:11%}.type{width:9%}.network{width:13%}.content{width:25%}.project{width:20%}
+        </style></head><body><div class="head"><h1><?= htmlspecialchars($title) ?></h1><p>Calendrier éditorial · <?= date('d/m/Y H:i') ?> · <?= count($rows) ?> contenu(s)</p></div>
+        <?php foreach ($groups as $period => $items): ?><h2 class="section-title"><?= htmlspecialchars($period) ?></h2><table><thead><tr><th class="date">Date</th><th>Client / projet</th><th class="content">Contenu</th><th class="type">Format</th><th class="network">Réseau</th><th>Message clé</th></tr></thead><tbody>
+        <?php foreach ($items as $row): ?><tr><td><?= htmlspecialchars((string)($row['date_prevue'] ?? '—')) ?></td><td><strong><?= htmlspecialchars((string)($row['client'] ?? '')) ?></strong><br><span class="meta"><?= htmlspecialchars((string)($row['projet'] ?? '')) ?></span></td><td><strong><?= htmlspecialchars((string)($row['titre'] ?? '')) ?></strong><br><span class="meta"><?= htmlspecialchars((string)($row['sujet'] ?? '')) ?></span></td><td><?= htmlspecialchars((string)($row['type_livrable'] ?? '')) ?></td><td><?= htmlspecialchars((string)($row['reseau'] ?? '')) ?></td><td><?= nl2br(htmlspecialchars(mb_strimwidth((string)($row['message'] ?? ''),0,240,'…'))) ?></td></tr><?php endforeach ?>
+        </tbody></table><?php endforeach ?><?php if (!$rows): ?><div class="empty">Aucun contenu dans la sélection.</div><?php endif ?><div class="footer">Strax · Calendrier éditorial</div></body></html>
+        <?php return (string)ob_get_clean();
+    }
+
+    private static function buildBriefsHtml(string $title, array $rows): string {
+        ob_start(); ?>
+        <!doctype html><html lang="fr"><head><meta charset="UTF-8"><style>
+        <?= self::documentCss() ?>
+        .brief{page-break-after:always}.brief:last-child{page-break-after:auto}.brief-head{border-left:4px solid #4c8ac3;background:#eef4fa;padding:10px 12px;margin-bottom:10px}.brief-head h2{margin:0 0 4px;font-size:15px}.grid{width:100%;border-collapse:separate;border-spacing:6px}.grid td{border:1px solid #d9e3ed;border-radius:7px;padding:8px;vertical-align:top;width:50%}.label{display:block;text-transform:uppercase;letter-spacing:.04em;color:#60738b;font-size:7.5px;margin-bottom:4px}.block{border:1px solid #d9e3ed;border-radius:7px;padding:10px;margin:7px 0;line-height:1.5;white-space:pre-wrap}.block strong{display:block;color:#38516f;margin-bottom:4px}
+        </style></head><body><div class="head"><h1><?= htmlspecialchars($title) ?></h1><p>Briefs et scripts de production · <?= date('d/m/Y H:i') ?></p></div>
+        <?php foreach ($rows as $row): ?><section class="brief"><div class="brief-head"><h2><?= htmlspecialchars((string)($row['titre'] ?? 'Contenu')) ?></h2><span class="meta"><?= htmlspecialchars(trim((string)($row['client'] ?? '')).' · '.trim((string)($row['projet'] ?? '')).' · '.trim((string)($row['periode_mois'] ?? ''))) ?></span></div><table class="grid"><tr><td><span class="label">Format</span><?= htmlspecialchars((string)($row['type_livrable'] ?? '')) ?></td><td><span class="label">Réseau</span><?= htmlspecialchars((string)($row['reseau'] ?? '')) ?></td></tr><tr><td><span class="label">Sujet / angle</span><?= nl2br(htmlspecialchars((string)($row['sujet'] ?? ''))) ?></td><td><span class="label">Message</span><?= nl2br(htmlspecialchars((string)($row['message'] ?? ''))) ?></td></tr></table>
+        <?php foreach ([['plan_script','Plan / structure'],['texte_script','Texte du script'],['script_contenu','Brief / consigne']] as [$key,$label]): if(trim((string)($row[$key]??''))!==''): ?><div class="block"><strong><?= $label ?></strong><?= nl2br(htmlspecialchars((string)$row[$key])) ?></div><?php endif; endforeach ?></section><?php endforeach ?><?php if (!$rows): ?><div class="empty">Aucun brief ou script dans la sélection.</div><?php endif ?><div class="footer">Strax · Document de production</div></body></html>
+        <?php return (string)ob_get_clean();
     }
 
     private static function buildTableHtml($title, array $rows, array $columns) {

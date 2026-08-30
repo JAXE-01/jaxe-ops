@@ -67,10 +67,7 @@ class ExportDocumentController extends Controller {
             }
             if ($action === 'export_scripts_pdf') {
                 $rows = $this->calendrierModel->getScriptsExportRows($planIds);
-                $scriptDefaults = ['client', 'projet', 'periode_mois', 'titre', 'script_contenu'];
-                $scriptFields = $this->normalizeSelectedFields((array) ($_POST['selected_fields'] ?? []), $availableFields, $scriptDefaults);
-                $rows = $this->selectFieldsFromRows($rows, $scriptFields, $scriptDefaults);
-                PdfExportService::outputTablePdf('Export scripts editoriaux', $rows, $scriptFields, 'scripts-calendriers.pdf');
+                PdfExportService::outputBriefsPdf('Briefs et scripts editoriaux', $rows, 'briefs-scripts.pdf');
                 return;
             }
             if ($action === 'export_reports') {
@@ -80,8 +77,7 @@ class ExportDocumentController extends Controller {
             }
             if ($action === 'export_calendar_pdf') {
                 $rows = $this->calendrierModel->getCalendarExportRows($planIds, !empty($_POST['include_scripts']));
-                $rows = $this->selectFieldsFromRows($rows, $selectedFields, $defaultFields);
-                PdfExportService::outputTablePdf('Export calendrier editorial', $rows, $selectedFields, 'calendrier-editorial.pdf');
+                PdfExportService::outputCalendarPdf('Calendrier editorial', $rows, 'calendrier-editorial.pdf');
                 return;
             }
             if ($action === 'export_reports_pdf') {

@@ -38,7 +38,7 @@ class ReportingMetricController extends Controller {
         $analysisDashboard = $this->reportingMetricModel->getDashboardAnalysis($filters);
 
         $this->render('reporting-metric/index', [
-            'pageTitle' => 'Collecte KPI manuelle',
+            'pageTitle' => 'Statistiques & rapports',
             'canManage' => $this->can('reporting.manage'),
             'campaignOptions' => $this->reportingMetricModel->getCampaignOptions(),
             'publicationOptions' => $this->reportingMetricModel->getPublicationOptions($filters['campagne_id']),
@@ -86,8 +86,8 @@ class ReportingMetricController extends Controller {
             'url_publication' => trim((string) ($_POST['url_publication'] ?? '')),
         ];
 
-        if ($input['campagne_id'] <= 0) {
-            $this->flash('error', 'Selectionne une campagne.');
+        if ($input['campagne_id'] <= 0 && (int)$input['contenu_id'] <= 0) {
+            $this->flash('error', 'Selectionne une campagne ou une publication.');
             $this->redirect('/reporting-metric');
         }
 

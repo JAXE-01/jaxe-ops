@@ -11,4 +11,5 @@ config/instance.secrets.php
 /composer.phar
 /storage/backups/*
 !/storage/.htaccess
+/storage/qa-pdf/
 /.codex-tpack/

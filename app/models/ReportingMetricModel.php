@@ -31,8 +31,9 @@ class ReportingMetricModel extends Model {
     public function getPublicationOptions($campaignId = 0) {
         $sql = 'SELECT ct.id, ct.sujet, cp.nom AS campagne_nom
             FROM contenus ct
-            JOIN campagnes cp ON cp.id = ct.campagne_id
-            JOIN clients scope_client ON scope_client.id=cp.client_id
+            LEFT JOIN campagnes cp ON cp.id = ct.campagne_id
+            LEFT JOIN projets pr ON pr.id = ct.projet_id
+            JOIN clients scope_client ON scope_client.id=COALESCE(cp.client_id,pr.client_id)
             WHERE (:campagne_id = 0 OR ct.campagne_id = :campagne_id) AND __ANALYTICS_PUBLICATION_SCOPE__
             ORDER BY ct.id DESC';
 
@@ -128,10 +129,25 @@ class ReportingMetricModel extends Model {
     }
 
     public function createMetric(array $data) {
-        $this->assertCampaignAnalyticsAccess((int)($data['campagne_id']??0),true);
+        $campaignId=(int)($data['campagne_id']??0);
+        $contentId=(int)($data['contenu_id']??0);
+        $projectId=null;
+        if($contentId>0){
+            $context=$this->db->prepare('SELECT campagne_id,projet_id FROM contenus WHERE id=:id LIMIT 1');
+            $context->execute(['id'=>$contentId]);
+            $row=$context->fetch(PDO::FETCH_ASSOC)?:[];
+            $campaignId=$campaignId?:((int)($row['campagne_id']??0));
+            $projectId=(int)($row['projet_id']??0)?:null;
+        }
+        if($campaignId>0)$this->assertCampaignAnalyticsAccess($campaignId,true);
+        elseif($projectId)TenantGuard::assertProject($projectId);
+        else throw new RuntimeException('Publication ou campagne inaccessible.');
         $sql = 'INSERT INTO reporting_metrics (
+                tenant_id,
                 campagne_id,
+                project_id,
                 contenu_id,
+                source,
                 plateforme,
                 date_collecte,
                 impressions,
@@ -149,8 +165,11 @@ class ReportingMetricModel extends Model {
                 kpi_payload,
                 url_publication
             ) VALUES (
+                :tenant_id,
                 :campagne_id,
+                :project_id,
                 :contenu_id,
+                "manual",
                 :plateforme,
                 :date_collecte,
                 :impressions,
@@ -171,7 +190,9 @@ class ReportingMetricModel extends Model {
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            'campagne_id' => (int) ($data['campagne_id'] ?? 0),
+            'tenant_id' => TenantGuard::tenantId(),
+            'campagne_id' => $campaignId ?: null,
+            'project_id' => $projectId,
             'contenu_id' => !empty($data['contenu_id']) ? (int) $data['contenu_id'] : null,
             'plateforme' => (string) ($data['plateforme'] ?? ''),
             'date_collecte' => (string) ($data['date_collecte'] ?? null),
@@ -204,12 +225,14 @@ class ReportingMetricModel extends Model {
         $params = [];
         $where = $this->buildFiltersWhere($filters, $params);
 
-        $sql = 'SELECT rm.*, c.nom AS campagne_nom, ct.sujet AS publication_titre,
-            COALESCE(CAST(rm.contenu_id AS CHAR), CONCAT("manual-", rm.id)) AS publication_id,
+        $sql = 'SELECT rm.*, c.nom AS campagne_nom,
+            COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication_titre,
+            COALESCE(CAST(rm.contenu_id AS CHAR), CONCAT("social-", rm.social_publication_id), CONCAT("manual-", rm.id)) AS publication_id,
                 DATE_FORMAT(rm.date_collecte, "%Y-%m") AS periode_analysee
             FROM reporting_metrics rm
             LEFT JOIN campagnes c ON c.id = rm.campagne_id
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
+            LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
             ' . $where . '
             ORDER BY rm.date_collecte DESC, rm.id DESC
             LIMIT ' . max(1, (int) $limit);
@@ -548,8 +571,9 @@ class ReportingMetricModel extends Model {
     private function buildFiltersWhere(array $filters, array &$params, $requireDate = false) {
         $clauses = [];
         $scope=AgencyAccessPolicy::clientSqlScope('scope_client','analytics','analytics_metrics');
-        $clauses[]='EXISTS (SELECT 1 FROM campagnes scope_campaign JOIN clients scope_client ON scope_client.id=scope_campaign.client_id WHERE scope_campaign.id=rm.campagne_id AND '.$scope['sql'].')';
-        $params=array_merge($params,$scope['params']);
+        $projectScope=AgencyAccessPolicy::clientSqlScope('project_client','analytics','analytics_projects');
+        $clauses[]='(EXISTS (SELECT 1 FROM campagnes scope_campaign JOIN clients scope_client ON scope_client.id=scope_campaign.client_id WHERE scope_campaign.id=rm.campagne_id AND '.$scope['sql'].') OR EXISTS (SELECT 1 FROM projets scope_project JOIN clients project_client ON project_client.id=scope_project.client_id WHERE scope_project.id=rm.project_id AND '.$projectScope['sql'].'))';
+        $params=array_merge($params,$scope['params'],$projectScope['params']);
 
         $campagneId = (int) ($filters['campagne_id'] ?? 0);
         if ($campagneId > 0) {
@@ -602,7 +626,7 @@ class ReportingMetricModel extends Model {
 
         $sql = 'SELECT
                 COALESCE(rm.contenu_id, 0) AS contenu_id,
-                COALESCE(ct.sujet, "Publication non rattachee") AS publication,
+                COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions,
                 SUM(COALESCE(rm.couverture, 0)) AS couverture,
@@ -615,8 +639,9 @@ class ReportingMetricModel extends Model {
                 AVG(COALESCE(rm.engagement_rate, 0)) AS engagement_rate_moyen
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
+            LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
             ' . $where . '
-            GROUP BY rm.contenu_id, ct.sujet
+            GROUP BY rm.contenu_id, rm.social_publication_id, ct.sujet, sp.master_title
             ORDER BY vues DESC';
 
         $stmt = $this->db->prepare($sql);
@@ -631,7 +656,7 @@ class ReportingMetricModel extends Model {
         $sql = 'SELECT
                 DATE_FORMAT(rm.date_collecte, "%Y-%m") AS mois,
                 rm.plateforme,
-                COALESCE(ct.sujet, "Publication non rattachee") AS publication,
+                COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions_total,
                 AVG(rm.impressions) AS impressions_moyenne,
@@ -645,8 +670,9 @@ class ReportingMetricModel extends Model {
                 AVG(COALESCE(rm.engagement_rate, 0)) AS engagement_rate_moyen
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
+            LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
             ' . $where . '
-            GROUP BY DATE_FORMAT(rm.date_collecte, "%Y-%m"), rm.plateforme, ct.sujet
+            GROUP BY DATE_FORMAT(rm.date_collecte, "%Y-%m"), rm.plateforme, rm.social_publication_id, ct.sujet, sp.master_title
             ORDER BY mois DESC, plateforme ASC, publication ASC';
 
         $stmt = $this->db->prepare($sql);
@@ -915,7 +941,7 @@ class ReportingMetricModel extends Model {
     }
 
     private function assertMetricAnalyticsAccess(int $metricId,bool $write=false): void {
-        $stmt=$this->db->prepare('SELECT rm.*,cp.client_id,cl.tenant_id,cl.organization_id FROM reporting_metrics rm JOIN campagnes cp ON cp.id=rm.campagne_id JOIN clients cl ON cl.id=cp.client_id WHERE rm.id=:id LIMIT 1');
+        $stmt=$this->db->prepare('SELECT rm.*,COALESCE(cp.client_id,pr.client_id) client_id,cl.tenant_id,cl.organization_id FROM reporting_metrics rm LEFT JOIN campagnes cp ON cp.id=rm.campagne_id LEFT JOIN projets pr ON pr.id=rm.project_id JOIN clients cl ON cl.id=COALESCE(cp.client_id,pr.client_id) WHERE rm.id=:id LIMIT 1');
         $stmt->execute(['id'=>$metricId]);
         AgencyAccessPolicy::assertRecordCapability('reporting_metrics',$stmt->fetch(PDO::FETCH_ASSOC)?:null,'analytics',$write);
     }

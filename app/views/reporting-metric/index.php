@@ -101,8 +101,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 <section class="panel">
     <div class="panel-head">
         <div>
-            <h2>Collecte KPI manuelle</h2>
-            <p class="panel-subtitle">Formulaire dynamique par reseau. La periode analysee est calculee automatiquement a partir de la date de collecte.</p>
+            <h2>Statistiques & rapports</h2>
+            <p class="panel-subtitle">Analysez les publications collectées automatiquement et exportez des rapports prêts à partager.</p>
         </div>
         <div class="form-actions">
             <a class="button" href="<?= htmlspecialchars(report_export_url('excel', 'flat', $filterQuery)) ?>">Excel analyse (flat)</a>
@@ -160,7 +160,9 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 </section>
 
 <?php if ($canManage): ?>
-<section class="panel" style="margin-top:14px;">
+<details class="panel" style="margin-top:14px;">
+    <summary style="cursor:pointer;font-weight:700;">Saisie manuelle de secours</summary>
+<section style="margin-top:12px;">
     <div class="panel-head">
         <div>
             <h2>Nouvelle collecte manuelle</h2>
@@ -171,7 +173,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>" class="grid-form" id="kpi-form">
         <label>
             Campagne
-            <select name="campagne_id" required>
+            <select name="campagne_id">
                 <option value="">Selectionner</option>
                 <?php foreach ($campaignOptions as $id => $label): ?>
                     <option value="<?= (int) $id ?>"><?= htmlspecialchars((string) $label) ?></option>
@@ -213,13 +215,14 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </div>
     </form>
 </section>
+</details>
 <?php endif; ?>
 
 <section class="panel" style="margin-top:14px;">
     <div class="panel-head">
         <div>
-            <h2>Dashboard KPI</h2>
-            <p class="panel-subtitle">Analyse automatique des performances: score, croissance, comparaison reseaux, top et faibles publications.</p>
+            <h2>Vue d’ensemble des performances</h2>
+            <p class="panel-subtitle">Évolution, comparaison par réseau, publications fortes et points à optimiser.</p>
         </div>
     </div>
 
