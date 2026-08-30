@@ -380,6 +380,10 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     var forms = document.querySelectorAll('form');
     forms.forEach(function (form) {
         form.addEventListener('submit', function (event) {
+            if (form.hasAttribute('data-no-global-loader')) {
+                return;
+            }
+
             if (!form.checkValidity()) {
                 event.preventDefault();
                 if (window.AppUI && typeof window.AppUI.toast === 'function') {
