@@ -25,7 +25,7 @@
         if (button) { button.disabled = true; button.textContent = 'Collecte en cours…'; }
         if (feedback) feedback.textContent = '';
         const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), 45000);
+        const timeoutId = window.setTimeout(() => controller.abort(), 60000);
         try {
             const response = await fetch(form.action || window.location.href, {
                 method: 'POST',
@@ -42,8 +42,8 @@
             window.setTimeout(() => { if (button) button.textContent = initialLabel; }, 3500);
         } catch (error) {
             if (feedback) feedback.textContent = error && error.name === 'AbortError'
-                ? ' La collecte Meta a dépassé 45 secondes. Vous pouvez réessayer sans recharger la page.'
-                : ' Échec de la collecte. Réessayez.';
+                ? ' La collecte Meta a dépassé 60 secondes. Vous pouvez réessayer sans recharger la page.'
+                : ' ' + (error && error.message ? error.message : 'Échec de la collecte. Réessayez.');
             if (button) button.textContent = initialLabel;
         } finally {
             window.clearTimeout(timeoutId);
