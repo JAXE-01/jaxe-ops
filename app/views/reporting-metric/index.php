@@ -103,8 +103,7 @@ $barMax = max(1, max(array_map(static function ($item) {
 $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 ?>
 <style>
-.social-reporting-actions{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}.social-reporting-actions form{margin:0}.social-reporting-actions summary{list-style:none;cursor:pointer}.social-history-form{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:10px;align-items:end;margin-top:10px;padding:14px;border:1px solid #dce6f0;border-radius:14px;background:#f8fbfe}.social-history-form label{display:grid;gap:5px}
-.reporting-filter-row{display:grid!important;grid-template-columns:minmax(170px,1fr) minmax(210px,1.35fr) minmax(130px,.75fr) minmax(140px,.72fr) minmax(140px,.72fr) auto;gap:10px;align-items:end}.reporting-filter-row label{min-width:0}.reporting-filter-row select,.reporting-filter-row input{width:100%;box-sizing:border-box}.reporting-filter-row.is-loading{opacity:.62;pointer-events:none}@media(max-width:1100px){.reporting-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.reporting-filter-row{grid-template-columns:1fr}}
+.report-icon-actions,.social-reporting-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.social-reporting-actions{margin:10px 0 14px}.social-reporting-actions form{margin:0}.social-reporting-actions details{position:relative}.report-icon-button{position:relative;display:inline-grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #dbe5ee;border-radius:10px;background:#fff;color:#3d5872;cursor:pointer;text-decoration:none;transition:.15s}.report-icon-button:hover{border-color:#9bbbd6;background:#f4f9fd;color:#1f5f93}.report-icon-button.primary{background:#244f78;color:#fff;border-color:#244f78}.report-icon-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.report-icon-button[data-format]::after{content:attr(data-format);position:absolute;right:-4px;bottom:-4px;padding:1px 3px;border-radius:4px;background:#eef3f7;color:#526b82;font-size:7px;font-weight:800}.social-reporting-actions summary{list-style:none}.social-reporting-actions summary::-webkit-details-marker{display:none}.social-history-form{position:absolute;z-index:20;left:0;top:44px;display:grid;grid-template-columns:repeat(3,minmax(130px,1fr)) auto;gap:8px;align-items:end;width:min(720px,80vw);padding:12px;border:1px solid #dce6f0;border-radius:12px;background:#fff;box-shadow:0 16px 38px #17345222}.social-history-form label{display:grid;gap:4px;font-size:11px}.reporting-filter-row{display:grid!important;grid-template-columns:minmax(150px,1fr) minmax(190px,1.35fr) minmax(110px,.7fr) minmax(130px,.7fr) minmax(130px,.7fr) auto;gap:8px;align-items:end;padding-top:12px;border-top:1px solid #edf1f5}.reporting-filter-row label{min-width:0;font-size:11px}.reporting-filter-row select,.reporting-filter-row input{width:100%;box-sizing:border-box}.reporting-filter-row.is-loading{opacity:.62;pointer-events:none}#reporting-results>.panel{padding:20px}#reporting-results .stat-card{padding:14px 16px;border:0;border-left:2px solid #80b8e6;border-radius:8px;box-shadow:none;background:#f8fafc}#reporting-results .stat-value{font-size:clamp(24px,3vw,34px)}#reporting-results .detail-card{padding:13px;border-color:#e7edf3;border-radius:10px;box-shadow:none}#reporting-results svg{display:block;max-width:100%;border-radius:10px}#reporting-results svg rect:first-child{fill:#fafcfe}#reporting-results .requirement-list{display:flex;gap:6px;overflow:auto}#reporting-results .requirement-item{min-width:max-content;padding:7px 10px;border:0;background:#f1f7f4}.reporting-filter-row .form-actions{gap:5px}.reporting-filter-row .report-icon-button{width:36px;height:36px}@media(max-width:1100px){.reporting-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.reporting-filter-row{grid-template-columns:1fr}.social-history-form{position:fixed;left:4vw;top:20vh;width:92vw;grid-template-columns:1fr}.report-icon-actions{max-width:100%}}
 </style>
 
 <section class="panel">
@@ -113,25 +112,20 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <h2>Statistiques & rapports</h2>
             <p class="panel-subtitle">Analysez les publications collectées automatiquement et exportez des rapports prêts à partager.</p>
         </div>
-        <div class="form-actions">
-            <a class="button" href="<?= htmlspecialchars(report_export_url('excel', 'flat', $filterQuery)) ?>">Excel analyse (flat)</a>
-            <a class="button" href="<?= htmlspecialchars(report_export_url('pdf', 'client', $filterQuery)) ?>">PDF client</a>
-            <a class="button secondary" href="<?= htmlspecialchars(report_export_url('csv', 'individual', $filterQuery)) ?>">CSV individuel</a>
-            <a class="button secondary" href="<?= htmlspecialchars(report_export_url('pdf', 'individual', $filterQuery)) ?>">PDF individuel</a>
-            <a class="button secondary" href="<?= htmlspecialchars(report_export_url('csv', 'publication', $filterQuery)) ?>">CSV par publication</a>
-            <a class="button secondary" href="<?= htmlspecialchars(report_export_url('pdf', 'publication', $filterQuery)) ?>">PDF par publication</a>
-            <a class="button secondary" href="<?= htmlspecialchars(report_export_url('csv', 'monthly', $filterQuery)) ?>">CSV mensuel</a>
-            <a class="button secondary" href="<?= htmlspecialchars(report_export_url('pdf', 'monthly', $filterQuery)) ?>">PDF mensuel</a>
+        <div class="report-icon-actions" aria-label="Exporter les statistiques">
+            <?php foreach([['excel','flat','XLS','Exporter l’analyse Excel'],['pdf','client','PDF','Exporter le rapport client'],['csv','individual','CSV','Exporter les données individuelles'],['pdf','individual','PDF','Exporter le PDF individuel'],['csv','publication','CSV','Exporter par publication'],['pdf','publication','PDF','Exporter le PDF par publication'],['csv','monthly','CSV','Exporter le rapport mensuel'],['pdf','monthly','PDF','Exporter le PDF mensuel']] as $export): ?>
+            <a class="report-icon-button" data-format="<?= $export[2] ?>" href="<?= htmlspecialchars(report_export_url($export[0],$export[1],$filterQuery)) ?>" title="<?= htmlspecialchars($export[3]) ?>" aria-label="<?= htmlspecialchars($export[3]) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg></a>
+            <?php endforeach; ?>
         </div>
     </div>
 
     <?php if ($canManage): ?>
     <div class="social-reporting-actions">
         <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/collect-social-metrics')) ?>">
-            <button class="button" type="submit">↻ Collecter les KPI Meta</button>
+            <button class="report-icon-button primary" type="submit" title="Collecter les KPI Meta" aria-label="Collecter les KPI Meta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M6.2 9A7 7 0 0 1 18 6l2 5M4 13l2 5a7 7 0 0 0 11.8-3"/></svg></button>
         </form>
         <details>
-            <summary class="button secondary">Importer l’historique Meta</summary>
+            <summary class="report-icon-button" title="Importer l’historique Meta" aria-label="Importer l’historique Meta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg></summary>
             <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/import-social-history')) ?>" class="social-history-form">
                 <label>Page<select name="connection_id" required><option value="">Choisir</option><?php foreach($socialConnections as $connection):if(($connection['status']??'')!=='Connected'||!in_array($connection['provider']??'',['facebook','instagram'],true))continue;?><option value="<?= (int)$connection['id'] ?>"><?= htmlspecialchars(($connection['account_label']??'Page').' · '.ucfirst($connection['provider'])) ?></option><?php endforeach?></select></label>
                 <label>Du<input type="date" name="from" required value="<?= date('Y-m-d',strtotime('-90 days')) ?>"></label>
@@ -139,20 +133,10 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                 <button class="button" type="submit">Importer et collecter</button>
             </form>
         </details>
-        <a class="button secondary" href="<?= htmlspecialchars(route_url('/social-inbox')) ?>">Messages et commentaires →</a>
+        <a class="report-icon-button" href="<?= htmlspecialchars(route_url('/social-inbox')) ?>" title="Messages et commentaires" aria-label="Messages et commentaires"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Zm4 4h8M8 12h5"/></svg></a>
     </div>
     <?php endif; ?>
 
-    <?php if ($canManage): ?>
-    <div class="social-reporting-actions">
-        <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/collect-social-metrics')) ?>"><button class="button" type="submit">↻ Collecter les KPI Meta</button></form>
-        <details><summary class="button secondary">Importer l’historique Meta</summary><form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/import-social-history')) ?>" class="social-history-form">
-            <label>Page<select name="connection_id" required><option value="">Choisir</option><?php foreach($socialConnections as $connection):if(($connection['status']??'')!=='Connected'||!in_array($connection['provider']??'',['facebook','instagram'],true))continue;?><option value="<?= (int)$connection['id'] ?>"><?= htmlspecialchars(($connection['account_label']??'Page').' · '.ucfirst($connection['provider'])) ?></option><?php endforeach?></select></label>
-            <label>Du<input type="date" name="from" required value="<?= date('Y-m-d',strtotime('-90 days')) ?>"></label><label>Au<input type="date" name="to" required value="<?= date('Y-m-d') ?>"></label><button class="button" type="submit">Importer et collecter</button>
-        </form></details>
-        <a class="button secondary" href="<?= htmlspecialchars(route_url('/social-inbox')) ?>">Messages et commentaires →</a>
-    </div>
-    <?php endif; ?>
     <form class="compact-filters reporting-filter-row" id="reporting-filter-form" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
         <label>
             Campagne
@@ -197,8 +181,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <input type="date" name="to" value="<?= htmlspecialchars((string) ($filters['to'] ?? '')) ?>">
         </label>
         <div class="form-actions" style="align-self:flex-end;">
-            <button class="button secondary" type="submit">Filtrer</button>
-            <a class="button ghost" href="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">Reinitialiser</a>
+            <button class="report-icon-button primary" type="submit" title="Appliquer les filtres" aria-label="Appliquer les filtres"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/></svg></button>
+            <a class="report-icon-button" href="<?= htmlspecialchars(route_url('/reporting-metric')) ?>" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5M4 4v4.5h4.5"/></svg></a>
         </div>
     </form>
 </section>
@@ -255,7 +239,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </div>
 
         <div class="form-actions" style="grid-column: 1 / -1;">
-            <button class="button" type="submit">Enregistrer la collecte</button>
+            <button class="report-icon-button primary" type="submit" title="Enregistrer la collecte" aria-label="Enregistrer la collecte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5V4Zm3 0v6h8V4M8 20v-6h8v6"/></svg></button>
         </div>
     </form>
 </section>
@@ -300,7 +284,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 
     <?php if (!empty($analysisLineSeries)): ?>
         <div style="overflow-x:auto; margin-bottom:10px;">
-            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="260" aria-label="Evolution du score global">
+            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="168" aria-label="Evolution du score global">
                 <rect x="0" y="0" width="<?= $chartWidth ?>" height="<?= $chartHeight ?>" fill="#f7fbff"></rect>
                 <line x1="<?= $padding ?>" y1="<?= $padding ?>" x2="<?= $padding ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
                 <line x1="<?= $padding ?>" y1="<?= $padding + $plotHeight ?>" x2="<?= $padding + $plotWidth ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
@@ -312,7 +296,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 
     <?php if (!empty($analysisNetworkComparison)): ?>
         <div style="overflow-x:auto; margin-bottom:12px;">
-            <svg viewBox="0 0 <?= $barChartWidth ?> <?= $barChartHeight ?>" width="100%" height="260" aria-label="Comparaison reseaux">
+            <svg viewBox="0 0 <?= $barChartWidth ?> <?= $barChartHeight ?>" width="100%" height="168" aria-label="Comparaison reseaux">
                 <rect x="0" y="0" width="<?= $barChartWidth ?>" height="<?= $barChartHeight ?>" fill="#f7fbff"></rect>
                 <line x1="<?= $barPadding ?>" y1="<?= $barPadding + $barPlotHeight ?>" x2="<?= $barPadding + $barPlotWidth ?>" y2="<?= $barPadding + $barPlotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
                 <?php foreach ($analysisNetworkComparison as $index => $networkRow): ?>
@@ -360,7 +344,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 
     <?php if (!empty($growthSeries)): ?>
         <div style="overflow-x:auto; margin-bottom:10px;">
-            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="260" aria-label="Courbe KPI">
+            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="168" aria-label="Courbe KPI">
                 <rect x="0" y="0" width="<?= $chartWidth ?>" height="<?= $chartHeight ?>" fill="#f7fbff"></rect>
                 <line x1="<?= $padding ?>" y1="<?= $padding ?>" x2="<?= $padding ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
                 <line x1="<?= $padding ?>" y1="<?= $padding + $plotHeight ?>" x2="<?= $padding + $plotWidth ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
@@ -537,7 +521,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                     <?php if ($canManage): ?>
                         <td>
                             <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/delete/' . (int) ($row['id'] ?? 0))) ?>" onsubmit="return confirm('Supprimer cette collecte ?');">
-                                <button type="submit" class="button ghost">Supprimer</button>
+                                <button type="submit" class="report-icon-button" title="Supprimer cette collecte" aria-label="Supprimer cette collecte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v5m4-5v5"/></svg></button>
                             </form>
                         </td>
                     <?php endif; ?>
