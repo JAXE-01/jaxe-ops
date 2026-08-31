@@ -18,4 +18,27 @@ class SocialPublishingController extends Controller {
         }catch(Throwable$e){$this->flash('error',$e->getMessage());}$this->redirect('/social-publishing');}
         $data=$this->model->dashboardData(WorkingMonth::resolve());$this->render('social-publishing/index',array_merge($data,['pageTitle'=>'Publication multiréseau','clients'=>$this->model->clients(),'projects'=>$this->model->projects(),'providers'=>SocialPublishingModel::PROVIDERS,'canManage'=>$this->can('publishing.manage'),'canApprove'=>$this->can('publishing.approve')]));
     }
-}
+
+    public function collectAllMetrics(): void {
+        if (!$this->isPost()) { http_response_code(405); header('Allow: POST'); echo 'Methode non autorisee.'; return; }
+        $this->requirePermission('publishing.manage');
+        try {
+            $result=(new SocialMetricsCollectorService())->collectPublished(TenantGuard::tenantId(),(int)$this->currentUser()['id'],50);
+            $message=$result['collected'].' destination(s) actualisee(s).';
+            if($result['failed']){$message.=' '.$result['failed'].' echec(s).';$errors=array_values(array_unique(array_filter(array_map('trim',(array)($result['errors']??[])))));if($errors)$message.=' Motif : '.implode(' | ',array_slice($errors,0,3));}
+            elseif(!$result['collected']){$message='Aucune destination publiee eligible a la collecte.';}
+            $this->respondJson(['success'=>$result['collected']>0,'message'=>$message]+$result);
+        } catch(Throwable $e) { $this->respondJson(['success'=>false,'message'=>$e->getMessage()],500); }
+    }
+
+    public function importHistory(): void {
+        if (!$this->isPost()) { http_response_code(405); header('Allow: POST'); echo 'Methode non autorisee.'; return; }
+        $this->requirePermission('publishing.manage');
+        try {
+            $result=(new SocialMetricsCollectorService())->importHistory((int)($_POST['connection_id']??0),TenantGuard::tenantId(),(int)$this->currentUser()['id'],(string)($_POST['from']??''),(string)($_POST['to']??''),100);
+            $message=$result['imported'].' publication(s) importee(s), '.$result['existing'].' deja connue(s), '.$result['collected'].' collecte(s) KPI.';
+            if($result['failed'])$message.=' '.$result['failed'].' echec(s).';
+            $this->flash($result['imported']||$result['collected']?'success':'error',$message);
+        } catch(Throwable $e) { $this->flash('error',$e->getMessage()); }
+        $this->redirect('/social-publishing');
+    }}

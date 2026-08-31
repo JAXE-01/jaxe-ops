@@ -36,6 +36,11 @@ class SocialMetricsCollectorService {
         $impressions = max(0, (int)($metrics['impressions'] ?? 0));
         $engagement = $impressions > 0 ? round(($interactions / $impressions) * 100, 4) : null;
 
+        // One API snapshot per target and day: repeated manual clicks refresh it instead of inflating reports.
+        $cleanup = $this->db->prepare('DELETE FROM reporting_metrics
+            WHERE tenant_id=:tenant AND social_target_id=:target AND source="api" AND date_collecte=CURDATE()');
+        $cleanup->execute(['tenant' => $tenantId, 'target' => $targetId]);
+
         $insert = $this->db->prepare('INSERT INTO reporting_metrics
             (tenant_id,campagne_id,project_id,contenu_id,social_publication_id,social_target_id,source,
              plateforme,date_collecte,collected_at,impressions,couverture,vues,likes,commentaires,partages,
@@ -96,6 +101,98 @@ class SocialMetricsCollectorService {
         return $result;
     }
 
+    public function importHistory(int $connectionId, int $tenantId, ?int $userId, string $from, string $to, int $limit = 100): array {
+        $fromDate = DateTimeImmutable::createFromFormat('!Y-m-d', $from);
+        $toDate = DateTimeImmutable::createFromFormat('!Y-m-d', $to);
+        if (!$fromDate || !$toDate || $fromDate > $toDate) throw new RuntimeException('Periode historique invalide.');
+        if ($fromDate->diff($toDate)->days > 366) throw new RuntimeException('Importez au maximum 12 mois a la fois.');
+        $limit = max(1, min(250, $limit));
+
+        $stmt = $this->db->prepare('SELECT * FROM social_connections
+            WHERE id=:id AND tenant_id=:tenant AND status="Connected"
+              AND provider IN ("facebook","instagram") LIMIT 1');
+        $stmt->execute(['id'=>$connectionId,'tenant'=>$tenantId]);
+        $connection = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$connection) throw new RuntimeException('Page Meta connectee introuvable.');
+        if (empty($connection['external_account_id'])) throw new RuntimeException('Identifiant Meta de la Page absent.');
+
+        $token = CryptoService::decrypt((string)$connection['access_token_encrypted']);
+        if ($token === '') throw new RuntimeException('Jeton Meta absent ou illisible.');
+        $provider = (string)$connection['provider'];
+        $path = '/'.rawurlencode((string)$connection['external_account_id']).($provider === 'instagram' ? '/media' : '/posts');
+        $fields = $provider === 'instagram'
+            ? 'id,caption,media_type,timestamp,permalink'
+            : 'id,message,created_time,permalink_url,shares,comments.limit(0).summary(true),reactions.limit(0).summary(true)';
+        $params = [
+            'fields'=>$fields,
+            'since'=>$fromDate->format('Y-m-d'),
+            'until'=>$toDate->modify('+1 day')->format('Y-m-d'),
+            'limit'=>min(100,$limit),
+            'access_token'=>$token,
+        ];
+
+        $items=[]; $after=null;
+        do {
+            if ($after !== null) $params['after']=$after; else unset($params['after']);
+            $page=$this->graph($path,$params);
+            foreach ((array)($page['data']??[]) as $item) {
+                if (is_array($item) && !empty($item['id'])) $items[]=$item;
+                if (count($items) >= $limit) break 2;
+            }
+            $after=(string)($page['paging']['cursors']['after']??'');
+            if ($after==='') $after=null;
+        } while ($after !== null);
+
+        $result=['found'=>count($items),'imported'=>0,'existing'=>0,'collected'=>0,'failed'=>0,'errors'=>[]];
+        $find=$this->db->prepare('SELECT t.id FROM social_publication_targets t
+            JOIN social_publications p ON p.id=t.publication_id
+            WHERE p.tenant_id=:tenant AND t.connection_id=:connection AND t.external_post_id=:external LIMIT 1');
+        $insertPublication=$this->db->prepare('INSERT INTO social_publications
+            (tenant_id,organization_id,client_id,project_id,content_id,master_title,master_caption,publish_mode,
+             scheduled_at,approval_status,approved_by,approved_at,created_by)
+            VALUES (:tenant,:organization,:client,NULL,NULL,:title,:caption,"Now",:published,"Approved",:user,:published,:user)');
+        $insertTarget=$this->db->prepare('INSERT INTO social_publication_targets
+            (publication_id,connection_id,provider,adapted_caption,status,attempts,next_attempt_at,published_at,
+             external_post_id,external_post_url)
+            VALUES (:publication,:connection,:provider,:caption,"Published",1,:published,:published,:external,:url)');
+
+        foreach ($items as $item) {
+            try {
+                $external=(string)$item['id'];
+                $find->execute(['tenant'=>$tenantId,'connection'=>$connectionId,'external'=>$external]);
+                $targetId=(int)$find->fetchColumn();
+                if ($targetId) {
+                    $result['existing']++;
+                } else {
+                    $publishedRaw=(string)($item[$provider==='instagram'?'timestamp':'created_time']??'now');
+                    $published=date('Y-m-d H:i:s',strtotime($publishedRaw)?:time());
+                    $caption=trim((string)($item[$provider==='instagram'?'caption':'message']??''));
+                    $title='Import '.ucfirst($provider).' · '.date('d/m/Y',strtotime($published));
+                    $this->db->beginTransaction();
+                    $insertPublication->execute([
+                        'tenant'=>$tenantId,'organization'=>(int)($connection['organization_id']??0)?:null,
+                        'client'=>(int)$connection['client_id'],'title'=>$title,'caption'=>$caption,
+                        'published'=>$published,'user'=>$userId,
+                    ]);
+                    $publicationId=(int)$this->db->lastInsertId();
+                    $insertTarget->execute([
+                        'publication'=>$publicationId,'connection'=>$connectionId,'provider'=>$provider,
+                        'caption'=>$caption,'published'=>$published,'external'=>$external,
+                        'url'=>trim((string)($item[$provider==='instagram'?'permalink':'permalink_url']??''))?:null,
+                    ]);
+                    $targetId=(int)$this->db->lastInsertId();
+                    $this->db->commit();
+                    $result['imported']++;
+                }
+                $this->collectTarget($targetId,$tenantId,$userId);
+                $result['collected']++;
+            } catch (Throwable $exception) {
+                if ($this->db->inTransaction()) $this->db->rollBack();
+                $result['failed']++; $result['errors'][]=$exception->getMessage();
+            }
+        }
+        return $result;
+    }
     private function resolveContext(array $target): array {
         $contentId = (int)($target['content_id'] ?? 0) ?: null;
         $projectId = (int)($target['project_id'] ?? 0) ?: null;

@@ -11,3 +11,18 @@
 .meta-projects{margin:.55rem 0 1rem;padding:.7rem;border:1px solid #dbe5f0;border-radius:10px}.meta-projects legend{padding:0 .35rem;color:#536a86;font-size:12px;font-weight:800}.meta-projects label{display:block;margin:.4rem 0;font-size:13px}
 
 .workspace-switch{display:flex;gap:8px;margin-top:12px}.workspace-switch a{flex:1;padding:8px;text-align:center;border:1px solid #64748b;border-radius:8px;color:#fff}.workspace-switch a.active{background:#234766}.logout-form{margin:0}.logout-form .nav-icon-button{width:100%;cursor:pointer}
+
+/* KPI collection and historical audit import */
+.social-kpi-tools{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+.social-kpi-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.social-kpi-feedback{color:#5f7287;font-size:.85rem;align-self:center}
+.social-history-import{position:relative}
+.social-history-import>summary{list-style:none;cursor:pointer;padding:11px 16px;border:1px solid #ccdbe8;border-radius:999px;background:#fff;color:#31526f;font-weight:800}
+.social-history-import>summary::-webkit-details-marker{display:none}
+.social-history-import[open]>summary{border-radius:14px 14px 0 0}
+.social-history-import form{display:grid;grid-template-columns:minmax(220px,1.5fr) repeat(2,minmax(145px,.7fr)) auto;gap:10px;align-items:end;width:min(900px,calc(100vw - 40px));padding:14px;border:1px solid #ccdbe8;border-radius:0 14px 14px;background:#fff;box-shadow:0 16px 38px rgba(19,45,75,.12)}
+.social-history-import label{display:grid;gap:5px;color:#30465d;font-size:.78rem;font-weight:800}
+.social-history-import input,.social-history-import select{width:100%;box-sizing:border-box;border:1px solid #cedbe7;border-radius:10px;padding:10px;background:#fff;color:#18334f}
+.social-history-import small{grid-column:1/-1;color:#718398}
+@media(max-width:850px){.social-history-import form{grid-template-columns:1fr 1fr}.social-history-import form label:first-child{grid-column:1/-1}}
+@media(max-width:560px){.social-history-import form{grid-template-columns:1fr}.social-history-import form label:first-child,.social-history-import small{grid-column:auto}}
