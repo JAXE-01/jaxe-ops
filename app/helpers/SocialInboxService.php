@@ -7,14 +7,13 @@ class SocialInboxService {
         $stmt=$this->db->prepare("SELECT id,account_label,external_account_id,scopes_json FROM social_connections WHERE tenant_id=:tenant AND provider='facebook' AND status='Connected' ORDER BY account_label");
         $stmt->execute(['tenant'=>$tenantId]);return$stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    public function inbox(int $connectionId,int $tenantId): array {
+    public function inbox(int $connectionId,int $tenantId,string $type='comments'): array {
         $connection=$this->connection($connectionId,$tenantId);$token=$this->token($connection);$page=(string)$connection['external_account_id'];
-        $posts=$this->graph('GET','/'.$page.'/feed',['fields'=>'id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,parent}','limit'=>30,'access_token'=>$token]);
+        $posts=[];if($type==='comments'){$response=$this->graph('GET','/'.$page.'/feed',['fields'=>'id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,parent}','limit'=>30,'access_token'=>$token]);$posts=(array)($response['data']??[]);}
         $conversations=[];$messageError=null;
-        try{$response=$this->graph('GET','/'.$page.'/conversations',['fields'=>'id,updated_time,participants,messages.limit(25){id,message,from,to,created_time}','limit'=>30,'access_token'=>$token]);$conversations=(array)($response['data']??[]);}
-        catch(Throwable $e){$messageError=$e->getMessage();}
+        if($type==='messages')try{$response=$this->graph('GET','/'.$page.'/conversations',['fields'=>'id,updated_time,participants,messages.limit(25){id,message,from,to,created_time}','limit'=>30,'access_token'=>$token]);$conversations=(array)($response['data']??[]);}catch(Throwable $e){$messageError=$e->getMessage();}
         $scopes=(array)json_decode((string)($connection['scopes_json']??'[]'),true);$metadata=(array)json_decode((string)($connection['metadata_json']??'{}'),true);$tasks=(array)($metadata['tasks']??[]);
-        return['connection'=>$connection,'posts'=>(array)($posts['data']??[]),'conversations'=>$conversations,'message_error'=>$messageError,'message_access'=>[
+        return['connection'=>$connection,'posts'=>$posts,'conversations'=>$conversations,'message_error'=>$messageError,'message_access'=>[
             'scope_granted'=>in_array('pages_messaging',$scopes,true),'task_granted'=>in_array('MESSAGING',$tasks,true),'tasks'=>$tasks,
         ]];
     }

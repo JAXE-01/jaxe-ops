@@ -18,7 +18,7 @@ class PdfExportService {
     public static function outputTablePdf($title, array $rows, array $columns, $fileName = 'export.pdf') {
         if (class_exists('Dompdf\\Dompdf')) {
             $html = self::buildTableHtml($title, $rows, $columns);
-            self::renderWithDompdf($html, $fileName);
+            self::renderWithDompdf($html, $fileName, 'landscape');
             return;
         }
 
@@ -123,7 +123,7 @@ class PdfExportService {
 
         if (class_exists('Dompdf\\Dompdf')) {
             $html = self::buildKpiClientReportHtml($title, $cards, $top, $weak, $network, $insights);
-            self::renderWithDompdf($html, $fileName);
+            self::renderWithDompdf($html, $fileName, 'portrait');
             return;
         }
 
@@ -164,10 +164,16 @@ class PdfExportService {
     }
 
     private static function renderWithDompdf($html, $fileName, string $orientation = 'landscape') {
-        $dompdf = new Dompdf\Dompdf();
+        $options=new Dompdf\Options();
+        $options->set('defaultFont','DejaVu Sans');
+        $options->set('isRemoteEnabled',false);
+        $options->set('isHtml5ParserEnabled',true);
+        $dompdf = new Dompdf\Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', $orientation);
         $dompdf->render();
+        $canvas=$dompdf->getCanvas();$font=$dompdf->getFontMetrics()->getFont('DejaVu Sans','normal');
+        $canvas->page_text($canvas->get_width()-92,$canvas->get_height()-24,'Page {PAGE_NUM}/{PAGE_COUNT}',$font,7,[0.38,0.45,0.55]);
 
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="' . $fileName . '"');
@@ -275,14 +281,15 @@ class PdfExportService {
         <head>
             <meta charset="UTF-8">
             <style>
-                body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10px; color: #1e293b; margin: 20px; }
-                .hero { background: linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%); color: #fff; border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
-                .hero h1 { margin: 0 0 4px; font-size: 18px; }
+                @page { margin: 24px 28px 34px; }
+                body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 9.5px; color: #20344d; margin: 0; }
+                .hero { border-left: 4px solid #3977ad; background: #f3f7fa; padding: 14px 16px; margin-bottom: 10px; }
+                .hero h1 { margin: 0 0 4px; font-size: 17px; color:#173451; }
                 .hero p { margin: 0; font-size: 10px; opacity: 0.96; }
                 .cards { margin: 10px 0 12px; }
                 .cards table { width: 100%; border-collapse: separate; border-spacing: 8px; }
-                .cards td { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px; }
-                .section { border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #f8fafc; }
+                .cards td { background: #f8fafc; border-left: 2px solid #80b8e6; padding: 9px; }
+                .section { border-top: 1px solid #dce5ed; padding: 9px 2px; margin-bottom: 6px; page-break-inside:avoid; }
                 .section h3 { margin: 0 0 6px; font-size: 12px; color: #0f172a; }
                 .row { margin: 3px 0; }
             </style>
