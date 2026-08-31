@@ -13,7 +13,10 @@ class SocialInboxService {
         $conversations=[];$messageError=null;
         try{$response=$this->graph('GET','/'.$page.'/conversations',['fields'=>'id,updated_time,participants,messages.limit(25){id,message,from,to,created_time}','limit'=>30,'access_token'=>$token]);$conversations=(array)($response['data']??[]);}
         catch(Throwable $e){$messageError=$e->getMessage();}
-        return['connection'=>$connection,'posts'=>(array)($posts['data']??[]),'conversations'=>$conversations,'message_error'=>$messageError];
+        $scopes=(array)json_decode((string)($connection['scopes_json']??'[]'),true);$metadata=(array)json_decode((string)($connection['metadata_json']??'{}'),true);$tasks=(array)($metadata['tasks']??[]);
+        return['connection'=>$connection,'posts'=>(array)($posts['data']??[]),'conversations'=>$conversations,'message_error'=>$messageError,'message_access'=>[
+            'scope_granted'=>in_array('pages_messaging',$scopes,true),'task_granted'=>in_array('MESSAGING',$tasks,true),'tasks'=>$tasks,
+        ]];
     }
     public function replyComment(int $connectionId,int $tenantId,string $commentId,string $message): void {
         $connection=$this->connection($connectionId,$tenantId);$message=trim($message);if($message==='')throw new RuntimeException('Réponse vide.');

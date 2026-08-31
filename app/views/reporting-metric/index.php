@@ -14,6 +14,8 @@ $networkConfig = is_array($networkConfig ?? null) ? $networkConfig : [];
 $defaultNetwork = (string) ($defaultNetwork ?? (array_key_first($networkConfig) ?: 'facebook'));
 $canManage = !empty($canManage);
 $socialConnections = is_array($socialConnections ?? null) ? $socialConnections : [];
+$clientOptions = is_array($clientOptions ?? null) ? $clientOptions : [];
+$pageOptions = is_array($pageOptions ?? null) ? $pageOptions : [];
 $metricValue = static fn(array $row, string $key): string => !array_key_exists($key, $row) || $row[$key] === null
     ? '<span title="Métrique indisponible pour cette publication">—</span>'
     : number_format((int)$row[$key], 0, ',', ' ');
@@ -22,6 +24,8 @@ $filterQuery = http_build_query(array_filter([
     'campagne_id' => (int) ($filters['campagne_id'] ?? 0) > 0 ? (int) $filters['campagne_id'] : null,
     'publication_ref' => trim((string) ($filters['publication_ref'] ?? '')),
     'plateforme' => trim((string) ($filters['plateforme'] ?? '')),
+    'client_id' => (int)($filters['client_id']??0)?:null,
+    'connection_id' => (int)($filters['connection_id']??0)?:null,
     'from' => trim((string) ($filters['from'] ?? '')),
     'to' => trim((string) ($filters['to'] ?? '')),
 ], static function ($value) {
@@ -40,6 +44,9 @@ $viewValues = array_map(static function ($item) {
 $impressionValues = array_map(static function ($item) {
     return (int) ($item['impressions'] ?? 0);
 }, $growthSeries);
+$hasViewData=(bool)array_filter($growthSeries,static fn($item)=>array_key_exists('vues',$item)&&$item['vues']!==null);
+$hasImpressionData=(bool)array_filter($growthSeries,static fn($item)=>array_key_exists('impressions',$item)&&$item['impressions']!==null);
+$hasGrowthData=$hasViewData||$hasImpressionData;
 $maxY = max(1, max($viewValues ?: [0]), max($impressionValues ?: [0]));
 $chartWidth = 760;
 $chartHeight = 230;
@@ -105,6 +112,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 <style>
 .report-icon-actions,.social-reporting-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.social-reporting-actions{margin:10px 0 14px}.social-reporting-actions form{margin:0}.social-reporting-actions details{position:relative}.report-icon-button{position:relative;display:inline-grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #dbe5ee;border-radius:10px;background:#fff;color:#3d5872;cursor:pointer;text-decoration:none;transition:.15s}.report-icon-button:hover{border-color:#9bbbd6;background:#f4f9fd;color:#1f5f93}.report-icon-button.primary{background:#244f78;color:#fff;border-color:#244f78}.report-icon-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.report-icon-button[data-format]::after{content:attr(data-format);position:absolute;right:-4px;bottom:-4px;padding:1px 3px;border-radius:4px;background:#eef3f7;color:#526b82;font-size:7px;font-weight:800}.social-reporting-actions summary{list-style:none}.social-reporting-actions summary::-webkit-details-marker{display:none}.social-history-form{position:absolute;z-index:20;left:0;top:44px;display:grid;grid-template-columns:repeat(3,minmax(130px,1fr)) auto;gap:8px;align-items:end;width:min(720px,80vw);padding:12px;border:1px solid #dce6f0;border-radius:12px;background:#fff;box-shadow:0 16px 38px #17345222}.social-history-form label{display:grid;gap:4px;font-size:11px}.reporting-filter-row{display:grid!important;grid-template-columns:minmax(150px,1fr) minmax(190px,1.35fr) minmax(110px,.7fr) minmax(130px,.7fr) minmax(130px,.7fr) auto;gap:8px;align-items:end;padding-top:12px;border-top:1px solid #edf1f5}.reporting-filter-row label{min-width:0;font-size:11px}.reporting-filter-row select,.reporting-filter-row input{width:100%;box-sizing:border-box}.reporting-filter-row.is-loading{opacity:.62;pointer-events:none}#reporting-results>.panel{padding:20px}#reporting-results .stat-card{padding:14px 16px;border:0;border-left:2px solid #80b8e6;border-radius:8px;box-shadow:none;background:#f8fafc}#reporting-results .stat-value{font-size:clamp(24px,3vw,34px)}#reporting-results .detail-card{padding:13px;border-color:#e7edf3;border-radius:10px;box-shadow:none}#reporting-results svg{display:block;max-width:100%;border-radius:10px}#reporting-results svg rect:first-child{fill:#fafcfe}#reporting-results .requirement-list{display:flex;gap:6px;overflow:auto}#reporting-results .requirement-item{min-width:max-content;padding:7px 10px;border:0;background:#f1f7f4}.reporting-filter-row .form-actions{gap:5px}.reporting-filter-row .report-icon-button{width:36px;height:36px}@media(max-width:1100px){.reporting-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.reporting-filter-row{grid-template-columns:1fr}.social-history-form{position:fixed;left:4vw;top:20vh;width:92vw;grid-template-columns:1fr}.report-icon-actions{max-width:100%}}
 </style>
+<style>.reporting-filter-row{grid-template-columns:repeat(3,minmax(120px,1fr)) minmax(170px,1.25fr) repeat(3,minmax(105px,.72fr)) auto}.overview-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.overview-chart-grid>div{margin:0!important;min-width:0}@media(max-width:900px){.overview-chart-grid{grid-template-columns:1fr}}</style>
 
 <section class="panel">
     <div class="panel-head">
@@ -138,6 +146,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     <?php endif; ?>
 
     <form class="compact-filters reporting-filter-row" id="reporting-filter-form" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
+        <label>Client<select name="client_id"><option value="">Tous</option><?php foreach($clientOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['client_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
+        <label>Page<select name="connection_id"><option value="">Toutes</option><?php foreach($pageOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['connection_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
         <label>
             Campagne
             <select name="campagne_id">
@@ -282,6 +292,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </ul>
     <?php endif; ?>
 
+    <div class="overview-chart-grid">
     <?php if (!empty($analysisLineSeries)): ?>
         <div style="overflow-x:auto; margin-bottom:10px;">
             <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="168" aria-label="Evolution du score global">
@@ -312,6 +323,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             </svg>
         </div>
     <?php endif; ?>
+    </div>
 
     <div class="detail-grid" style="margin-bottom:12px;">
         <article class="detail-card">
@@ -342,7 +354,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </article>
     </div>
 
-    <?php if (!empty($growthSeries)): ?>
+    <?php if ($hasGrowthData): ?>
         <div style="overflow-x:auto; margin-bottom:10px;">
             <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="168" aria-label="Courbe KPI">
                 <rect x="0" y="0" width="<?= $chartWidth ?>" height="<?= $chartHeight ?>" fill="#f7fbff"></rect>
@@ -363,7 +375,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </article>
         <article class="stat-card">
             <span class="stat-label">Moyenne des vues</span>
-            <span class="stat-value"><?= number_format((float) ($impactStats['avg_views'] ?? 0), 1, ',', ' ') ?></span>
+            <span class="stat-value"><?= (int)($impactStats['sample_size']??0)>0?number_format((float)($impactStats['avg_views']??0),1,',',' '):'—' ?></span>
         </article>
     </div>
 

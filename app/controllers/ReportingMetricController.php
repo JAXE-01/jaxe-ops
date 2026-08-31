@@ -19,6 +19,8 @@ class ReportingMetricController extends Controller {
             'social_publication_id' => preg_match('/^social-(\d+)$/', $publicationRef, $match) ? (int) $match[1] : 0,
             'publication_ref' => $publicationRef,
             'plateforme' => strtolower(trim((string) ($_GET['plateforme'] ?? ''))),
+            'client_id' => (int)($_GET['client_id']??0),
+            'connection_id' => (int)($_GET['connection_id']??0),
             'from' => trim((string) ($_GET['from'] ?? '')),
             'to' => trim((string) ($_GET['to'] ?? '')),
         ];
@@ -48,6 +50,8 @@ class ReportingMetricController extends Controller {
             'publicationOptions' => $this->reportingMetricModel->getPublicationOptions($filters['campagne_id']),
             'socialPublicationOptions' => $this->reportingMetricModel->getSocialPublicationOptions($filters['campagne_id']),
             'platformOptions' => $this->reportingMetricModel->getPlatformOptions(),
+            'clientOptions' => $this->reportingMetricModel->getClientOptions(),
+            'pageOptions' => $this->reportingMetricModel->getPageOptions($filters['client_id']),
             'networkConfig' => $networkConfig,
             'defaultNetwork' => $defaultNetwork,
             'filters' => $filters,
@@ -142,7 +146,7 @@ class ReportingMetricController extends Controller {
             $rows = $this->reportingMetricModel->getExcelFlatRows($filters);
             $title = 'Export analyse KPI (flat)';
             $fileStem = 'analyse-kpi-flat';
-            $columns = ['Date_collecte', 'Publication_ID', 'Reseau', 'KPI', 'Valeur', 'Growth_rate', 'Daily_rate'];
+            $columns = ['Date_collecte','Date_publication','Client','Page','Publication_ID','Reseau','KPI','Valeur','Growth_rate','Daily_rate'];
         } elseif ($reportType === 'publication') {
             $rows = $this->reportingMetricModel->getPublicationAggregateReport($filters);
             $title = 'Rapport global par publication';
@@ -157,7 +161,7 @@ class ReportingMetricController extends Controller {
             $rows = $this->reportingMetricModel->getIndividualReportRows($filters);
             $title = 'Rapport individuel par publication';
             $fileStem = 'rapport-individuel';
-            $columns = ['id', 'campagne_nom', 'publication_titre', 'plateforme', 'date_collecte', 'periode_analysee', 'impressions', 'couverture', 'vues', 'likes', 'commentaires', 'partages', 'clics', 'ctr', 'engagement_rate', 'score_global', 'growth_rate', 'daily_rate', 'url_publication'];
+            $columns = ['id','client_nom','page_nom','campagne_nom','publication_titre','plateforme','date_publication','date_collecte','periode_analysee','impressions','couverture','vues','likes','commentaires','partages','clics','ctr','engagement_rate','score_global','growth_rate','daily_rate','url_publication'];
         }
 
         if ($format === 'pdf') {

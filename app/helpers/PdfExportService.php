@@ -571,6 +571,7 @@ class SimplePdfBuilder {
         $text = str_replace(["\xE2\x80\x98", "\xE2\x80\x99", "\xE2\x80\x9A", "\xE2\x80\x9B"], "'", $text);
         $text = str_replace(["\xE2\x80\x9C", "\xE2\x80\x9D", "\xE2\x80\x9E", "\xE2\x80\x9F"], '"', $text);
         $text = str_replace(["\xE2\x80\x93", "\xE2\x80\x94", "\xE2\x88\x92"], '-', $text);
+        $text = str_replace("\xC2\xB7", '-', $text);
 
         if (function_exists('mb_convert_encoding')) {
             $converted = @mb_convert_encoding($text, 'Windows-1252', 'UTF-8');

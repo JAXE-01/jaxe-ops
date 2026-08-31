@@ -11,6 +11,8 @@ $expectedMappings = [
     "'post_impressions_unique'=>'couverture'",
     "'post_clicks'=>'clics'",
     "'post_video_views','vues'",
+    "'post_media_view','vues'",
+    "'post_views','vues'",
     "'reach'=>'couverture'",
     "'views'=>'vues'",
     "'saved'=>'sauvegardes'",

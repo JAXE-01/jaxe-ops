@@ -230,9 +230,10 @@ class SocialMetricsCollectorService {
         foreach (['post_impressions'=>'impressions','post_impressions_unique'=>'couverture','post_clicks'=>'clics'] as $meta=>$local) {
             $this->collectInsight($metrics,$target,$token,$meta,$local);
         }
+        $this->collectInsight($metrics,$target,$token,'post_media_view','vues');
+        if($metrics['vues']===null)$this->collectInsight($metrics,$target,$token,'post_views','vues');
         $mediaType=strtolower((string)($data['attachments']['data'][0]['media_type']??''));
-        if(in_array($mediaType,['video','video_inline'],true))$this->collectInsight($metrics,$target,$token,'post_video_views','vues');
-        else{$metrics['vues']=null;$metrics['_availability']['vues']=['status'=>'unavailable','source'=>'post_video_views','reason'=>'Publication non vidéo'];}
+        if($metrics['vues']===null&&in_array($mediaType,['video','video_inline'],true))$this->collectInsight($metrics,$target,$token,'post_video_views','vues');
         return $metrics;
     }
 

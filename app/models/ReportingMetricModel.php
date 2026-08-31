@@ -93,6 +93,18 @@ class ReportingMetricModel extends Model {
         return $options;
     }
 
+    public function getClientOptions(): array {
+        $scope=AgencyAccessPolicy::clientSqlScope('c','analytics','analytics_metric_clients');
+        $stmt=$this->db->prepare('SELECT c.id,c.entreprise FROM clients c WHERE '.$scope['sql'].' ORDER BY c.entreprise');$stmt->execute($scope['params']);
+        $options=[];foreach($stmt->fetchAll(PDO::FETCH_ASSOC)as$row)$options[(int)$row['id']]=(string)$row['entreprise'];return$options;
+    }
+
+    public function getPageOptions(int $clientId=0): array {
+        $scope=AgencyAccessPolicy::clientSqlScope('c','analytics','analytics_metric_pages');
+        $stmt=$this->db->prepare('SELECT sc.id,sc.account_label,c.entreprise client_name FROM social_connections sc JOIN clients c ON c.id=sc.client_id WHERE sc.tenant_id=:tenant AND sc.status="Connected" AND (:client=0 OR sc.client_id=:client) AND '.$scope['sql'].' ORDER BY c.entreprise,sc.account_label');
+        $stmt->execute(array_merge(['tenant'=>TenantGuard::tenantId(),'client'=>$clientId],$scope['params']));$options=[];foreach($stmt->fetchAll(PDO::FETCH_ASSOC)as$row)$options[(int)$row['id']]=(string)$row['client_name'].' · '.(string)$row['account_label'];return$options;
+    }
+
     public function normalizePayload(array $data) {
         $network = strtolower(trim((string) ($data['plateforme'] ?? '')));
         $config = $this->getNetworkKpiConfig();
@@ -254,8 +266,11 @@ class ReportingMetricModel extends Model {
 
         $sql = 'SELECT rm.*, c.nom AS campagne_nom,
             COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication_titre,
+            COALESCE(DATE((SELECT spt.published_at FROM social_publication_targets spt WHERE spt.id=rm.social_target_id)),rm.date_collecte) AS date_publication,
+            (SELECT scl.entreprise FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id JOIN clients scl ON scl.id=sc.client_id WHERE spt.id=rm.social_target_id) AS client_nom,
+            (SELECT sc.account_label FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id WHERE spt.id=rm.social_target_id) AS page_nom,
             COALESCE(CAST(rm.contenu_id AS CHAR), CONCAT("social-", rm.social_publication_id), CONCAT("manual-", rm.id)) AS publication_id,
-                DATE_FORMAT(rm.date_collecte, "%Y-%m") AS periode_analysee
+                DATE_FORMAT(COALESCE(DATE((SELECT ppt.published_at FROM social_publication_targets ppt WHERE ppt.id=rm.social_target_id)),rm.date_collecte), "%Y-%m") AS periode_analysee
             FROM reporting_metrics rm
             LEFT JOIN campagnes c ON c.id = rm.campagne_id
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
@@ -276,7 +291,7 @@ class ReportingMetricModel extends Model {
         $sql = 'SELECT
                 rm.date_collecte,
                 SUM(rm.impressions) AS impressions,
-                SUM(COALESCE(rm.couverture, 0)) AS couverture,
+                SUM(rm.couverture) AS couverture,
                 SUM(rm.vues) AS vues,
                 SUM(rm.likes) AS likes,
                 SUM(rm.commentaires) AS commentaires,
@@ -530,6 +545,9 @@ class ReportingMetricModel extends Model {
             foreach ($kpis as $kpiName => $kpiValue) {
                 $flat[] = [
                     'Date_collecte' => (string) ($row['date_collecte'] ?? ''),
+                    'Date_publication' => (string)($row['date_publication']??''),
+                    'Client' => (string)($row['client_nom']??''),
+                    'Page' => (string)($row['page_nom']??''),
                     'Publication_ID' => (string) ($row['publication_id'] ?? ''),
                     'Reseau' => (string) ($row['plateforme'] ?? ''),
                     'KPI' => (string) $kpiName,
@@ -551,11 +569,11 @@ class ReportingMetricModel extends Model {
             ' . $where;
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = array_values(array_filter($stmt->fetchAll(PDO::FETCH_ASSOC),static fn($row)=>$row['vues']!==null));
 
         $yValues = [];
         foreach ($rows as $row) {
-            $yValues[] = (float) ($row['vues'] ?? 0);
+            $yValues[] = (float) $row['vues'];
         }
 
         $metrics = [
@@ -627,15 +645,20 @@ class ReportingMetricModel extends Model {
             $params['plateforme'] = $plateforme;
         }
 
+        $clientId=(int)($filters['client_id']??0);
+        if($clientId>0){$clauses[]='EXISTS (SELECT 1 FROM social_publication_targets ft JOIN social_connections fc ON fc.id=ft.connection_id WHERE ft.id=rm.social_target_id AND fc.client_id=:filter_client)';$params['filter_client']=$clientId;}
+        $connectionId=(int)($filters['connection_id']??0);
+        if($connectionId>0){$clauses[]='EXISTS (SELECT 1 FROM social_publication_targets ft WHERE ft.id=rm.social_target_id AND ft.connection_id=:filter_connection)';$params['filter_connection']=$connectionId;}
+
         $from = trim((string) ($filters['from'] ?? ''));
         if ($from !== '') {
-            $clauses[] = 'rm.date_collecte >= :date_from';
+            $clauses[] = 'COALESCE(DATE((SELECT fpt.published_at FROM social_publication_targets fpt WHERE fpt.id=rm.social_target_id)),rm.date_collecte) >= :date_from';
             $params['date_from'] = $from;
         }
 
         $to = trim((string) ($filters['to'] ?? ''));
         if ($to !== '') {
-            $clauses[] = 'rm.date_collecte <= :date_to';
+            $clauses[] = 'COALESCE(DATE((SELECT fpt.published_at FROM social_publication_targets fpt WHERE fpt.id=rm.social_target_id)),rm.date_collecte) <= :date_to';
             $params['date_to'] = $to;
         }
 
@@ -668,9 +691,9 @@ class ReportingMetricModel extends Model {
                 SUM(rm.likes) AS likes,
                 SUM(rm.commentaires) AS commentaires,
                 SUM(rm.partages) AS partages,
-                SUM(COALESCE(rm.clics, 0)) AS clics,
-                AVG(COALESCE(rm.ctr, 0)) AS ctr_moyen,
-                AVG(COALESCE(rm.engagement_rate, 0)) AS engagement_rate_moyen
+                SUM(rm.clics) AS clics,
+                AVG(rm.ctr) AS ctr_moyen,
+                AVG(rm.engagement_rate) AS engagement_rate_moyen
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
             LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
@@ -688,25 +711,25 @@ class ReportingMetricModel extends Model {
         $where = $this->buildFiltersWhere($filters, $params, true);
 
         $sql = 'SELECT
-                DATE_FORMAT(rm.date_collecte, "%Y-%m") AS mois,
+                DATE_FORMAT(COALESCE(DATE((SELECT mpt.published_at FROM social_publication_targets mpt WHERE mpt.id=rm.social_target_id)),rm.date_collecte), "%Y-%m") AS mois,
                 rm.plateforme,
                 COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions_total,
                 AVG(rm.impressions) AS impressions_moyenne,
-                SUM(COALESCE(rm.couverture, 0)) AS couverture_total,
-                AVG(COALESCE(rm.couverture, 0)) AS couverture_moyenne,
+                SUM(rm.couverture) AS couverture_total,
+                AVG(rm.couverture) AS couverture_moyenne,
                 SUM(rm.vues) AS vues_total,
                 AVG(rm.vues) AS vues_moyenne,
-                SUM(COALESCE(rm.clics, 0)) AS clics_total,
-                AVG(COALESCE(rm.clics, 0)) AS clics_moyenne,
-                AVG(COALESCE(rm.ctr, 0)) AS ctr_moyen,
-                AVG(COALESCE(rm.engagement_rate, 0)) AS engagement_rate_moyen
+                SUM(rm.clics) AS clics_total,
+                AVG(rm.clics) AS clics_moyenne,
+                AVG(rm.ctr) AS ctr_moyen,
+                AVG(rm.engagement_rate) AS engagement_rate_moyen
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
             LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
             ' . $where . '
-            GROUP BY DATE_FORMAT(rm.date_collecte, "%Y-%m"), rm.plateforme, rm.social_publication_id, ct.sujet, sp.master_title
+            GROUP BY mois, rm.plateforme, rm.social_publication_id, ct.sujet, sp.master_title
             ORDER BY mois DESC, plateforme ASC, publication ASC';
 
         $stmt = $this->db->prepare($sql);
