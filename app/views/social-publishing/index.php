@@ -30,7 +30,8 @@
             const response = await fetch(form.action || window.location.href, {
                 method: 'POST',
                 body: new FormData(form),
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                headers: {'Accept': 'application/json'},
+                credentials: 'same-origin',
                 credentials: 'same-origin',
                 signal: controller.signal
             });
