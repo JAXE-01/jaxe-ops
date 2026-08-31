@@ -33,7 +33,7 @@ class SocialMetricsCollectorService {
         $payload = json_encode($metrics, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $interactions = (int)($metrics['likes'] ?? 0) + (int)($metrics['commentaires'] ?? 0)
             + (int)($metrics['partages'] ?? 0) + (int)($metrics['sauvegardes'] ?? 0);
-        $impressions = max(0, (int)($metrics['impressions'] ?? 0));
+        $impressions = array_key_exists('impressions', $metrics) && $metrics['impressions'] !== null ? max(0, (int)$metrics['impressions']) : null;
         $engagement = $impressions > 0 ? round(($interactions / $impressions) * 100, 4) : null;
 
         // One API snapshot per target and day: repeated manual clicks refresh it instead of inflating reports.
@@ -57,17 +57,17 @@ class SocialMetricsCollectorService {
             'target' => $targetId,
             'provider' => (string)$target['provider'],
             'impressions' => $impressions,
-            'reach' => max(0, (int)($metrics['couverture'] ?? 0)),
-            'views' => max(0, (int)($metrics['vues'] ?? 0)),
-            'likes' => max(0, (int)($metrics['likes'] ?? 0)),
-            'comments' => max(0, (int)($metrics['commentaires'] ?? 0)),
-            'shares' => max(0, (int)($metrics['partages'] ?? 0)),
-            'clicks' => max(0, (int)($metrics['clics'] ?? 0)),
+            'reach' => $this->nullableCount($metrics,'couverture'),
+            'views' => $this->nullableCount($metrics,'vues'),
+            'likes' => $this->nullableCount($metrics,'likes'),
+            'comments' => $this->nullableCount($metrics,'commentaires'),
+            'shares' => $this->nullableCount($metrics,'partages'),
+            'clicks' => $this->nullableCount($metrics,'clics'),
             'ctr' => $metrics['ctr'] ?? null,
             'engagement' => $metrics['engagement_rate'] ?? $engagement,
             'watch' => $metrics['avg_watch_time'] ?? null,
-            'saves' => max(0, (int)($metrics['sauvegardes'] ?? 0)),
-            'followers' => max(0, (int)($metrics['abonnes_gagnes'] ?? 0)),
+            'saves' => $this->nullableCount($metrics,'sauvegardes'),
+            'followers' => $this->nullableCount($metrics,'abonnes_gagnes'),
             'payload' => $payload,
             'url' => trim((string)($target['external_post_url'] ?? '')) ?: null,
         ]);
@@ -214,7 +214,7 @@ class SocialMetricsCollectorService {
 
     private function collectFacebook(array $target, string $token): array {
         $data = $this->graph('/'.rawurlencode((string)$target['external_post_id']), [
-            'fields' => 'shares,comments.limit(0).summary(true),reactions.limit(0).summary(true)',
+            'fields' => 'shares,comments.limit(0).summary(true),reactions.limit(0).summary(true),attachments.limit(1){media_type}',
             'access_token' => $token,
         ]);
         $metrics = [
@@ -222,17 +222,17 @@ class SocialMetricsCollectorService {
             'commentaires' => (int)($data['comments']['summary']['total_count'] ?? 0),
             'partages' => (int)($data['shares']['count'] ?? 0),
         ];
-        try {
-            $insights = $this->graph('/'.rawurlencode((string)$target['external_post_id']).'/insights', [
-                'metric' => 'post_impressions,post_impressions_unique,post_clicks', 'access_token' => $token,
-            ]);
-            foreach ((array)($insights['data'] ?? []) as $item) {
-                $value = (int)($item['values'][0]['value'] ?? 0);
-                if (($item['name'] ?? '') === 'post_impressions') $metrics['impressions'] = $value;
-                if (($item['name'] ?? '') === 'post_impressions_unique') $metrics['couverture'] = $value;
-                if (($item['name'] ?? '') === 'post_clicks') $metrics['clics'] = $value;
-            }
-        } catch (Throwable $ignored) {}
+        $metrics['_availability'] = [
+            'likes'=>['status'=>'available','source'=>'reactions.summary.total_count'],
+            'commentaires'=>['status'=>'available','source'=>'comments.summary.total_count'],
+            'partages'=>['status'=>'available','source'=>'shares.count'],
+        ];
+        foreach (['post_impressions'=>'impressions','post_impressions_unique'=>'couverture','post_clicks'=>'clics'] as $meta=>$local) {
+            $this->collectInsight($metrics,$target,$token,$meta,$local);
+        }
+        $mediaType=strtolower((string)($data['attachments']['data'][0]['media_type']??''));
+        if(in_array($mediaType,['video','video_inline'],true))$this->collectInsight($metrics,$target,$token,'post_video_views','vues');
+        else{$metrics['vues']=null;$metrics['_availability']['vues']=['status'=>'unavailable','source'=>'post_video_views','reason'=>'Publication non vidéo'];}
         return $metrics;
     }
 
@@ -241,17 +241,19 @@ class SocialMetricsCollectorService {
             'fields' => 'like_count,comments_count,media_type', 'access_token' => $token,
         ]);
         $metrics = ['likes' => (int)($data['like_count'] ?? 0), 'commentaires' => (int)($data['comments_count'] ?? 0)];
-        try {
-            $insights = $this->graph('/'.rawurlencode((string)$target['external_post_id']).'/insights', [
-                'metric' => 'reach,views,saved,shares', 'access_token' => $token,
-            ]);
-            foreach ((array)($insights['data'] ?? []) as $item) {
-                $value = (int)($item['values'][0]['value'] ?? $item['total_value']['value'] ?? 0);
-                $map = ['reach' => 'couverture', 'views' => 'vues', 'saved' => 'sauvegardes', 'shares' => 'partages'];
-                if (isset($map[$item['name'] ?? ''])) $metrics[$map[$item['name']]] = $value;
-            }
-        } catch (Throwable $ignored) {}
+        $metrics['_availability']=['likes'=>['status'=>'available','source'=>'like_count'],'commentaires'=>['status'=>'available','source'=>'comments_count']];
+        foreach(['reach'=>'couverture','views'=>'vues','saved'=>'sauvegardes','shares'=>'partages'] as$meta=>$local)$this->collectInsight($metrics,$target,$token,$meta,$local);
+        foreach(['impressions','clics']as$local){$metrics[$local]=null;$metrics['_availability'][$local]=['status'=>'unavailable','source'=>null,'reason'=>'Non fournie au niveau du média Instagram'];}
         return $metrics;
+    }
+
+    private function collectInsight(array &$metrics,array $target,string $token,string $meta,string $local): void {
+        try{$response=$this->graph('/'.rawurlencode((string)$target['external_post_id']).'/insights',['metric'=>$meta,'access_token'=>$token]);$item=(array)(($response['data']??[])[0]??[]);$value=$item['values'][0]['value']??$item['total_value']['value']??null;if($value===null||!is_numeric($value))throw new RuntimeException('Aucune valeur retournée');$metrics[$local]=max(0,(int)$value);$metrics['_availability'][$local]=['status'=>'available','source'=>$meta];}
+        catch(Throwable $e){$metrics[$local]=null;$metrics['_availability'][$local]=['status'=>'unavailable','source'=>$meta,'reason'=>mb_strimwidth($e->getMessage(),0,500)];}
+    }
+
+    private function nullableCount(array $metrics,string $key): ?int {
+        return array_key_exists($key,$metrics)&&$metrics[$key]!==null?max(0,(int)$metrics[$key]):null;
     }
 
     private function graph(string $path, array $params): array {

@@ -13,6 +13,9 @@ $platformOptions = is_array($platformOptions ?? null) ? $platformOptions : [];
 $networkConfig = is_array($networkConfig ?? null) ? $networkConfig : [];
 $defaultNetwork = (string) ($defaultNetwork ?? (array_key_first($networkConfig) ?: 'facebook'));
 $canManage = !empty($canManage);
+$metricValue = static fn(array $row, string $key): string => !array_key_exists($key, $row) || $row[$key] === null
+    ? '<span title="Métrique indisponible pour cette publication">—</span>'
+    : number_format((int)$row[$key], 0, ',', ' ');
 
 $filterQuery = http_build_query(array_filter([
     'campagne_id' => (int) ($filters['campagne_id'] ?? 0) > 0 ? (int) $filters['campagne_id'] : null,
@@ -399,10 +402,10 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                 <tr>
                     <td><?= htmlspecialchars((string) ($row['publication'] ?? '')) ?></td>
                     <td><?= number_format((int) ($row['collectes'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['impressions'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['couverture'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['vues'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['clics'] ?? 0), 0, ',', ' ') ?></td>
+                    <td><?= $metricValue($row, 'impressions') ?></td>
+                    <td><?= $metricValue($row, 'couverture') ?></td>
+                    <td><?= $metricValue($row, 'vues') ?></td>
+                    <td><?= $metricValue($row, 'clics') ?></td>
                     <td><?= number_format((float) ($row['ctr_moyen'] ?? 0), 2, ',', ' ') ?>%</td>
                     <td><?= number_format((float) ($row['engagement_rate_moyen'] ?? 0), 2, ',', ' ') ?>%</td>
                 </tr>
@@ -492,10 +495,10 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                     <td><?= htmlspecialchars((string) ($row['campagne_nom'] ?? '')) ?></td>
                     <td><?= htmlspecialchars((string) ($row['publication_titre'] ?? '')) ?></td>
                     <td><?= htmlspecialchars((string) ($platformOptions[$row['plateforme'] ?? ''] ?? ($row['plateforme'] ?? '')) ) ?></td>
-                    <td><?= number_format((int) ($row['impressions'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['couverture'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['vues'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['clics'] ?? 0), 0, ',', ' ') ?></td>
+                    <td><?= $metricValue($row, 'impressions') ?></td>
+                    <td><?= $metricValue($row, 'couverture') ?></td>
+                    <td><?= $metricValue($row, 'vues') ?></td>
+                    <td><?= $metricValue($row, 'clics') ?></td>
                     <td><?= number_format((float) ($row['ctr'] ?? 0), 2, ',', ' ') ?>%</td>
                     <td><?= number_format((float) ($row['engagement_rate'] ?? 0), 2, ',', ' ') ?>%</td>
                     <td><?= number_format((float) ($row['score_global'] ?? 0), 2, ',', ' ') ?></td>
