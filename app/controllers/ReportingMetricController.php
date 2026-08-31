@@ -39,6 +39,7 @@ class ReportingMetricController extends Controller {
         $publicationReport = $this->reportingMetricModel->getPublicationAggregateReport($filters);
         $monthlyReport = $this->reportingMetricModel->getMonthlyAggregateReport($filters);
         $analysisDashboard = $this->reportingMetricModel->getDashboardAnalysis($filters);
+        $connections=(new SocialPublishingModel())->dashboardData(WorkingMonth::resolve())['connections']??[];
 
         $this->render('reporting-metric/index', [
             'pageTitle' => 'Statistiques & rapports',
@@ -56,7 +57,24 @@ class ReportingMetricController extends Controller {
             'publicationReport' => $publicationReport,
             'monthlyReport' => $monthlyReport,
             'analysisDashboard' => $analysisDashboard,
+            'socialConnections' => $connections,
         ]);
+    }
+
+    public function collectSocialMetrics(): void {
+        if(!$this->isPost()){http_response_code(405);return;}
+        $this->requirePermission('publishing.manage');
+        try{$result=(new SocialMetricsCollectorService())->collectPublished(TenantGuard::tenantId(),(int)$this->currentUser()['id'],100);$this->flash($result['collected']?'success':'error',$result['collected'].' collecte(s) actualisée(s), '.$result['failed'].' échec(s).');}
+        catch(Throwable $e){$this->flash('error',$e->getMessage());}
+        $this->redirect('/reporting-metric');
+    }
+
+    public function importSocialHistory(): void {
+        if(!$this->isPost()){http_response_code(405);return;}
+        $this->requirePermission('publishing.manage');
+        try{$result=(new SocialMetricsCollectorService())->importHistory((int)($_POST['connection_id']??0),TenantGuard::tenantId(),(int)$this->currentUser()['id'],(string)($_POST['from']??''),(string)($_POST['to']??''),250);$this->flash('success',$result['imported'].' publication(s) importée(s), '.$result['collected'].' KPI collectés.');}
+        catch(Throwable $e){$this->flash('error',$e->getMessage());}
+        $this->redirect('/reporting-metric');
     }
 
     public function create() {

@@ -13,6 +13,7 @@ $platformOptions = is_array($platformOptions ?? null) ? $platformOptions : [];
 $networkConfig = is_array($networkConfig ?? null) ? $networkConfig : [];
 $defaultNetwork = (string) ($defaultNetwork ?? (array_key_first($networkConfig) ?: 'facebook'));
 $canManage = !empty($canManage);
+$socialConnections = is_array($socialConnections ?? null) ? $socialConnections : [];
 $metricValue = static fn(array $row, string $key): string => !array_key_exists($key, $row) || $row[$key] === null
     ? '<span title="Métrique indisponible pour cette publication">—</span>'
     : number_format((int)$row[$key], 0, ',', ' ');
@@ -102,6 +103,7 @@ $barMax = max(1, max(array_map(static function ($item) {
 $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 ?>
 <style>
+.social-reporting-actions{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}.social-reporting-actions form{margin:0}.social-reporting-actions summary{list-style:none;cursor:pointer}.social-history-form{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:10px;align-items:end;margin-top:10px;padding:14px;border:1px solid #dce6f0;border-radius:14px;background:#f8fbfe}.social-history-form label{display:grid;gap:5px}
 .reporting-filter-row{display:grid!important;grid-template-columns:minmax(170px,1fr) minmax(210px,1.35fr) minmax(130px,.75fr) minmax(140px,.72fr) minmax(140px,.72fr) auto;gap:10px;align-items:end}.reporting-filter-row label{min-width:0}.reporting-filter-row select,.reporting-filter-row input{width:100%;box-sizing:border-box}.reporting-filter-row.is-loading{opacity:.62;pointer-events:none}@media(max-width:1100px){.reporting-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.reporting-filter-row{grid-template-columns:1fr}}
 </style>
 
@@ -123,6 +125,34 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </div>
     </div>
 
+    <?php if ($canManage): ?>
+    <div class="social-reporting-actions">
+        <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/collect-social-metrics')) ?>">
+            <button class="button" type="submit">↻ Collecter les KPI Meta</button>
+        </form>
+        <details>
+            <summary class="button secondary">Importer l’historique Meta</summary>
+            <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/import-social-history')) ?>" class="social-history-form">
+                <label>Page<select name="connection_id" required><option value="">Choisir</option><?php foreach($socialConnections as $connection):if(($connection['status']??'')!=='Connected'||!in_array($connection['provider']??'',['facebook','instagram'],true))continue;?><option value="<?= (int)$connection['id'] ?>"><?= htmlspecialchars(($connection['account_label']??'Page').' · '.ucfirst($connection['provider'])) ?></option><?php endforeach?></select></label>
+                <label>Du<input type="date" name="from" required value="<?= date('Y-m-d',strtotime('-90 days')) ?>"></label>
+                <label>Au<input type="date" name="to" required value="<?= date('Y-m-d') ?>"></label>
+                <button class="button" type="submit">Importer et collecter</button>
+            </form>
+        </details>
+        <a class="button secondary" href="<?= htmlspecialchars(route_url('/social-inbox')) ?>">Messages et commentaires →</a>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($canManage): ?>
+    <div class="social-reporting-actions">
+        <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/collect-social-metrics')) ?>"><button class="button" type="submit">↻ Collecter les KPI Meta</button></form>
+        <details><summary class="button secondary">Importer l’historique Meta</summary><form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/import-social-history')) ?>" class="social-history-form">
+            <label>Page<select name="connection_id" required><option value="">Choisir</option><?php foreach($socialConnections as $connection):if(($connection['status']??'')!=='Connected'||!in_array($connection['provider']??'',['facebook','instagram'],true))continue;?><option value="<?= (int)$connection['id'] ?>"><?= htmlspecialchars(($connection['account_label']??'Page').' · '.ucfirst($connection['provider'])) ?></option><?php endforeach?></select></label>
+            <label>Du<input type="date" name="from" required value="<?= date('Y-m-d',strtotime('-90 days')) ?>"></label><label>Au<input type="date" name="to" required value="<?= date('Y-m-d') ?>"></label><button class="button" type="submit">Importer et collecter</button>
+        </form></details>
+        <a class="button secondary" href="<?= htmlspecialchars(route_url('/social-inbox')) ?>">Messages et commentaires →</a>
+    </div>
+    <?php endif; ?>
     <form class="compact-filters reporting-filter-row" id="reporting-filter-form" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
         <label>
             Campagne

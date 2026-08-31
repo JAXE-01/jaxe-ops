@@ -97,7 +97,15 @@ $mainNavItems = [
         'match' => [route_url('/social-publishing')],
         'permission' => 'publishing.view',
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-5 16-3-6-8-2Zm8 2 8-10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    ],    [
+    ],
+    [
+        'label' => 'Messages & commentaires',
+        'href' => route_url('/social-inbox'),
+        'match' => [route_url('/social-inbox')],
+        'permission' => 'publishing.view',
+        'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Zm4 4h8M8 12h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    ],
+    [
         'label' => 'Documentation',
         'href' => route_url('/documentation'),
         'match' => [route_url('/documentation')],

@@ -599,8 +599,9 @@ class ReportingMetricModel extends Model {
         $clauses = [];
         $scope=AgencyAccessPolicy::clientSqlScope('scope_client','analytics','analytics_metrics');
         $projectScope=AgencyAccessPolicy::clientSqlScope('project_client','analytics','analytics_projects');
-        $clauses[]='(EXISTS (SELECT 1 FROM campagnes scope_campaign JOIN clients scope_client ON scope_client.id=scope_campaign.client_id WHERE scope_campaign.id=rm.campagne_id AND '.$scope['sql'].') OR EXISTS (SELECT 1 FROM projets scope_project JOIN clients project_client ON project_client.id=scope_project.client_id WHERE scope_project.id=rm.project_id AND '.$projectScope['sql'].'))';
-        $params=array_merge($params,$scope['params'],$projectScope['params']);
+        $socialScope=AgencyAccessPolicy::clientSqlScope('social_client','analytics','analytics_social_metrics');
+        $clauses[]='(EXISTS (SELECT 1 FROM campagnes scope_campaign JOIN clients scope_client ON scope_client.id=scope_campaign.client_id WHERE scope_campaign.id=rm.campagne_id AND '.$scope['sql'].') OR EXISTS (SELECT 1 FROM projets scope_project JOIN clients project_client ON project_client.id=scope_project.client_id WHERE scope_project.id=rm.project_id AND '.$projectScope['sql'].') OR EXISTS (SELECT 1 FROM social_publications scope_social JOIN clients social_client ON social_client.id=scope_social.client_id WHERE scope_social.id=rm.social_publication_id AND scope_social.tenant_id=rm.tenant_id AND '.$socialScope['sql'].'))';
+        $params=array_merge($params,$scope['params'],$projectScope['params'],$socialScope['params']);
 
         $campagneId = (int) ($filters['campagne_id'] ?? 0);
         if ($campagneId > 0) {
@@ -847,7 +848,7 @@ class ReportingMetricModel extends Model {
         $payload = [];
         foreach ($decoded as $kpiName => $value) {
             $key = strtolower(trim((string) $kpiName));
-            if ($key === '') {
+            if ($key === '' || !is_numeric($value)) {
                 continue;
             }
             $payload[$key] = (float) $value;
