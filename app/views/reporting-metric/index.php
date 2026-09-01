@@ -115,7 +115,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 <style>
 .report-icon-actions,.social-reporting-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.social-reporting-actions{margin:10px 0 14px}.social-reporting-actions form{margin:0}.social-reporting-actions details{position:relative}.report-icon-button{position:relative;display:inline-grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #dbe5ee;border-radius:10px;background:#fff;color:#3d5872;cursor:pointer;text-decoration:none;transition:.15s}.report-icon-button:hover{border-color:#9bbbd6;background:#f4f9fd;color:#1f5f93}.report-icon-button.primary{background:#244f78;color:#fff;border-color:#244f78}.report-icon-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.report-icon-button[data-format]::after{content:attr(data-format);position:absolute;right:-4px;bottom:-4px;padding:1px 3px;border-radius:4px;background:#eef3f7;color:#526b82;font-size:7px;font-weight:800}.social-reporting-actions summary{list-style:none}.social-reporting-actions summary::-webkit-details-marker{display:none}.social-history-form{position:absolute;z-index:20;left:0;top:44px;display:grid;grid-template-columns:repeat(3,minmax(130px,1fr)) auto;gap:8px;align-items:end;width:min(720px,80vw);padding:12px;border:1px solid #dce6f0;border-radius:12px;background:#fff;box-shadow:0 16px 38px #17345222}.social-history-form label{display:grid;gap:4px;font-size:11px}.reporting-filter-row{display:grid!important;grid-template-columns:minmax(150px,1fr) minmax(190px,1.35fr) minmax(110px,.7fr) minmax(130px,.7fr) minmax(130px,.7fr) auto;gap:8px;align-items:end;padding-top:12px;border-top:1px solid #edf1f5}.reporting-filter-row label{min-width:0;font-size:11px}.reporting-filter-row select,.reporting-filter-row input{width:100%;box-sizing:border-box}.reporting-filter-row.is-loading{opacity:.62;pointer-events:none}#reporting-results>.panel{padding:20px}#reporting-results .stat-card{padding:14px 16px;border:0;border-left:2px solid #80b8e6;border-radius:8px;box-shadow:none;background:#f8fafc}#reporting-results .stat-value{font-size:clamp(24px,3vw,34px)}#reporting-results .detail-card{padding:13px;border-color:#e7edf3;border-radius:10px;box-shadow:none}#reporting-results svg{display:block;max-width:100%;border-radius:10px}#reporting-results svg rect:first-child{fill:#fafcfe}#reporting-results .requirement-list{display:flex;gap:6px;overflow:auto}#reporting-results .requirement-item{min-width:max-content;padding:7px 10px;border:0;background:#f1f7f4}.reporting-filter-row .form-actions{gap:5px}.reporting-filter-row .report-icon-button{width:36px;height:36px}@media(max-width:1100px){.reporting-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.reporting-filter-row{grid-template-columns:1fr}.social-history-form{position:fixed;left:4vw;top:20vh;width:92vw;grid-template-columns:1fr}.report-icon-actions{max-width:100%}}
 </style>
-<style>.reporting-filter-row{grid-template-columns:repeat(3,minmax(120px,1fr)) minmax(170px,1.25fr) repeat(3,minmax(105px,.72fr)) auto}.overview-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.overview-chart-grid>div{margin:0!important;min-width:0}@media(max-width:900px){.overview-chart-grid{grid-template-columns:1fr}}</style>
+<style>.reporting-filter-row{grid-template-columns:repeat(3,minmax(120px,1fr)) minmax(170px,1.25fr) repeat(3,minmax(105px,.72fr)) auto}.overview-chart-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}.overview-chart-grid>div{margin:0!important;min-width:0}.publication-cell{display:flex;align-items:center;gap:7px}.publication-link{display:inline-grid;place-items:center;width:25px;height:25px;border:1px solid #dbe5ee;border-radius:7px;color:#315f87;text-decoration:none;flex:0 0 auto}.reporting-filter-status{font-size:11px;color:#60758a}@media(max-width:1100px){.overview-chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.overview-chart-grid{grid-template-columns:1fr}}</style>
 
 <section class="panel">
     <div class="panel-head">
@@ -123,7 +123,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <h2>Statistiques & rapports</h2>
             <p class="panel-subtitle">Analysez les publications collectées automatiquement et exportez des rapports prêts à partager.</p>
         </div>
-        <div class="report-icon-actions" aria-label="Exporter les statistiques">
+        <div class="report-icon-actions" id="report-export-actions" aria-label="Exporter les statistiques">
             <?php foreach([['excel','flat','XLS','Exporter l’analyse Excel'],['pdf','client','PDF','Exporter le rapport client'],['csv','individual','CSV','Exporter les données individuelles'],['pdf','individual','PDF','Exporter le PDF individuel'],['csv','publication','CSV','Exporter par publication'],['pdf','publication','PDF','Exporter le PDF par publication'],['csv','monthly','CSV','Exporter le rapport mensuel'],['pdf','monthly','PDF','Exporter le PDF mensuel']] as $export): ?>
             <a class="report-icon-button" data-format="<?= $export[2] ?>" href="<?= htmlspecialchars(report_export_url($export[0],$export[1],$filterQuery)) ?>" title="<?= htmlspecialchars($export[3]) ?>" aria-label="<?= htmlspecialchars($export[3]) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg></a>
             <?php endforeach; ?>
@@ -149,8 +149,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     <?php endif; ?>
 
     <form class="compact-filters reporting-filter-row" id="reporting-filter-form" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
-        <label>Client<select name="client_id"><option value="">Tous</option><?php foreach($clientOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['client_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
-        <label>Page<select name="connection_id"><option value="">Toutes</option><?php foreach($pageOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['connection_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
+        <label>Client<select name="client_id" id="reporting-client"><option value="">Tous</option><?php foreach($clientOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['client_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
+        <label>Page<select name="connection_id" id="reporting-page"><option value="">Toutes</option><?php foreach($pageOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['connection_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
         <label>
             Campagne
             <select name="campagne_id">
@@ -326,6 +326,20 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             </svg>
         </div>
     <?php endif; ?>
+
+    <?php if ($hasGrowthData): ?>
+        <div style="overflow-x:auto;">
+            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="168" aria-label="Evolution des vues et impressions">
+                <rect x="0" y="0" width="<?= $chartWidth ?>" height="<?= $chartHeight ?>" fill="#f7fbff"></rect>
+                <line x1="<?= $padding ?>" y1="<?= $padding ?>" x2="<?= $padding ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
+                <line x1="<?= $padding ?>" y1="<?= $padding + $plotHeight ?>" x2="<?= $padding + $plotWidth ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
+                <polyline fill="none" stroke="#2f7dd1" stroke-width="3" points="<?= htmlspecialchars(implode(' ', $viewPoints)) ?>"></polyline>
+                <polyline fill="none" stroke="#e07a2a" stroke-width="2" stroke-dasharray="6 4" points="<?= htmlspecialchars(implode(' ', $impressionPoints)) ?>"></polyline>
+                <text x="<?= $padding + 6 ?>" y="<?= $padding + 12 ?>" fill="#2f7dd1" font-size="11">Vues</text>
+                <text x="<?= $padding + 62 ?>" y="<?= $padding + 12 ?>" fill="#e07a2a" font-size="11">Impressions</text>
+            </svg>
+        </div>
+    <?php endif; ?>
     </div>
 
     <div class="detail-grid" style="margin-bottom:12px;">
@@ -357,20 +371,6 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         </article>
     </div>
 
-    <?php if ($hasGrowthData): ?>
-        <div style="overflow-x:auto; margin-bottom:10px;">
-            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" width="100%" height="168" aria-label="Courbe KPI">
-                <rect x="0" y="0" width="<?= $chartWidth ?>" height="<?= $chartHeight ?>" fill="#f7fbff"></rect>
-                <line x1="<?= $padding ?>" y1="<?= $padding ?>" x2="<?= $padding ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
-                <line x1="<?= $padding ?>" y1="<?= $padding + $plotHeight ?>" x2="<?= $padding + $plotWidth ?>" y2="<?= $padding + $plotHeight ?>" stroke="#8ea5b5" stroke-width="1"></line>
-                <polyline fill="none" stroke="#2f7dd1" stroke-width="3" points="<?= htmlspecialchars(implode(' ', $viewPoints)) ?>"></polyline>
-                <polyline fill="none" stroke="#e07a2a" stroke-width="2" stroke-dasharray="6 4" points="<?= htmlspecialchars(implode(' ', $impressionPoints)) ?>"></polyline>
-                <text x="<?= $padding + 6 ?>" y="<?= $padding + 12 ?>" fill="#2f7dd1" font-size="11">Vues</text>
-                <text x="<?= $padding + 62 ?>" y="<?= $padding + 12 ?>" fill="#e07a2a" font-size="11">Impressions</text>
-            </svg>
-        </div>
-    <?php endif; ?>
-
     <div class="stats-grid" style="grid-template-columns:repeat(2,minmax(200px,1fr)); margin-bottom:10px;">
         <article class="stat-card">
             <span class="stat-label">Nombre de collectes</span>
@@ -393,10 +393,10 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             </thead>
             <tbody>
             <?php foreach ((array) ($impactStats['correlations'] ?? []) as $corr): ?>
-                <?php $badge = reporting_correlation_badge((float) ($corr['correlation'] ?? 0)); ?>
+                <?php $hasCorrelation=($corr['correlation']??null)!==null;$badge=$hasCorrelation?reporting_correlation_badge((float)$corr['correlation']):['class'=>'','label'=>'Indisponible']; ?>
                 <tr>
                     <td><?= htmlspecialchars((string) ($corr['label'] ?? '')) ?></td>
-                    <td><?= number_format((float) ($corr['correlation'] ?? 0), 4, ',', ' ') ?></td>
+                    <td><?= $hasCorrelation?number_format((float)$corr['correlation'],4,',',' '):'—' ?><?php if(!empty($corr['available_samples'])):?><small> · n=<?= (int)$corr['available_samples']?></small><?php endif?></td>
                     <td><span class="status-badge <?= htmlspecialchars((string) $badge['class']) ?>"><?= htmlspecialchars((string) $badge['label']) ?></span></td>
                 </tr>
             <?php endforeach; ?>
@@ -416,6 +416,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
         <table>
             <thead>
             <tr>
+                <th>Client / Page</th>
                 <th>Publication</th>
                 <th>Collectes</th>
                 <th>Impressions</th>
@@ -429,7 +430,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <tbody>
             <?php foreach ($publicationReport as $row): ?>
                 <tr>
-                    <td><?= htmlspecialchars((string) ($row['publication'] ?? '')) ?></td>
+                    <td><strong><?= htmlspecialchars((string)($row['client_nom']??'')) ?></strong><br><small><?= htmlspecialchars((string)($row['page_nom']??'')) ?></small></td>
+                    <td><span class="publication-cell"><span><?= htmlspecialchars((string) ($row['publication'] ?? '')) ?></span><?php if(!empty($row['url_publication'])):?><a class="publication-link" href="<?= htmlspecialchars((string)$row['url_publication']) ?>" target="_blank" rel="noopener" title="Voir la publication Facebook" aria-label="Voir la publication Facebook">↗</a><?php endif?></span></td>
                     <td><?= number_format((int) ($row['collectes'] ?? 0), 0, ',', ' ') ?></td>
                     <td><?= $metricValue($row, 'impressions') ?></td>
                     <td><?= $metricValue($row, 'couverture') ?></td>
@@ -448,7 +450,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     <div class="panel-head">
         <div>
             <h2>Rapport global mensuel</h2>
-            <p class="panel-subtitle">Vue consolidee par mois, reseau et publication avec totaux + moyennes.</p>
+            <p class="panel-subtitle">Synthèse consolidée par mois, client, Page et réseau.</p>
         </div>
     </div>
     <div class="table-wrap compact-table">
@@ -456,8 +458,9 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <thead>
             <tr>
                 <th>Mois</th>
+                <th>Client / Page</th>
                 <th>Reseau</th>
-                <th>Publication</th>
+                <th>Publications</th>
                 <th>Collectes</th>
                 <th>Vues totales</th>
                 <th>Vues moyennes</th>
@@ -471,8 +474,9 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <?php foreach ($monthlyReport as $row): ?>
                 <tr>
                     <td><?= htmlspecialchars((string) ($row['mois'] ?? '')) ?></td>
+                    <td><strong><?= htmlspecialchars((string)($row['client_nom']??'')) ?></strong><br><small><?= htmlspecialchars((string)($row['page_nom']??'')) ?></small></td>
                     <td><?= htmlspecialchars((string) ($platformOptions[$row['plateforme'] ?? ''] ?? ($row['plateforme'] ?? '')) ) ?></td>
-                    <td><?= htmlspecialchars((string) ($row['publication'] ?? '')) ?></td>
+                    <td><?= number_format((int)($row['publications']??0),0,',',' ') ?></td>
                     <td><?= number_format((int) ($row['collectes'] ?? 0), 0, ',', ' ') ?></td>
                     <td><?= $metricValue($row, 'vues_total') ?></td>
                     <td><?= $metricValue($row, 'vues_moyenne') ?></td>
@@ -500,6 +504,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <thead>
             <tr>
                 <th>Date</th>
+                <th>Client / Page</th>
                 <th>Periode</th>
                 <th>Campagne</th>
                 <th>Publication</th>
@@ -520,9 +525,10 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <?php foreach ($rows as $row): ?>
                 <tr>
                     <td><?= htmlspecialchars((string) ($row['date_collecte'] ?? '')) ?></td>
+                    <td><strong><?= htmlspecialchars((string)($row['client_nom']??'')) ?></strong><br><small><?= htmlspecialchars((string)($row['page_nom']??'')) ?></small></td>
                     <td><?= htmlspecialchars((string) ($row['periode_analysee'] ?? '')) ?></td>
                     <td><?= htmlspecialchars((string) ($row['campagne_nom'] ?? '')) ?></td>
-                    <td><?= htmlspecialchars((string) ($row['publication_titre'] ?? '')) ?></td>
+                    <td><span class="publication-cell"><span><?= htmlspecialchars((string) ($row['publication_titre'] ?? '')) ?></span><?php if(!empty($row['url_publication'])):?><a class="publication-link" href="<?= htmlspecialchars((string)$row['url_publication']) ?>" target="_blank" rel="noopener" title="Voir la publication" aria-label="Voir la publication">↗</a><?php endif?></span></td>
                     <td><?= htmlspecialchars((string) ($platformOptions[$row['plateforme'] ?? ''] ?? ($row['plateforme'] ?? '')) ) ?></td>
                     <td><?= $metricValue($row, 'impressions') ?></td>
                     <td><?= $metricValue($row, 'couverture') ?></td>
@@ -591,5 +597,42 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     networkSelect.addEventListener('change', renderKpiFields);
     renderKpiFields();
 })();
-(function(){var form=document.getElementById('reporting-filter-form');var results=document.getElementById('reporting-results');if(!form||!results||!window.fetch||!window.DOMParser)return;form.addEventListener('submit',function(event){event.preventDefault();var url=form.action+'?'+new URLSearchParams(new FormData(form)).toString();form.classList.add('is-loading');fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(response){if(!response.ok)throw new Error('HTTP '+response.status);return response.text();}).then(function(html){var copy=new DOMParser().parseFromString(html,'text/html');var next=copy.getElementById('reporting-results');if(!next)throw new Error('Résultats indisponibles');results.replaceWith(next);results=next;history.replaceState({},'',url);}).catch(function(){window.location.href=url;}).finally(function(){form.classList.remove('is-loading');});});})();
+(function(){
+    var form=document.getElementById('reporting-filter-form');
+    var results=document.getElementById('reporting-results');
+    if(!form||!results||!window.fetch||!window.DOMParser)return;
+    var requestId=0;
+    function refresh(){
+        var current=++requestId;
+        var url=form.action+'?'+new URLSearchParams(new FormData(form)).toString();
+        form.classList.add('is-loading');
+        fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+            .then(function(response){if(!response.ok)throw new Error('HTTP '+response.status);return response.text();})
+            .then(function(html){
+                if(current!==requestId)return;
+                var copy=new DOMParser().parseFromString(html,'text/html');
+                var next=copy.getElementById('reporting-results');
+                var nextPage=copy.getElementById('reporting-page');
+                var page=form.querySelector('#reporting-page');
+                var nextExports=copy.getElementById('report-export-actions');
+                var exports=document.getElementById('report-export-actions');
+                if(!next)throw new Error('Résultats indisponibles');
+                results.replaceWith(next);results=next;
+                if(page&&nextPage)page.replaceWith(nextPage);
+                if(exports&&nextExports){exports.replaceWith(nextExports);}
+                history.replaceState({},'',url);
+            })
+            .catch(function(){window.location.href=url;})
+            .finally(function(){if(current===requestId)form.classList.remove('is-loading');});
+    }
+    form.addEventListener('submit',function(event){event.preventDefault();refresh();});
+    form.addEventListener('change',function(event){
+        if(!event.target.matches('select,input[type="date"]'))return;
+        if(event.target.name==='client_id'){
+            var page=form.querySelector('[name="connection_id"]');
+            if(page)page.value='';
+        }
+        refresh();
+    });
+})();
 </script>

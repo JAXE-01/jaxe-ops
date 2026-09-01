@@ -564,7 +564,7 @@ class ReportingMetricModel extends Model {
     public function getImpactStats(array $filters = []) {
         $params = [];
         $where = $this->buildFiltersWhere($filters, $params);
-        $sql = 'SELECT vues, impressions, COALESCE(couverture, 0) AS couverture, likes, commentaires, partages, COALESCE(clics, 0) AS clics, COALESCE(ctr, 0) AS ctr, COALESCE(engagement_rate, 0) AS engagement_rate, sauvegardes, abonnes_gagnes
+        $sql = 'SELECT vues, impressions, couverture, likes, commentaires, partages, clics, ctr, engagement_rate, sauvegardes, abonnes_gagnes
             FROM reporting_metrics rm
             ' . $where;
         $stmt = $this->db->prepare($sql);
@@ -592,13 +592,17 @@ class ReportingMetricModel extends Model {
         $correlations = [];
         foreach ($metrics as $key => $label) {
             $xValues = [];
+            $metricViews = [];
             foreach ($rows as $row) {
-                $xValues[] = (float) ($row[$key] ?? 0);
+                if (!array_key_exists($key,$row) || $row[$key] === null) continue;
+                $xValues[] = (float)$row[$key];
+                $metricViews[] = (float)$row['vues'];
             }
             $correlations[] = [
                 'metric' => $key,
                 'label' => $label,
-                'correlation' => $this->pearsonCorrelation($xValues, $yValues),
+                'available_samples' => count($xValues),
+                'correlation' => count($xValues) >= 2 ? $this->pearsonCorrelation($xValues, $metricViews) : null,
             ];
         }
 
@@ -680,10 +684,15 @@ class ReportingMetricModel extends Model {
     public function getPublicationAggregateReport(array $filters) {
         $params = [];
         $where = $this->buildFiltersWhere($filters, $params);
+        $latestSnapshot = '(rm.social_target_id IS NULL OR rm.id=(SELECT MAX(latest_rm.id) FROM reporting_metrics latest_rm WHERE latest_rm.tenant_id=rm.tenant_id AND latest_rm.social_target_id=rm.social_target_id))';
+        $where .= $where === '' ? 'WHERE '.$latestSnapshot : ' AND '.$latestSnapshot;
 
         $sql = 'SELECT
                 COALESCE(rm.contenu_id, 0) AS contenu_id,
                 COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
+                COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
+                COALESCE(sc.account_label, "Page non rattachee") AS page_nom,
+                COALESCE(MAX(rm.url_publication), MAX(spt.external_post_url)) AS url_publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions,
                 SUM(rm.couverture) AS couverture,
@@ -697,8 +706,11 @@ class ReportingMetricModel extends Model {
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
             LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
+            LEFT JOIN social_publication_targets spt ON spt.id = rm.social_target_id
+            LEFT JOIN social_connections sc ON sc.id = spt.connection_id
+            LEFT JOIN clients scl ON scl.id = sc.client_id
             ' . $where . '
-            GROUP BY rm.contenu_id, rm.social_publication_id, ct.sujet, sp.master_title
+            GROUP BY rm.contenu_id, rm.social_publication_id, ct.sujet, sp.master_title, scl.entreprise, sc.account_label
             ORDER BY vues DESC';
 
         $stmt = $this->db->prepare($sql);
@@ -709,11 +721,15 @@ class ReportingMetricModel extends Model {
     public function getMonthlyAggregateReport(array $filters) {
         $params = [];
         $where = $this->buildFiltersWhere($filters, $params, true);
+        $latestSnapshot = '(rm.social_target_id IS NULL OR rm.id=(SELECT MAX(latest_rm.id) FROM reporting_metrics latest_rm WHERE latest_rm.tenant_id=rm.tenant_id AND latest_rm.social_target_id=rm.social_target_id))';
+        $where .= $where === '' ? 'WHERE '.$latestSnapshot : ' AND '.$latestSnapshot;
 
         $sql = 'SELECT
-                DATE_FORMAT(COALESCE(DATE((SELECT mpt.published_at FROM social_publication_targets mpt WHERE mpt.id=rm.social_target_id)),rm.date_collecte), "%Y-%m") AS mois,
+                DATE_FORMAT(COALESCE(DATE(spt.published_at),rm.date_collecte), "%Y-%m") AS mois,
                 rm.plateforme,
-                COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
+                COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
+                COALESCE(sc.account_label, "Page non rattachee") AS page_nom,
+                COUNT(DISTINCT COALESCE(rm.social_publication_id, rm.contenu_id, rm.id)) AS publications,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions_total,
                 AVG(rm.impressions) AS impressions_moyenne,
@@ -728,9 +744,12 @@ class ReportingMetricModel extends Model {
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
             LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
+            LEFT JOIN social_publication_targets spt ON spt.id = rm.social_target_id
+            LEFT JOIN social_connections sc ON sc.id = spt.connection_id
+            LEFT JOIN clients scl ON scl.id = sc.client_id
             ' . $where . '
-            GROUP BY mois, rm.plateforme, rm.social_publication_id, ct.sujet, sp.master_title
-            ORDER BY mois DESC, plateforme ASC, publication ASC';
+            GROUP BY mois, rm.plateforme, scl.entreprise, sc.account_label
+            ORDER BY mois DESC, client_nom ASC, page_nom ASC, plateforme ASC';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

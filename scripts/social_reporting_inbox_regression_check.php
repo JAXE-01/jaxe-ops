@@ -6,9 +6,9 @@ $controller=file_get_contents($root.'/app/controllers/ReportingMetricController.
 $inbox=file_get_contents($root.'/app/helpers/SocialInboxService.php');
 $pdf=file_get_contents($root.'/app/helpers/PdfExportService.php');
 $view=file_get_contents($root.'/app/views/reporting-metric/index.php');
-foreach(['scope_social.id=rm.social_publication_id','analytics_social_metrics','filter_client','filter_connection','date_publication','getClientOptions','getPageOptions'] as$needle)if(!str_contains($model,$needle))throw new RuntimeException('Périmètre social absent: '.$needle);
+foreach(['scope_social.id=rm.social_publication_id','analytics_social_metrics','filter_client','filter_connection','date_publication','getClientOptions','getPageOptions','client_nom','page_nom','url_publication'] as$needle)if(!str_contains($model,$needle))throw new RuntimeException('Périmètre social absent: '.$needle);
 foreach(['collectSocialMetrics','importSocialHistory']as$needle)if(!str_contains($controller,$needle))throw new RuntimeException('Action reporting absente: '.$needle);
-foreach(['Collecter les KPI Meta','Importer l’historique Meta','Messages et commentaires']as$needle)if(!str_contains($view,$needle))throw new RuntimeException('Bouton absent: '.$needle);
+foreach(['Collecter les KPI Meta','Importer l’historique Meta','Messages et commentaires','reporting-client','reporting-page','publication-link','credentials:\'same-origin\'']as$needle)if(!str_contains($view,$needle))throw new RuntimeException('Reporting AJAX incomplet: '.$needle);
 foreach(['pages_manage_engagement','pages_messaging','replyComment','replyMessage']as$needle)if(!str_contains($inbox,$needle))throw new RuntimeException('Capacité inbox absente: '.$needle);
 foreach(['Dompdf\\Dompdf','outputCalendarFallback']as$needle)if(!str_contains($pdf,$needle))throw new RuntimeException('Rendu PDF incomplet: '.$needle);
 $inboxView=file_get_contents($root.'/app/views/social-inbox/index.php');foreach(['inbox-tabs','type=','Historique (','messages[0]']as$needle)if(!str_contains($inboxView,$needle))throw new RuntimeException('Design inbox incomplet: '.$needle);

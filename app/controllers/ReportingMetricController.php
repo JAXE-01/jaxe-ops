@@ -151,12 +151,12 @@ class ReportingMetricController extends Controller {
             $rows = $this->reportingMetricModel->getPublicationAggregateReport($filters);
             $title = 'Rapport global par publication';
             $fileStem = 'rapport-publication';
-            $columns = ['publication', 'collectes', 'impressions', 'couverture', 'vues', 'likes', 'commentaires', 'partages', 'clics', 'ctr_moyen', 'engagement_rate_moyen'];
+            $columns = ['client_nom', 'page_nom', 'publication', 'collectes', 'impressions', 'couverture', 'vues', 'likes', 'commentaires', 'partages', 'clics', 'ctr_moyen', 'engagement_rate_moyen', 'url_publication'];
         } elseif ($reportType === 'monthly') {
             $rows = $this->reportingMetricModel->getMonthlyAggregateReport($filters);
             $title = 'Rapport global mensuel';
             $fileStem = 'rapport-mensuel';
-            $columns = ['mois', 'plateforme', 'publication', 'collectes', 'impressions_total', 'impressions_moyenne', 'couverture_total', 'couverture_moyenne', 'vues_total', 'vues_moyenne', 'clics_total', 'clics_moyenne', 'ctr_moyen', 'engagement_rate_moyen'];
+            $columns = ['mois', 'client_nom', 'page_nom', 'plateforme', 'publications', 'collectes', 'impressions_total', 'impressions_moyenne', 'couverture_total', 'couverture_moyenne', 'vues_total', 'vues_moyenne', 'clics_total', 'clics_moyenne', 'ctr_moyen', 'engagement_rate_moyen'];
         } else {
             $rows = $this->reportingMetricModel->getIndividualReportRows($filters);
             $title = 'Rapport individuel par publication';
