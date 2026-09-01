@@ -296,9 +296,9 @@ class ReportingMetricModel extends Model {
                 SUM(rm.likes) AS likes,
                 SUM(rm.commentaires) AS commentaires,
                 SUM(rm.partages) AS partages,
-                SUM(COALESCE(rm.clics, 0)) AS clics,
-                AVG(COALESCE(rm.ctr, 0)) AS ctr,
-                AVG(COALESCE(rm.engagement_rate, 0)) AS engagement_rate,
+                SUM(rm.clics) AS clics,
+                AVG(rm.ctr) AS ctr,
+                AVG(rm.engagement_rate) AS engagement_rate,
                 SUM(rm.sauvegardes) AS sauvegardes,
                 SUM(rm.abonnes_gagnes) AS abonnes_gagnes
             FROM reporting_metrics rm
@@ -686,7 +686,7 @@ class ReportingMetricModel extends Model {
                 COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions,
-                SUM(COALESCE(rm.couverture, 0)) AS couverture,
+                SUM(rm.couverture) AS couverture,
                 SUM(rm.vues) AS vues,
                 SUM(rm.likes) AS likes,
                 SUM(rm.commentaires) AS commentaires,

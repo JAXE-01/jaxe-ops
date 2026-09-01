@@ -19,6 +19,9 @@ $pageOptions = is_array($pageOptions ?? null) ? $pageOptions : [];
 $metricValue = static fn(array $row, string $key): string => !array_key_exists($key, $row) || $row[$key] === null
     ? '<span title="Métrique indisponible pour cette publication">—</span>'
     : number_format((int)$row[$key], 0, ',', ' ');
+$metricPercent = static fn(array $row, string $key): string => !array_key_exists($key, $row) || $row[$key] === null
+    ? '<span title="Métrique indisponible pour cette publication">—</span>'
+    : number_format((float)$row[$key], 2, ',', ' ') . '%';
 
 $filterQuery = http_build_query(array_filter([
     'campagne_id' => (int) ($filters['campagne_id'] ?? 0) > 0 ? (int) $filters['campagne_id'] : null,
@@ -432,8 +435,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                     <td><?= $metricValue($row, 'couverture') ?></td>
                     <td><?= $metricValue($row, 'vues') ?></td>
                     <td><?= $metricValue($row, 'clics') ?></td>
-                    <td><?= number_format((float) ($row['ctr_moyen'] ?? 0), 2, ',', ' ') ?>%</td>
-                    <td><?= number_format((float) ($row['engagement_rate_moyen'] ?? 0), 2, ',', ' ') ?>%</td>
+                    <td><?= $metricPercent($row, 'ctr_moyen') ?></td>
+                    <td><?= $metricPercent($row, 'engagement_rate_moyen') ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -471,12 +474,12 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                     <td><?= htmlspecialchars((string) ($platformOptions[$row['plateforme'] ?? ''] ?? ($row['plateforme'] ?? '')) ) ?></td>
                     <td><?= htmlspecialchars((string) ($row['publication'] ?? '')) ?></td>
                     <td><?= number_format((int) ($row['collectes'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['vues_total'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((float) ($row['vues_moyenne'] ?? 0), 2, ',', ' ') ?></td>
-                    <td><?= number_format((int) ($row['clics_total'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= number_format((float) ($row['clics_moyenne'] ?? 0), 2, ',', ' ') ?></td>
-                    <td><?= number_format((float) ($row['ctr_moyen'] ?? 0), 2, ',', ' ') ?>%</td>
-                    <td><?= number_format((float) ($row['engagement_rate_moyen'] ?? 0), 2, ',', ' ') ?>%</td>
+                    <td><?= $metricValue($row, 'vues_total') ?></td>
+                    <td><?= $metricValue($row, 'vues_moyenne') ?></td>
+                    <td><?= $metricValue($row, 'clics_total') ?></td>
+                    <td><?= $metricValue($row, 'clics_moyenne') ?></td>
+                    <td><?= $metricPercent($row, 'ctr_moyen') ?></td>
+                    <td><?= $metricPercent($row, 'engagement_rate_moyen') ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -525,8 +528,8 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
                     <td><?= $metricValue($row, 'couverture') ?></td>
                     <td><?= $metricValue($row, 'vues') ?></td>
                     <td><?= $metricValue($row, 'clics') ?></td>
-                    <td><?= number_format((float) ($row['ctr'] ?? 0), 2, ',', ' ') ?>%</td>
-                    <td><?= number_format((float) ($row['engagement_rate'] ?? 0), 2, ',', ' ') ?>%</td>
+                    <td><?= $metricPercent($row, 'ctr') ?></td>
+                    <td><?= $metricPercent($row, 'engagement_rate') ?></td>
                     <td><?= number_format((float) ($row['score_global'] ?? 0), 2, ',', ' ') ?></td>
                     <td><?= number_format((float) ($row['growth_rate'] ?? 0), 2, ',', ' ') ?>%</td>
                     <td><?= number_format((float) ($row['daily_rate'] ?? 0), 2, ',', ' ') ?></td>
