@@ -5,7 +5,7 @@ class PdfExportService {
             self::renderWithDompdf(self::buildCalendarHtml($title, $rows), $fileName, 'landscape');
             return;
         }
-        self::outputTablePdf($title, $rows, ['date_prevue','client','projet','titre','type_livrable','reseau','sujet'], $fileName);
+        self::outputCalendarFallback($title, $rows, $fileName);
     }
 
     public static function outputBriefsPdf(string $title, array $rows, string $fileName = 'briefs-et-scripts.pdf'): void {
@@ -14,6 +14,32 @@ class PdfExportService {
             return;
         }
         self::outputTablePdf($title, $rows, ['client','projet','periode_mois','titre','script_contenu'], $fileName);
+    }
+
+    private static function outputCalendarFallback(string $title, array $rows, string $fileName): void {
+        $lines = [$title, str_repeat('=', max(18, strlen($title))), ''];
+        if (!$rows) {
+            $lines[] = 'Aucune publication dans la selection.';
+        }
+        foreach ($rows as $row) {
+            $date = trim((string)($row['date_prevue'] ?? ''));
+            $timestamp = $date !== '' ? strtotime($date) : false;
+            $date = $timestamp ? date('d/m/Y', $timestamp) : ($date ?: '-');
+            $clientProject = implode(' / ', array_filter([
+                trim((string)($row['client'] ?? '')),
+                trim((string)($row['projet'] ?? '')),
+            ]));
+            $meta = implode(' - ', array_filter([
+                trim((string)($row['type_livrable'] ?? '')),
+                trim((string)($row['reseau'] ?? '')),
+            ]));
+            $lines[] = $date.'  |  '.trim((string)($row['titre'] ?? 'Publication')).($meta !== '' ? '  |  '.$meta : '');
+            if ($clientProject !== '') $lines[] = '  '.$clientProject;
+            $subject = trim((string)($row['sujet'] ?? ''));
+            if ($subject !== '') $lines[] = '  Sujet : '.$subject;
+            $lines[] = '';
+        }
+        self::renderSimplePdfLines($lines, $fileName);
     }
     public static function outputTablePdf($title, array $rows, array $columns, $fileName = 'export.pdf') {
         if (class_exists('Dompdf\\Dompdf')) {
