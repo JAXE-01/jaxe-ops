@@ -1,16 +1,16 @@
 <?php
 class PdfExportService {
     public static function outputCalendarPdf(string $title, array $rows, string $fileName = 'calendrier-editorial.pdf'): void {
-        if (class_exists('Dompdf\\Dompdf')) {
-            self::renderWithDompdf(self::buildCalendarHtml($title, $rows), $fileName, 'landscape');
+        if (self::hasHtmlPdfEngine()) {
+            self::renderHtmlPdf(self::buildCalendarHtml($title, $rows), $fileName, 'landscape');
             return;
         }
         self::outputCalendarFallback($title, $rows, $fileName);
     }
 
     public static function outputBriefsPdf(string $title, array $rows, string $fileName = 'briefs-et-scripts.pdf'): void {
-        if (class_exists('Dompdf\\Dompdf')) {
-            self::renderWithDompdf(self::buildBriefsHtml($title, $rows), $fileName, 'portrait');
+        if (self::hasHtmlPdfEngine()) {
+            self::renderHtmlPdf(self::buildBriefsHtml($title, $rows), $fileName, 'portrait');
             return;
         }
         self::outputTablePdf($title, $rows, ['client','projet','periode_mois','titre','script_contenu'], $fileName);
@@ -42,9 +42,9 @@ class PdfExportService {
         self::renderSimplePdfLines($lines, $fileName);
     }
     public static function outputTablePdf($title, array $rows, array $columns, $fileName = 'export.pdf') {
-        if (class_exists('Dompdf\\Dompdf')) {
+        if (self::hasHtmlPdfEngine()) {
             $html = self::buildTableHtml($title, $rows, $columns);
-            self::renderWithDompdf($html, $fileName, 'landscape');
+            self::renderHtmlPdf($html, $fileName, 'landscape');
             return;
         }
 
@@ -78,9 +78,9 @@ class PdfExportService {
         $recommendations = (array) ($data['recommendations'] ?? []);
         $sections = !empty($sections) ? $sections : ['global', 'publication', 'network', 'recommendations'];
 
-        if (class_exists('Dompdf\\Dompdf')) {
+        if (self::hasHtmlPdfEngine()) {
             $html = self::buildReportHtml($title, $global, $items, $fields, $sections, $byPublication, $byNetwork, $recommendations);
-            self::renderWithDompdf($html, $fileName);
+            self::renderHtmlPdf($html, $fileName);
             return;
         }
 
@@ -147,9 +147,9 @@ class PdfExportService {
         $network = is_array($analysis['network_comparison'] ?? null) ? $analysis['network_comparison'] : [];
         $insights = is_array($analysis['global_insights'] ?? null) ? $analysis['global_insights'] : [];
 
-        if (class_exists('Dompdf\\Dompdf')) {
+        if (self::hasHtmlPdfEngine()) {
             $html = self::buildKpiClientReportHtml($title, $cards, $top, $weak, $network, $insights);
-            self::renderWithDompdf($html, $fileName, 'portrait');
+            self::renderHtmlPdf($html, $fileName, 'portrait');
             return;
         }
 
@@ -189,6 +189,42 @@ class PdfExportService {
         self::renderSimplePdfLines($lines, $fileName);
     }
 
+    private static function hasHtmlPdfEngine(): bool {
+        return class_exists('TCPDF') || class_exists('Dompdf\\Dompdf');
+    }
+
+    private static function renderHtmlPdf($html, $fileName, string $orientation = 'landscape'): void {
+        if (class_exists('TCPDF')) {
+            self::renderWithTcpdf($html, $fileName, $orientation);
+            return;
+        }
+        self::renderWithDompdf($html, $fileName, $orientation);
+    }
+
+    private static function renderWithTcpdf($html, $fileName, string $orientation = 'landscape'): void {
+        $pdf = new TCPDF($orientation === 'portrait' ? 'P' : 'L', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->SetCreator('Strax');
+        $pdf->SetAuthor('Strax');
+        $pdf->SetTitle(strip_tags((string)$fileName));
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(12, 12, 12);
+        $pdf->SetAutoPageBreak(true, 14);
+        $pdf->setImageScale(1.25);
+        $pdf->SetFont('dejavusans', '', 9);
+        $pdf->AddPage();
+        $pdf->writeHTML((string)$html, true, false, true, false, '');
+        $pages = $pdf->getNumPages();
+        for ($page = 1; $page <= $pages; $page++) {
+            $pdf->setPage($page);
+            $pdf->SetY(-10);
+            $pdf->SetFont('dejavusans', '', 7);
+            $pdf->SetTextColor(96, 115, 139);
+            $pdf->Cell(0, 5, 'Strax  |  Page '.$page.'/'.$pages, 0, 0, 'R');
+        }
+        self::sendPdf((string)$pdf->Output($fileName, 'S'), $fileName);
+    }
+
     private static function renderWithDompdf($html, $fileName, string $orientation = 'landscape') {
         $options=new Dompdf\Options();
         $options->set('defaultFont','DejaVu Sans');
@@ -201,12 +237,17 @@ class PdfExportService {
         $canvas=$dompdf->getCanvas();$font=$dompdf->getFontMetrics()->getFont('DejaVu Sans','normal');
         $canvas->page_text($canvas->get_width()-92,$canvas->get_height()-24,'Page {PAGE_NUM}/{PAGE_COUNT}',$font,7,[0.38,0.45,0.55]);
 
+        self::sendPdf($dompdf->output(), $fileName);
+    }
+
+    private static function sendPdf(string $content, string $fileName): void {
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+        header('Content-Disposition: attachment; filename="' . str_replace(['"', "\r", "\n"], '', $fileName) . '"');
+        header('Content-Length: '.strlen($content));
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Pragma: no-cache');
         header('Expires: 0');
-        echo $dompdf->output();
+        echo $content;
         exit;
     }
 
