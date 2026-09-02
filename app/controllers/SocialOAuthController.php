@@ -6,10 +6,10 @@ class SocialOAuthController extends Controller {
     public function __construct(){parent::__construct();$this->requireAuth();$this->requirePermission('publishing.manage');}
 
     public function connect($connectionId){
+        $connection=$this->connection((int)$connectionId);
+        if(!in_array($connection['provider'],['facebook','instagram'],true)){$this->flash('error','Les identifiants seuls ne suffisent pas : le connecteur OAuth de ce réseau n est pas encore implémenté.');$this->redirect('/social-publishing');}
         $clientId=trim((string)config_env_value('META_CLIENT_ID',''));$secret=trim((string)config_env_value('META_CLIENT_SECRET',''));
         if($clientId===''||$secret===''){$this->flash('error','Ajoutez META_CLIENT_ID et META_CLIENT_SECRET dans le fichier .env.');$this->redirect('/social-publishing');}
-        $connection=$this->connection((int)$connectionId);
-        if(!in_array($connection['provider'],['facebook','instagram'],true)){$this->flash('error','Ce connecteur OAuth sera disponible dans un prochain adaptateur.');$this->redirect('/social-publishing');}
         $state=bin2hex(random_bytes(24));$_SESSION['social_oauth'][$state]=['connection_id'=>(int)$connection['id'],'tenant_id'=>TenantGuard::tenantId(),'created_at'=>time()];
         $scopes=$this->requestedScopes();$params=['client_id'=>$clientId,'redirect_uri'=>$this->absoluteUrl(route_url('/social-oauth/callback')),'state'=>$state,'response_type'=>'code','scope'=>implode(',',$scopes),'auth_type'=>'rerequest'];
         header('Location: https://www.facebook.com/'.rawurlencode($this->version()).'/dialog/oauth?'.http_build_query($params));exit;
