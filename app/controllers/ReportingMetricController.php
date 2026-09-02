@@ -21,6 +21,9 @@ class ReportingMetricController extends Controller {
             'plateforme' => strtolower(trim((string) ($_GET['plateforme'] ?? ''))),
             'client_id' => (int)($_GET['client_id']??0),
             'connection_id' => (int)($_GET['connection_id']??0),
+            'content_type' => is_string($_GET['content_type']??null) ? $_GET['content_type'] : '',
+            'sort' => is_string($_GET['sort']??null) ? $_GET['sort'] : 'date_publication',
+            'direction' => ($_GET['direction']??'desc')==='asc'?'asc':'desc',
             'from' => trim((string) ($_GET['from'] ?? '')),
             'to' => trim((string) ($_GET['to'] ?? '')),
         ];
@@ -134,6 +137,20 @@ class ReportingMetricController extends Controller {
     }
 
     private function downloadReport(array $filters, $reportType, $format) {
+        if($format==='pdf' && $reportType==='selection') {
+            $tables=[];$clients=[];
+            foreach(ReportPresentation::tables($_GET) as $model) {
+                $data=match($model){'publication'=>$this->reportingMetricModel->getPublicationAggregateReport($filters),'monthly'=>$this->reportingMetricModel->getMonthlyAggregateReport($filters),default=>$this->reportingMetricModel->getIndividualReportRows($filters)};
+                $names=array_values(array_unique(array_filter(array_column($data,'client_nom'))));
+                $clients=array_merge($clients,$names);
+                $tables[]=['title'=>ReportPresentation::models()[$model].(count($names)===1?' — '.$names[0]:' — Multi-clients'),'rows'=>$data,'columns'=>ReportPresentation::columns($model,$_GET)];
+            }
+            $clients=array_values(array_unique($clients));
+            $name=count($clients)===1?$clients[0]:'selection';
+            $slug=trim(preg_replace('/[^a-z0-9]+/i','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name)),'-');
+            PdfExportService::outputSelectedTablesPdf($tables,'rapport-'.$slug.'.pdf');
+            return;
+        }
         $reportType = in_array($reportType, ['individual', 'publication', 'monthly', 'flat', 'client'], true) ? $reportType : 'individual';
 
         if ($format === 'pdf' && $reportType === 'client') {
@@ -164,6 +181,15 @@ class ReportingMetricController extends Controller {
             $columns = ['id','client_nom','page_nom','campagne_nom','publication_titre','plateforme','date_publication','date_collecte','periode_analysee','impressions','couverture','vues','likes','commentaires','partages','clics','ctr','engagement_rate','score_global','growth_rate','daily_rate','url_publication'];
         }
 
+        if (in_array($reportType, ['individual','publication','monthly'], true) && $format !== 'excel') {
+            $columns = ReportPresentation::columns($reportType, $_GET);
+            $clients = array_values(array_unique(array_filter(array_column($rows, 'client_nom'))));
+            $client = count($clients)===1 ? $clients[0] : (count($clients)>1?'Multi-clients':'');
+            if ($client !== '') {
+                $title .= ' — '.$client;
+                $fileStem .= '-'.trim(preg_replace('/[^a-z0-9]+/i','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$client)), '-');
+            }
+        }
         if ($format === 'pdf') {
             PdfExportService::outputTablePdf($title, $rows, $columns, $fileStem . '.pdf');
             return;

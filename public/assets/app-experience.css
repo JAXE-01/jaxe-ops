@@ -1,0 +1,29 @@
+.report-table-panel{margin-top:14px;padding:18px!important}
+.report-table-panel .panel-head{align-items:center;gap:16px}
+.report-table-panel td{max-width:320px;overflow-wrap:anywhere}
+.report-sort{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:6px;white-space:nowrap}
+.report-sort:focus-visible,.report-columns summary:focus-visible{outline:2px solid #397bbb}
+.report-columns{position:relative;font-size:12px}
+.report-columns summary{cursor:pointer;padding:8px;border:1px solid #dce4ed;border-radius:6px}
+.report-columns>div{position:absolute;right:0;z-index:20;background:white;border:1px solid #dce4ed;box-shadow:0 8px 24px #172f4b20;padding:12px;width:240px;max-height:340px;overflow:auto}
+.report-columns label{display:flex;gap:8px;align-items:center;margin:6px 0}
+.report-columns input[type=checkbox]{width:16px;min-height:16px;height:16px}
+.report-status{font-size:13px;color:#42617f;min-height:0}
+.report-status:not(:empty){padding:10px 0}
+.report-status.busy:before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;border:2px solid #dce4ed;border-top-color:#315d86;border-radius:50%;animation:report-spin .8s linear infinite}
+@keyframes report-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.report-status.busy:before{animation:none}}
+.install-app{border:1px solid #dce4ed;background:#fff;color:#23364d;padding:10px 14px;border-radius:8px;cursor:pointer}
+.install-app[hidden]{display:none}
+.install-app{position:fixed;right:16px;bottom:82px;z-index:90}
+.report-table-panel[hidden]{display:none!important}
+.report-delete{display:inline-block;margin:0 0 0 8px}.report-delete button{border:0;background:none;color:#8a6570;cursor:pointer;padding:4px 8px}
+@media(max-width:768px){
+ .mobile-bottom-nav{padding-bottom:env(safe-area-inset-bottom);grid-template-columns:repeat(5,minmax(0,1fr))!important;backdrop-filter:blur(12px)}
+ .authenticated-user main.content{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+ .report-table-panel{padding:12px!important}.report-table-panel h2{font-size:17px}
+ .reporting-filter-row{display:grid!important;grid-template-columns:1fr 1fr!important}
+ .reporting-filter-row label{min-width:0!important}.reporting-filter-row select{width:100%}
+ .compact-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .report-table-panel .panel-head{flex-wrap:wrap}
+}

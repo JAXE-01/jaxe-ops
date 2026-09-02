@@ -264,19 +264,21 @@ class ReportingMetricModel extends Model {
         $params = [];
         $where = $this->buildFiltersWhere($filters, $params);
 
-        $sql = 'SELECT rm.*, c.nom AS campagne_nom,
+        $sql = 'SELECT rm.*, c.nom AS campagne_nom, sp.master_caption AS publication_caption,
+            '.ReportPresentation::typeSql().' AS content_type,
             COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication_titre,
-            COALESCE(DATE((SELECT spt.published_at FROM social_publication_targets spt WHERE spt.id=rm.social_target_id)),rm.date_collecte) AS date_publication,
+            DATE((SELECT spt.published_at FROM social_publication_targets spt WHERE spt.id=rm.social_target_id)) AS date_publication,
+            COALESCE(NULLIF(rm.url_publication,""),(SELECT link_target.external_post_url FROM social_publication_targets link_target WHERE link_target.id=rm.social_target_id)) AS url_publication,
             (SELECT scl.entreprise FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id JOIN clients scl ON scl.id=sc.client_id WHERE spt.id=rm.social_target_id) AS client_nom,
             (SELECT sc.account_label FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id WHERE spt.id=rm.social_target_id) AS page_nom,
             COALESCE(CAST(rm.contenu_id AS CHAR), CONCAT("social-", rm.social_publication_id), CONCAT("manual-", rm.id)) AS publication_id,
-                DATE_FORMAT(COALESCE(DATE((SELECT ppt.published_at FROM social_publication_targets ppt WHERE ppt.id=rm.social_target_id)),rm.date_collecte), "%Y-%m") AS periode_analysee
+                DATE_FORMAT(DATE((SELECT ppt.published_at FROM social_publication_targets ppt WHERE ppt.id=rm.social_target_id)), "%Y-%m") AS periode_analysee
             FROM reporting_metrics rm
             LEFT JOIN campagnes c ON c.id = rm.campagne_id
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
             LEFT JOIN social_publications sp ON sp.id = rm.social_publication_id
             ' . $where . '
-            ORDER BY rm.date_collecte DESC, rm.id DESC
+            ORDER BY '.ReportPresentation::sortSql('individual',$filters).', rm.id DESC
             LIMIT ' . max(1, (int) $limit);
 
         $stmt = $this->db->prepare($sql);
@@ -650,19 +652,24 @@ class ReportingMetricModel extends Model {
         }
 
         $clientId=(int)($filters['client_id']??0);
+        $contentType=(string)($filters['content_type']??'');
+        if(in_array($contentType,['image','video','carousel','link','text','unknown'],true)) {
+            $clauses[]=ReportPresentation::typeSql().' = :filter_content_type';
+            $params['filter_content_type']=$contentType;
+        }
         if($clientId>0){$clauses[]='EXISTS (SELECT 1 FROM social_publication_targets ft JOIN social_connections fc ON fc.id=ft.connection_id WHERE ft.id=rm.social_target_id AND fc.client_id=:filter_client)';$params['filter_client']=$clientId;}
         $connectionId=(int)($filters['connection_id']??0);
         if($connectionId>0){$clauses[]='EXISTS (SELECT 1 FROM social_publication_targets ft WHERE ft.id=rm.social_target_id AND ft.connection_id=:filter_connection)';$params['filter_connection']=$connectionId;}
 
         $from = trim((string) ($filters['from'] ?? ''));
         if ($from !== '') {
-            $clauses[] = 'COALESCE(DATE((SELECT fpt.published_at FROM social_publication_targets fpt WHERE fpt.id=rm.social_target_id)),rm.date_collecte) >= :date_from';
+            $clauses[] = 'DATE((SELECT fpt.published_at FROM social_publication_targets fpt WHERE fpt.id=rm.social_target_id)) >= :date_from';
             $params['date_from'] = $from;
         }
 
         $to = trim((string) ($filters['to'] ?? ''));
         if ($to !== '') {
-            $clauses[] = 'COALESCE(DATE((SELECT fpt.published_at FROM social_publication_targets fpt WHERE fpt.id=rm.social_target_id)),rm.date_collecte) <= :date_to';
+            $clauses[] = 'DATE((SELECT fpt.published_at FROM social_publication_targets fpt WHERE fpt.id=rm.social_target_id)) <= :date_to';
             $params['date_to'] = $to;
         }
 
@@ -678,7 +685,7 @@ class ReportingMetricModel extends Model {
     }
 
     public function getIndividualReportRows(array $filters) {
-        return $this->getEnrichedMetrics($filters, 5000);
+        return ReportPresentation::sortRows($this->getEnrichedMetrics($filters, 5000),'individual',$filters);
     }
 
     public function getPublicationAggregateReport(array $filters) {
@@ -690,9 +697,13 @@ class ReportingMetricModel extends Model {
         $sql = 'SELECT
                 COALESCE(rm.contenu_id, 0) AS contenu_id,
                 COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
+                MAX(sp.master_caption) AS publication_caption,
+                MAX(sp.id) AS social_publication_id,
+                MAX(DATE(spt.published_at)) AS date_publication,
+                MAX('.ReportPresentation::typeSql().') AS content_type,
                 COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
                 COALESCE(sc.account_label, "Page non rattachee") AS page_nom,
-                COALESCE(MAX(rm.url_publication), MAX(spt.external_post_url)) AS url_publication,
+                COALESCE(MAX(NULLIF(rm.url_publication,"")), MAX(spt.external_post_url)) AS url_publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions,
                 SUM(rm.couverture) AS couverture,
@@ -711,7 +722,7 @@ class ReportingMetricModel extends Model {
             LEFT JOIN clients scl ON scl.id = sc.client_id
             ' . $where . '
             GROUP BY rm.contenu_id, rm.social_publication_id, ct.sujet, sp.master_title, scl.entreprise, sc.account_label
-            ORDER BY vues DESC';
+            ORDER BY '.ReportPresentation::sortSql('publication',$filters).', page_nom ASC';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -725,7 +736,7 @@ class ReportingMetricModel extends Model {
         $where .= $where === '' ? 'WHERE '.$latestSnapshot : ' AND '.$latestSnapshot;
 
         $sql = 'SELECT
-                DATE_FORMAT(COALESCE(DATE(spt.published_at),rm.date_collecte), "%Y-%m") AS mois,
+                DATE_FORMAT(DATE(spt.published_at), "%Y-%m") AS mois,
                 rm.plateforme,
                 COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
                 COALESCE(sc.account_label, "Page non rattachee") AS page_nom,
@@ -736,6 +747,9 @@ class ReportingMetricModel extends Model {
                 SUM(rm.couverture) AS couverture_total,
                 AVG(rm.couverture) AS couverture_moyenne,
                 SUM(rm.vues) AS vues_total,
+                SUM(rm.likes) AS likes_total,
+                SUM(rm.commentaires) AS commentaires_total,
+                SUM(rm.partages) AS partages_total,
                 AVG(rm.vues) AS vues_moyenne,
                 SUM(rm.clics) AS clics_total,
                 AVG(rm.clics) AS clics_moyenne,
@@ -749,7 +763,7 @@ class ReportingMetricModel extends Model {
             LEFT JOIN clients scl ON scl.id = sc.client_id
             ' . $where . '
             GROUP BY mois, rm.plateforme, scl.entreprise, sc.account_label
-            ORDER BY mois DESC, client_nom ASC, page_nom ASC, plateforme ASC';
+            ORDER BY '.ReportPresentation::sortSql('monthly',$filters).', client_nom ASC, page_nom ASC, plateforme ASC';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

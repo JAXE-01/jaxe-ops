@@ -24,6 +24,11 @@ $metricPercent = static fn(array $row, string $key): string => !array_key_exists
     : number_format((float)$row[$key], 2, ',', ' ') . '%';
 
 $filterQuery = http_build_query(array_filter([
+    'columns' => is_array($_GET['columns']??null)?$_GET['columns']:[],
+    'tables' => array_merge([''],ReportPresentation::tables($_GET)),
+    'content_type' => $filters['content_type']??'',
+    'sort' => $filters['sort']??'date_publication',
+    'direction' => $filters['direction']??'desc',
     'campagne_id' => (int) ($filters['campagne_id'] ?? 0) > 0 ? (int) $filters['campagne_id'] : null,
     'publication_ref' => trim((string) ($filters['publication_ref'] ?? '')),
     'plateforme' => trim((string) ($filters['plateforme'] ?? '')),
@@ -124,6 +129,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             <p class="panel-subtitle">Analysez les publications collectées automatiquement et exportez des rapports prêts à partager.</p>
         </div>
         <div class="report-icon-actions" id="report-export-actions" aria-label="Exporter les statistiques">
+            <a class="report-icon-button" href="<?= htmlspecialchars(report_export_url('pdf','selection',$filterQuery)) ?>" title="PDF des tableaux sélectionnés" aria-label="PDF des tableaux sélectionnés">▤</a>
             <?php foreach([['excel','flat','XLS','Exporter l’analyse Excel'],['pdf','client','PDF','Exporter le rapport client'],['csv','individual','CSV','Exporter les données individuelles'],['pdf','individual','PDF','Exporter le PDF individuel'],['csv','publication','CSV','Exporter par publication'],['pdf','publication','PDF','Exporter le PDF par publication'],['csv','monthly','CSV','Exporter le rapport mensuel'],['pdf','monthly','PDF','Exporter le PDF mensuel']] as $export): ?>
             <a class="report-icon-button" data-format="<?= $export[2] ?>" href="<?= htmlspecialchars(report_export_url($export[0],$export[1],$filterQuery)) ?>" title="<?= htmlspecialchars($export[3]) ?>" aria-label="<?= htmlspecialchars($export[3]) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg></a>
             <?php endforeach; ?>
@@ -149,6 +155,10 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     <?php endif; ?>
 
     <form class="compact-filters reporting-filter-row" id="reporting-filter-form" method="get" action="<?= htmlspecialchars(route_url('/reporting-metric')) ?>">
+        <details class="report-columns"><summary>Tableaux du rapport</summary><div><input type="hidden" name="tables[]" value=""><?php foreach(ReportPresentation::models() as $model=>$label): ?><label><input type="checkbox" name="tables[]" value="<?= $model ?>" <?= in_array($model,ReportPresentation::tables($_GET),true)?'checked':'' ?>> <?= htmlspecialchars($label) ?></label><?php endforeach ?></div></details>
+        <input type="hidden" name="sort" value="<?= htmlspecialchars($filters['sort']??'date_publication') ?>">
+        <input type="hidden" name="direction" value="<?= htmlspecialchars($filters['direction']??'desc') ?>">
+        <label>Format<select name="content_type"><option value="">Tous les formats</option><?php foreach(['image'=>'Image','video'=>'Vidéo','carousel'=>'Carrousel','link'=>'Lien','text'=>'Texte','unknown'=>'Non renseigné'] as $type=>$label): ?><option value="<?= $type ?>" <?= ($filters['content_type']??'')===$type?'selected':'' ?>><?= $label ?></option><?php endforeach ?></select></label>
         <label>Client<select name="client_id" id="reporting-client"><option value="">Tous</option><?php foreach($clientOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['client_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
         <label>Page<select name="connection_id" id="reporting-page"><option value="">Toutes</option><?php foreach($pageOptions as$id=>$label):?><option value="<?= (int)$id?>" <?= (int)($filters['connection_id']??0)===(int)$id?'selected':''?>><?= htmlspecialchars($label)?></option><?php endforeach?></select></label>
         <label>
@@ -405,153 +415,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
     </div>
 </section>
 
-<section class="panel" style="margin-top:14px;">
-    <div class="panel-head">
-        <div>
-            <h2>Rapport global par publication</h2>
-            <p class="panel-subtitle">Aggregation multi-reseaux pour mesurer la performance d une publication.</p>
-        </div>
-    </div>
-    <div class="table-wrap compact-table">
-        <table>
-            <thead>
-            <tr>
-                <th>Client / Page</th>
-                <th>Publication</th>
-                <th>Collectes</th>
-                <th>Impressions</th>
-                <th>Couverture</th>
-                <th>Vues</th>
-                <th>Clics</th>
-                <th>CTR moyen</th>
-                <th>Engagement rate moyen</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($publicationReport as $row): ?>
-                <tr>
-                    <td><strong><?= htmlspecialchars((string)($row['client_nom']??'')) ?></strong><br><small><?= htmlspecialchars((string)($row['page_nom']??'')) ?></small></td>
-                    <td><span class="publication-cell"><span><?= htmlspecialchars((string) ($row['publication'] ?? '')) ?></span><?php if(!empty($row['url_publication'])):?><a class="publication-link" href="<?= htmlspecialchars((string)$row['url_publication']) ?>" target="_blank" rel="noopener" title="Voir la publication Facebook" aria-label="Voir la publication Facebook">↗</a><?php endif?></span></td>
-                    <td><?= number_format((int) ($row['collectes'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= $metricValue($row, 'impressions') ?></td>
-                    <td><?= $metricValue($row, 'couverture') ?></td>
-                    <td><?= $metricValue($row, 'vues') ?></td>
-                    <td><?= $metricValue($row, 'clics') ?></td>
-                    <td><?= $metricPercent($row, 'ctr_moyen') ?></td>
-                    <td><?= $metricPercent($row, 'engagement_rate_moyen') ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="panel" style="margin-top:14px;">
-    <div class="panel-head">
-        <div>
-            <h2>Rapport global mensuel</h2>
-            <p class="panel-subtitle">Synthèse consolidée par mois, client, Page et réseau.</p>
-        </div>
-    </div>
-    <div class="table-wrap compact-table">
-        <table>
-            <thead>
-            <tr>
-                <th>Mois</th>
-                <th>Client / Page</th>
-                <th>Reseau</th>
-                <th>Publications</th>
-                <th>Collectes</th>
-                <th>Vues totales</th>
-                <th>Vues moyennes</th>
-                <th>Clics totaux</th>
-                <th>Clics moyens</th>
-                <th>CTR moyen</th>
-                <th>Engagement rate moyen</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($monthlyReport as $row): ?>
-                <tr>
-                    <td><?= htmlspecialchars((string) ($row['mois'] ?? '')) ?></td>
-                    <td><strong><?= htmlspecialchars((string)($row['client_nom']??'')) ?></strong><br><small><?= htmlspecialchars((string)($row['page_nom']??'')) ?></small></td>
-                    <td><?= htmlspecialchars((string) ($platformOptions[$row['plateforme'] ?? ''] ?? ($row['plateforme'] ?? '')) ) ?></td>
-                    <td><?= number_format((int)($row['publications']??0),0,',',' ') ?></td>
-                    <td><?= number_format((int) ($row['collectes'] ?? 0), 0, ',', ' ') ?></td>
-                    <td><?= $metricValue($row, 'vues_total') ?></td>
-                    <td><?= $metricValue($row, 'vues_moyenne') ?></td>
-                    <td><?= $metricValue($row, 'clics_total') ?></td>
-                    <td><?= $metricValue($row, 'clics_moyenne') ?></td>
-                    <td><?= $metricPercent($row, 'ctr_moyen') ?></td>
-                    <td><?= $metricPercent($row, 'engagement_rate_moyen') ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="panel" style="margin-top:14px;">
-    <div class="panel-head">
-        <div>
-            <h2>Rapport individuel par publication</h2>
-            <p class="panel-subtitle">Historique detaille, filtreable par reseau/publication/date.</p>
-        </div>
-    </div>
-
-    <div class="table-wrap compact-table">
-        <table>
-            <thead>
-            <tr>
-                <th>Date</th>
-                <th>Client / Page</th>
-                <th>Periode</th>
-                <th>Campagne</th>
-                <th>Publication</th>
-                <th>Reseau</th>
-                <th>Impr.</th>
-                <th>Couv.</th>
-                <th>Vues</th>
-                <th>Clics</th>
-                <th>CTR</th>
-                <th>Engagement</th>
-                <th>Score</th>
-                <th>Croissance</th>
-                <th>Perf/jour</th>
-                <?php if ($canManage): ?><th>Action</th><?php endif; ?>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($rows as $row): ?>
-                <tr>
-                    <td><?= htmlspecialchars((string) ($row['date_collecte'] ?? '')) ?></td>
-                    <td><strong><?= htmlspecialchars((string)($row['client_nom']??'')) ?></strong><br><small><?= htmlspecialchars((string)($row['page_nom']??'')) ?></small></td>
-                    <td><?= htmlspecialchars((string) ($row['periode_analysee'] ?? '')) ?></td>
-                    <td><?= htmlspecialchars((string) ($row['campagne_nom'] ?? '')) ?></td>
-                    <td><span class="publication-cell"><span><?= htmlspecialchars((string) ($row['publication_titre'] ?? '')) ?></span><?php if(!empty($row['url_publication'])):?><a class="publication-link" href="<?= htmlspecialchars((string)$row['url_publication']) ?>" target="_blank" rel="noopener" title="Voir la publication" aria-label="Voir la publication">↗</a><?php endif?></span></td>
-                    <td><?= htmlspecialchars((string) ($platformOptions[$row['plateforme'] ?? ''] ?? ($row['plateforme'] ?? '')) ) ?></td>
-                    <td><?= $metricValue($row, 'impressions') ?></td>
-                    <td><?= $metricValue($row, 'couverture') ?></td>
-                    <td><?= $metricValue($row, 'vues') ?></td>
-                    <td><?= $metricValue($row, 'clics') ?></td>
-                    <td><?= $metricPercent($row, 'ctr') ?></td>
-                    <td><?= $metricPercent($row, 'engagement_rate') ?></td>
-                    <td><?= number_format((float) ($row['score_global'] ?? 0), 2, ',', ' ') ?></td>
-                    <td><?= number_format((float) ($row['growth_rate'] ?? 0), 2, ',', ' ') ?>%</td>
-                    <td><?= number_format((float) ($row['daily_rate'] ?? 0), 2, ',', ' ') ?></td>
-                    <?php if ($canManage): ?>
-                        <td>
-                            <form method="post" action="<?= htmlspecialchars(route_url('/reporting-metric/delete/' . (int) ($row['id'] ?? 0))) ?>" onsubmit="return confirm('Supprimer cette collecte ?');">
-                                <button type="submit" class="report-icon-button" title="Supprimer cette collecte" aria-label="Supprimer cette collecte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v5m4-5v5"/></svg></button>
-                            </form>
-                        </td>
-                    <?php endif; ?>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
+<?php require __DIR__ . '/tables.php'; ?>
 
 </div>
 <script>
@@ -596,43 +460,5 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 
     networkSelect.addEventListener('change', renderKpiFields);
     renderKpiFields();
-})();
-(function(){
-    var form=document.getElementById('reporting-filter-form');
-    var results=document.getElementById('reporting-results');
-    if(!form||!results||!window.fetch||!window.DOMParser)return;
-    var requestId=0;
-    function refresh(){
-        var current=++requestId;
-        var url=form.action+'?'+new URLSearchParams(new FormData(form)).toString();
-        form.classList.add('is-loading');
-        fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
-            .then(function(response){if(!response.ok)throw new Error('HTTP '+response.status);return response.text();})
-            .then(function(html){
-                if(current!==requestId)return;
-                var copy=new DOMParser().parseFromString(html,'text/html');
-                var next=copy.getElementById('reporting-results');
-                var nextPage=copy.getElementById('reporting-page');
-                var page=form.querySelector('#reporting-page');
-                var nextExports=copy.getElementById('report-export-actions');
-                var exports=document.getElementById('report-export-actions');
-                if(!next)throw new Error('Résultats indisponibles');
-                results.replaceWith(next);results=next;
-                if(page&&nextPage)page.replaceWith(nextPage);
-                if(exports&&nextExports){exports.replaceWith(nextExports);}
-                history.replaceState({},'',url);
-            })
-            .catch(function(){window.location.href=url;})
-            .finally(function(){if(current===requestId)form.classList.remove('is-loading');});
-    }
-    form.addEventListener('submit',function(event){event.preventDefault();refresh();});
-    form.addEventListener('change',function(event){
-        if(!event.target.matches('select,input[type="date"]'))return;
-        if(event.target.name==='client_id'){
-            var page=form.querySelector('[name="connection_id"]');
-            if(page)page.value='';
-        }
-        refresh();
-    });
 })();
 </script>

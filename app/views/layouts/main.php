@@ -204,8 +204,8 @@ if ($currentUser) {
     }
 }
 
-$mobilePrimaryNavItems = array_slice($allowedMainNavItems, 0, 5);
-$mobileOverflowNavItems = array_slice($allowedMainNavItems, 5);
+$mobilePrimaryNavItems = array_slice($allowedMainNavItems, 0, 4);
+$mobileOverflowNavItems = array_slice($allowedMainNavItems, 4);
 
 $mobileUtilityItems = [];
 if ($currentUser) {
@@ -237,7 +237,10 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#14283f">
+    <link rel="manifest" href="<?= htmlspecialchars(app_url('/manifest.webmanifest')) ?>">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars(app_url('/public/assets/brand/app-192.png')) ?>">
     <title><?= htmlspecialchars($pageTitle ?? 'Strax') ?></title>
     <link rel="icon" type="image/svg+xml" href="<?= htmlspecialchars(app_url('/public/assets/favicon.svg')) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -246,6 +249,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/style.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/sidebar.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/public-site.css?v=20260826-1')) ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/app-experience.css?v=1')) ?>">
 </head>
 <body class="<?= $currentUser ? 'authenticated-user' : 'public-visitor' ?>" data-role-profile="<?= htmlspecialchars($roleProfile) ?>">
 <div class="global-loader" id="globalLoader" aria-hidden="true" role="status">
@@ -388,7 +392,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     var forms = document.querySelectorAll('form');
     forms.forEach(function (form) {
         form.addEventListener('submit', function (event) {
-            if (form.hasAttribute('data-no-global-loader')) {
+            if (event.defaultPrevented || form.hasAttribute('data-no-global-loader')) {
                 return;
             }
 
@@ -417,8 +421,8 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
             }
 
             var isDownloadForm = form.hasAttribute('data-download-form');
-            document.body.classList.add('is-loading');
-            loader.setAttribute('aria-hidden', 'false');
+            var loadingTimer = setTimeout(function(){document.body.classList.add('is-loading');loader.setAttribute('aria-hidden','false');},450);
+            window.addEventListener('pageshow',function(){clearTimeout(loadingTimer);document.body.classList.remove('is-loading');loader.setAttribute('aria-hidden','true');form.querySelectorAll('button,input[type="submit"]').forEach(function(control){control.disabled=false;});},{once:true});
 
             var controls = form.querySelectorAll('button, input[type="submit"]');
             controls.forEach(function (control) {
@@ -608,5 +612,8 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
 })();
 </script>
 <script src="<?= htmlspecialchars(app_url('/public/assets/calendar-position.js')) ?>"></script>
+<?php if($currentUser): ?><button id="install-app" class="install-app" type="button" hidden>Installer Strax</button><?php endif ?>
+<script src="<?= htmlspecialchars(app_url('/public/assets/reporting-workspace.js?v=1')) ?>"></script>
+<script src="<?= htmlspecialchars(app_url('/public/assets/app-install.js?v=1')) ?>"></script>
 </body>
 </html>

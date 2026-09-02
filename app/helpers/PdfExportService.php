@@ -193,6 +193,18 @@ class PdfExportService {
         return class_exists('TCPDF') || class_exists('Dompdf\\Dompdf');
     }
 
+    public static function outputSelectedTablesPdf(array $tables,string $fileName): void {
+        $html='';
+        foreach($tables as $table) {
+            $document=ReportTablePdf::html($table['title'],$table['rows'],$table['columns']);
+            if($html==='') {$html=$document;continue;}
+            preg_match('~<body>(.*)</body>~s',$document,$match);
+            $html=str_replace('</body></html>','<br pagebreak="true" />'.($match[1]??'').'</body></html>',$html);
+        }
+        if($html==='') $html=ReportTablePdf::html('Rapport — Aucun tableau sélectionné',[],['page_nom']);
+        self::renderHtmlPdf($html,$fileName,'landscape');
+    }
+
     private static function renderHtmlPdf($html, $fileName, string $orientation = 'landscape'): void {
         if (class_exists('TCPDF')) {
             self::renderWithTcpdf($html, $fileName, $orientation);
@@ -215,8 +227,11 @@ class PdfExportService {
         $pdf->AddPage();
         $pdf->writeHTML((string)$html, true, false, true, false, '');
         $pages = $pdf->getNumPages();
+        // Footer coordinates are inside the bottom margin; never create a new page here.
+        $pdf->SetAutoPageBreak(false, 0);
         for ($page = 1; $page <= $pages; $page++) {
             $pdf->setPage($page);
+            $pdf->SetAutoPageBreak(false, 0);
             $pdf->SetY(-10);
             $pdf->SetFont('dejavusans', '', 7);
             $pdf->SetTextColor(96, 115, 139);
@@ -284,60 +299,7 @@ class PdfExportService {
     }
 
     private static function buildTableHtml($title, array $rows, array $columns) {
-        ob_start();
-        ?>
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10px; color: #1e293b; margin: 20px; }
-                .hero { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: #ffffff; border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
-                .hero h1 { margin: 0 0 4px; font-size: 18px; }
-                .hero p { margin: 0; font-size: 10px; opacity: 0.96; }
-                .meta { margin-bottom: 8px; font-size: 10px; color: #334155; }
-                .table-wrap { border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { border-bottom: 1px solid #e2e8f0; padding: 7px 8px; vertical-align: top; }
-                th { background: #e2e8f0; text-transform: uppercase; font-size: 9px; letter-spacing: 0.02em; color: #334155; }
-                tbody tr:nth-child(even) td { background: #f8fafc; }
-                tbody tr:last-child td { border-bottom: none; }
-                td { line-height: 1.35; }
-            </style>
-        </head>
-        <body>
-            <div class="hero">
-                <h1><?= htmlspecialchars((string) $title) ?></h1>
-                <p>Export PDF professionnel · <?= date('d/m/Y H:i') ?></p>
-            </div>
-            <div class="meta">Colonnes selectionnees: <?= htmlspecialchars(implode(', ', $columns)) ?></div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <?php foreach ($columns as $column): ?>
-                                <th><?= htmlspecialchars((string) $column) ?></th>
-                            <?php endforeach; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($rows as $row): ?>
-                            <tr>
-                                <?php foreach ($columns as $column): ?>
-                                    <td><?= nl2br(htmlspecialchars((string) ($row[$column] ?? ''))) ?></td>
-                                <?php endforeach; ?>
-                            </tr>
-                        <?php endforeach; ?>
-                        <?php if (empty($rows)): ?>
-                            <tr><td colspan="<?= count($columns) ?>">Aucune donnee.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </body>
-        </html>
-        <?php
-        return (string) ob_get_clean();
+        return ReportTablePdf::html((string)$title, $rows, $columns);
     }
 
     private static function buildKpiClientReportHtml($title, array $cards, array $top, array $weak, array $network, array $insights) {

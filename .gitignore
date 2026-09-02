@@ -13,3 +13,4 @@ config/instance.secrets.php
 !/storage/.htaccess
 /storage/qa-pdf/
 /.codex-tpack/
+/tmp/pdfs/
