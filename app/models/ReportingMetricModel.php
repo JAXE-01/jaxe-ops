@@ -694,7 +694,9 @@ class ReportingMetricModel extends Model {
         $latestSnapshot = '(rm.social_target_id IS NULL OR rm.id=(SELECT MAX(latest_rm.id) FROM reporting_metrics latest_rm WHERE latest_rm.tenant_id=rm.tenant_id AND latest_rm.social_target_id=rm.social_target_id))';
         $where .= $where === '' ? 'WHERE '.$latestSnapshot : ' AND '.$latestSnapshot;
 
-        $sql = 'SELECT
+        // Aggregate aliases cannot be used inside IS NULL at the same SQL level
+        // on MariaDB (error 1247). Sort the materialized result instead.
+        $sql = 'SELECT report_rows.* FROM (SELECT
                 COALESCE(rm.contenu_id, 0) AS contenu_id,
                 COALESCE(ct.sujet, sp.master_title, "Publication non rattachee") AS publication,
                 MAX(sp.master_caption) AS publication_caption,
@@ -722,6 +724,7 @@ class ReportingMetricModel extends Model {
             LEFT JOIN clients scl ON scl.id = sc.client_id
             ' . $where . '
             GROUP BY rm.contenu_id, rm.social_publication_id, ct.sujet, sp.master_title, scl.entreprise, sc.account_label
+            ) AS report_rows
             ORDER BY '.ReportPresentation::sortSql('publication',$filters).', page_nom ASC';
 
         $stmt = $this->db->prepare($sql);
@@ -735,7 +738,7 @@ class ReportingMetricModel extends Model {
         $latestSnapshot = '(rm.social_target_id IS NULL OR rm.id=(SELECT MAX(latest_rm.id) FROM reporting_metrics latest_rm WHERE latest_rm.tenant_id=rm.tenant_id AND latest_rm.social_target_id=rm.social_target_id))';
         $where .= $where === '' ? 'WHERE '.$latestSnapshot : ' AND '.$latestSnapshot;
 
-        $sql = 'SELECT
+        $sql = 'SELECT report_rows.* FROM (SELECT
                 DATE_FORMAT(DATE(spt.published_at), "%Y-%m") AS mois,
                 rm.plateforme,
                 COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
@@ -763,6 +766,7 @@ class ReportingMetricModel extends Model {
             LEFT JOIN clients scl ON scl.id = sc.client_id
             ' . $where . '
             GROUP BY mois, rm.plateforme, scl.entreprise, sc.account_label
+            ) AS report_rows
             ORDER BY '.ReportPresentation::sortSql('monthly',$filters).', client_nom ASC, page_nom ASC, plateforme ASC';
 
         $stmt = $this->db->prepare($sql);
