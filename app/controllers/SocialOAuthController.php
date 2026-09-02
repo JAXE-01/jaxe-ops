@@ -2,6 +2,7 @@
 class SocialOAuthController extends Controller {
     private const REQUIRED_PAGE_SCOPES=['pages_show_list','pages_read_engagement','read_insights','pages_manage_posts'];
     private const INBOX_SCOPES=['pages_read_user_content','pages_manage_engagement','pages_messaging'];
+    private const INSTAGRAM_INSIGHTS_SCOPES=['instagram_basic','instagram_manage_insights'];
     public function __construct(){parent::__construct();$this->requireAuth();$this->requirePermission('publishing.manage');}
 
     public function connect($connectionId){
@@ -52,7 +53,7 @@ class SocialOAuthController extends Controller {
 
     private function projectsForClient(int $clientId): array {$stmt=Database::getConnection()->prepare("SELECT p.id,p.nom FROM projets p JOIN clients c ON c.id=p.client_id WHERE p.client_id=:client AND c.tenant_id=:tenant AND p.statut<>'Archive' ORDER BY p.nom");$stmt->execute(['client'=>$clientId,'tenant'=>TenantGuard::tenantId()]);return $stmt->fetchAll(PDO::FETCH_ASSOC);}
 
-    private function requestedScopes(): array {$raw=(string)config_env_value('META_OAUTH_SCOPES','pages_show_list,pages_read_engagement,read_insights,pages_manage_posts,pages_manage_engagement,pages_messaging,instagram_basic,instagram_content_publish');$scopes=array_values(array_unique(array_filter(array_map('trim',explode(',',$raw)))));foreach(array_merge(self::REQUIRED_PAGE_SCOPES,self::INBOX_SCOPES)as$scope)if(!in_array($scope,$scopes,true))$scopes[]=$scope;return$scopes;}
+    private function requestedScopes(): array {$raw=(string)config_env_value('META_OAUTH_SCOPES','pages_show_list,pages_read_engagement,read_insights,pages_manage_posts,pages_manage_engagement,pages_messaging,instagram_basic,instagram_content_publish');$scopes=array_values(array_unique(array_filter(array_map('trim',explode(',',$raw)))));foreach(array_merge(self::REQUIRED_PAGE_SCOPES,self::INBOX_SCOPES,self::INSTAGRAM_INSIGHTS_SCOPES)as$scope)if(!in_array($scope,$scopes,true))$scopes[]=$scope;return$scopes;}
     private function exchangeLongLived(string$short): string {try{$data=$this->request('/oauth/access_token',['grant_type'=>'fb_exchange_token','client_id'=>config_env_value('META_CLIENT_ID',''),'client_secret'=>config_env_value('META_CLIENT_SECRET',''),'fb_exchange_token'=>$short]);return(string)($data['access_token']??$short);}catch(Throwable$e){return$short;}}
     private function grantedScopes(string$token): array {$data=$this->request('/me/permissions',['access_token'=>$token]);$granted=[];foreach((array)($data['data']??[])as$row)if(($row['status']??'')==='granted'&&!empty($row['permission']))$granted[]=(string)$row['permission'];return array_values(array_unique($granted));}
     private function allPages(string$token): array {$url='/me/accounts';$params=['fields'=>'id,name,access_token,tasks,instagram_business_account{id,username,name,profile_picture_url}','limit'=>100,'access_token'=>$token];$all=[];for($i=0;$i<10;$i++){$data=$this->request($url,$params);$all=array_merge($all,(array)($data['data']??[]));$next=(string)($data['paging']['next']??'');if($next==='')break;$url=$next;$params=[];}return$all;}

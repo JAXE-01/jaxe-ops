@@ -2,6 +2,8 @@
 .report-table-panel .panel-head{align-items:center;gap:16px}
 .report-table-panel td{max-width:320px;overflow-wrap:anywhere}
 .report-sort{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:6px;white-space:nowrap}
+.report-sort svg,.report-table-panel td a svg{width:18px!important;height:18px;display:inline-block!important;vertical-align:middle}
+.report-instagram-access{font-size:12px;margin:8px 0;color:#735927}.report-instagram-access summary{cursor:pointer}
 .report-sort:focus-visible,.report-columns summary:focus-visible{outline:2px solid #397bbb}
 .report-columns{position:relative;font-size:12px}
 .report-columns summary{cursor:pointer;padding:8px;border:1px solid #dce4ed;border-radius:6px}

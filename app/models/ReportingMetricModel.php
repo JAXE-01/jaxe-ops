@@ -653,7 +653,7 @@ class ReportingMetricModel extends Model {
 
         $clientId=(int)($filters['client_id']??0);
         $contentType=(string)($filters['content_type']??'');
-        if(in_array($contentType,['image','video','carousel','link','text','unknown'],true)) {
+        if(in_array($contentType,['image','video','reel','carousel','link','text','unknown'],true)) {
             $clauses[]=ReportPresentation::typeSql().' = :filter_content_type';
             $params['filter_content_type']=$contentType;
         }
@@ -715,6 +715,7 @@ class ReportingMetricModel extends Model {
                 SUM(rm.partages) AS partages,
                 SUM(rm.clics) AS clics,
                 AVG(rm.ctr) AS ctr_moyen,
+                SUM(rm.sauvegardes) AS sauvegardes,
                 AVG(rm.engagement_rate) AS engagement_rate_moyen
             FROM reporting_metrics rm
             LEFT JOIN contenus ct ON ct.id = rm.contenu_id
@@ -755,6 +756,7 @@ class ReportingMetricModel extends Model {
                 SUM(rm.partages) AS partages_total,
                 AVG(rm.vues) AS vues_moyenne,
                 SUM(rm.clics) AS clics_total,
+                SUM(rm.sauvegardes) AS sauvegardes_total,
                 AVG(rm.clics) AS clics_moyenne,
                 AVG(rm.ctr) AS ctr_moyen,
                 AVG(rm.engagement_rate) AS engagement_rate_moyen

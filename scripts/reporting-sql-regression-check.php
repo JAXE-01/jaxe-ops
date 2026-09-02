@@ -28,6 +28,7 @@ $schemas=[
  'reporting_metrics'=>'id INT,tenant_id INT,campagne_id INT,project_id INT,contenu_id INT,social_publication_id INT,social_target_id INT,plateforme VARCHAR(20),date_collecte DATE,kpi_payload TEXT,url_publication VARCHAR(255),impressions INT,couverture INT,vues INT,likes INT,commentaires INT,partages INT,clics INT,ctr DECIMAL(8,2),engagement_rate DECIMAL(8,2)'
 ];
 // All fixtures disappear when this PDO connection closes. No application tables are modified.
+$schemas['reporting_metrics'].=',sauvegardes INT';
 foreach($schemas as $name=>$columns)$db->exec('CREATE TEMPORARY TABLE '.$name.' ('.$columns.')');
 $db->exec("INSERT INTO clients VALUES(1,1,'Client test'); INSERT INTO social_connections VALUES(1,1,'Page test')");
 for($i=1;$i<=3;$i++){

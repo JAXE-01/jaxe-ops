@@ -240,11 +240,9 @@ class SocialMetricsCollectorService {
 
     private function collectInstagram(array $target, string $token): array {
         $data = $this->graph('/'.rawurlencode((string)$target['external_post_id']), [
-            'fields' => 'like_count,comments_count,media_type', 'access_token' => $token,
+            'fields' => 'like_count,comments_count,media_type,media_product_type', 'access_token' => $token,
         ]);
-        $metrics = ['likes' => (int)($data['like_count'] ?? 0), 'commentaires' => (int)($data['comments_count'] ?? 0)];
-        $metrics['_content_type']=ReportPresentation::type(strtolower((string)($data['media_type']??'')));
-        $metrics['_availability']=['likes'=>['status'=>'available','source'=>'like_count'],'commentaires'=>['status'=>'available','source'=>'comments_count']];
+        $metrics = InstagramMetricMapper::fromMedia($data);
         foreach(['reach'=>'couverture','views'=>'vues','saved'=>'sauvegardes','shares'=>'partages'] as$meta=>$local)$this->collectInsight($metrics,$target,$token,$meta,$local);
         foreach(['impressions','clics']as$local){$metrics[$local]=null;$metrics['_availability'][$local]=['status'=>'unavailable','source'=>null,'reason'=>'Non fournie au niveau du média Instagram'];}
         return $metrics;

@@ -15,7 +15,7 @@ class ReportPresentation {
         });return $rows;
     }
     public static function fields(string $model): array {
-        $kpi=['vues'=>'Vues','likes'=>'Réactions','commentaires'=>'Commentaires','partages'=>'Partages','clics'=>'Clics','impressions'=>'Impressions','couverture'=>'Portée'];
+        $kpi=['vues'=>'Vues','likes'=>'Réactions','commentaires'=>'Commentaires','partages'=>'Partages','clics'=>'Clics','impressions'=>'Impressions','couverture'=>'Portée','sauvegardes'=>'Enregistrements'];
         if($model==='monthly') {
             $fields=['mois'=>'Mois','page_nom'=>'Page / compte','plateforme'=>'Réseau','publications'=>'Publications'];
             foreach($kpi as $key=>$label) $fields[$key.'_total']=$label;
@@ -39,7 +39,7 @@ class ReportPresentation {
         return ucfirst(str_replace('_',' ',$key));
     }
     public static function icon(string $key): string {
-        return ['vues'=>'◉','likes'=>'♡','commentaires'=>'▤','partages'=>'↗','clics'=>'↖','url_publication'=>'↗'][str_replace('_total','',$key)]??self::label($key);
+        return ReportIcons::web($key);
     }
     public static function url($value): string {
         $value=trim((string)$value);
@@ -47,7 +47,7 @@ class ReportPresentation {
     }
     public static function value(array $row,string $key): string {
         $value=$row[$key]??null;
-        if($key==='content_type') return ['image'=>'Image','video'=>'Vidéo','carousel'=>'Carrousel','link'=>'Lien','text'=>'Texte'][$value??'unknown']??'Non renseigné';
+        if($key==='content_type') return ['image'=>'Image','video'=>'Vidéo','reel'=>'Reel','carousel'=>'Carrousel','link'=>'Lien','text'=>'Texte'][$value??'unknown']??'Non renseigné';
         if(in_array($key,['publication','publication_titre'],true)&&preg_match('/^Import (Facebook|Instagram)\s*[·-]/u',(string)$value)) return '↓ '.mb_strimwidth(trim((string)($row['publication_caption']??''))?:'Publication',0,95,'…');
         if($value===null||$value==='') return '—';
         if(in_array($key,['publication','publication_titre'],true)&&!empty($row['social_publication_id'])) return '↑ '.(string)$value;
@@ -58,7 +58,7 @@ class ReportPresentation {
     public static function cell(array $row,string $key): string {
         if($key==='url_publication') {
             $url=self::url($row[$key]??'');
-            return $url?'<a href="'.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'" target="_blank" rel="noopener noreferrer" title="Ouvrir la publication" aria-label="Ouvrir la publication">↗</a>':'—';
+            return $url?'<a href="'.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'" target="_blank" rel="noopener noreferrer" title="Ouvrir la publication" aria-label="Ouvrir la publication">'.ReportIcons::web($key).'</a>':'—';
         }
         return htmlspecialchars(self::value($row,$key),ENT_QUOTES,'UTF-8');
     }

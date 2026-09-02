@@ -2,6 +2,8 @@
 if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
 require_once __DIR__.'/../app/helpers/ReportPresentation.php';
 require_once __DIR__.'/../app/helpers/ReportTablePdf.php';
+require_once __DIR__.'/../app/helpers/ReportIcons.php';
+require_once __DIR__.'/../app/helpers/PdfReportText.php';
 function checkReport($condition,$message){if(!$condition)throw new RuntimeException($message);}
 checkReport(ReportPresentation::url('javascript:alert(1)')==='', 'Reject unsafe links');
 checkReport(ReportPresentation::url('https://www.facebook.com/123/posts/456')!=='','Keep Facebook links');
@@ -11,6 +13,9 @@ checkReport(ReportPresentation::columns('individual',['columns'=>['individual'=>
 checkReport(!str_contains(ReportPresentation::sortSql('individual',['sort'=>'id; DROP TABLE x','direction'=>'bad']),'DROP'),'Sort allow-list');
 checkReport(ReportPresentation::type('video_inline')==='video','Normalize video');
 checkReport(ReportPresentation::type('')==='unknown','Do not invent format');
+checkReport(PdfReportText::normalize('𝐏𝐞𝐭𝐢𝐭 𝐛𝐮𝐝𝐠𝐞𝐭')==='Petit budget','Normalize mathematical letters');
+checkReport(PdfReportText::normalize('🅵🅰🅸🆁🅴')==='FAIRE','Normalize boxed letters');
+checkReport(str_contains(PdfReportText::cell(['publication'=>'ABCDEFGHIJKLMNOPQRSTUVWXYABCDEFGHIJKLMNOPQRSTUVWXY'],'publication'),'<br />'),'Wrap long tokens');
 checkReport(ReportPresentation::tables(['tables'=>['bad','monthly']])===['monthly'],'Table allow-list');
 checkReport(ReportPresentation::tables(['tables'=>['']])===[],'Empty selection stays empty');
 $sorted=ReportPresentation::sortRows([['vues'=>null],['vues'=>2],['vues'=>16]],'individual',['sort'=>'vues','direction'=>'desc']);
@@ -22,6 +27,8 @@ if(in_array('--render',$argv,true)) {
     foreach(['individual','publication','monthly'] as $model) {
         $rows=[];
         for($i=0;$i<35;$i++) $rows[]=['date_publication'=>'2026-08-26','mois'=>'2026-08','page_nom'=>'ELVEC TOGO','publication_titre'=>'Import Facebook · 26/08/2026','publication'=>'Import Facebook · 26/08/2026','publication_caption'=>'Un chantier réussi commence par le bon choix d’équipement.','content_type'=>'image','url_publication'=>'https://www.facebook.com/123/posts/456','vues'=>16,'likes'=>3,'commentaires'=>0,'partages'=>0,'clics'=>0,'impressions'=>null,'plateforme'=>'facebook','vues_total'=>16,'likes_total'=>3,'commentaires_total'=>0,'partages_total'=>0,'clics_total'=>0,'publications'=>1];
+        $samples=['𝐏𝐞𝐭𝐢𝐭 𝐛𝐮𝐝𝐠𝐞𝐭 : 𝐩𝐮𝐛𝐥𝐢𝐜𝐢𝐭𝐞́ et stratégie','🅵🅰🅸🆁🅴 🅳🅴🆂 🆅🆄🅴🆂 : être retenu','🏗️ 𝑼𝒏𝒆 𝒅𝒆́𝒎𝒐𝒍𝒊𝒕𝒊𝒐𝒏 réussie, avec les bons équipements','ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+        foreach($rows as $i=>&$row)$row['publication_caption']=$samples[$i%count($samples)];unset($row);
         $html=ReportTablePdf::html('Rapport '.$model.' — ELVEC',$rows,ReportPresentation::columns($model,[]));
         $pdf=new TCPDF('L','mm','A4',true,'UTF-8',false);
         $pdf->setPrintHeader(false);$pdf->setPrintFooter(false);$pdf->SetMargins(12,12,12);$pdf->SetAutoPageBreak(true,14);$pdf->SetFont('dejavusans','',9);$pdf->AddPage();$pdf->writeHTML($html);
