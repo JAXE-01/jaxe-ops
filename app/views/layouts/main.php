@@ -249,7 +249,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/style.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/sidebar.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/public-site.css?v=20260826-1')) ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/app-experience.css?v=1')) ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/app-experience.css?v=2')) ?>">
 </head>
 <body class="<?= $currentUser ? 'authenticated-user' : 'public-visitor' ?>" data-role-profile="<?= htmlspecialchars($roleProfile) ?>">
 <div class="global-loader" id="globalLoader" aria-hidden="true" role="status">
@@ -343,6 +343,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
         <div class="toast-stack" id="appToastStack" aria-live="polite" aria-atomic="true"></div>
 
         <?= $content ?>
+        <?php require __DIR__ . '/developer-footer.php'; ?>
     </main>
 
     <?php if ($currentUser): ?>
