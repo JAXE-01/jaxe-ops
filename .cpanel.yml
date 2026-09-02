@@ -6,6 +6,5 @@ deployment:
     - /bin/cp -R app config database public scripts storage $DEPLOYPATH
     - /bin/cp index.php install.sql composer.json composer.lock .htaccess $DEPLOYPATH
     - if [ -x /opt/cpanel/composer/bin/composer ]; then /opt/cpanel/composer/bin/composer install --no-dev --prefer-dist --optimize-autoloader --working-dir=$DEPLOYPATH; elif command -v composer >/dev/null 2>&1; then composer install --no-dev --prefer-dist --optimize-autoloader --working-dir=$DEPLOYPATH; fi
-    - test -f $DEPLOYPATH/vendor/autoload.php
-    - test -d $DEPLOYPATH/vendor/tecnickcom/tcpdf
-    - test -d $DEPLOYPATH/vendor/dompdf/dompdf
+    - test -f $DEPLOYPATH/app/third_party/tcpdf/tcpdf.php
+    - test -f $DEPLOYPATH/app/third_party/tcpdf/fonts/dejavusans.php

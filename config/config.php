@@ -268,6 +268,13 @@ if (file_exists($composerAutoload)) {
     require_once $composerAutoload;
 }
 
+// TCPDF est embarqué avec l'application : les exports restent disponibles
+// même lorsque l'hébergement cPanel n'exécute pas Composer au déploiement.
+$bundledTcpdf = __DIR__ . '/../app/third_party/tcpdf/tcpdf.php';
+if (!class_exists('TCPDF', false) && file_exists($bundledTcpdf)) {
+    require_once $bundledTcpdf;
+}
+
 // Autoloader projet
 spl_autoload_register(function ($class) {
     $directories = [
