@@ -15,16 +15,31 @@ uasort($groups,static fn($a,$b)=>strcasecmp($a['name'],$b['name']));
 <div class="connection-list">
 <?php foreach($group['items'] as$c):
 $scopes=(array)json_decode((string)($c['scopes_json']??'[]'),true);
-$ready=!empty($c['last_validated_at'])&&($c['provider']==='facebook'?in_array('pages_manage_posts',$scopes,true):(bool)array_intersect(['instagram_content_publish','instagram_business_content_publish'],$scopes));
+$networkOnly=in_array($c['provider'],['tiktok','linkedin','youtube'],true);
+$ready=!$networkOnly&&!empty($c['last_validated_at'])&&($c['provider']==='facebook'?in_array('pages_manage_posts',$scopes,true):(bool)array_intersect(['instagram_content_publish','instagram_business_content_publish'],$scopes));
 ?>
 <article data-destination-searchable="<?= $e(mb_strtolower($group['name'].' '.$c['account_label'])) ?>">
 <span class="network-logo"><?= $e(strtoupper(substr($c['provider'],0,1))) ?></span>
 <div><strong><?= $e($c['account_label']) ?></strong><small><?= $e($providers[$c['provider']]??$c['provider']) ?> · <?= count(array_filter(explode(',',(string)($c['project_ids']??'')))) ?> projet(s) associé(s)</small>
-<?php if($canManage): ?><a href="<?= $e(route_url('/social-oauth/connect/'.(int)$c['id'])) ?>" target="_blank" rel="noopener"><?= $c['status']==='Connected'?'Actualiser les droits Meta':'Connecter Meta' ?> ↗</a><?php endif ?>
-</div><span class="connection-state"><?= $e($c['status']==='Connected'?($ready?'Prête':'Droits incomplets'):'À connecter') ?></span>
+<?php if($canManage): ?><a href="<?= $e(route_url('/social-oauth/connect/'.(int)$c['id'])) ?>"><?= $c['status']==='Connected'?'Actualiser les droits':'Connecter' ?> <?= $e($networkOnly?($providers[$c['provider']]??$c['provider']):'Meta') ?> ↗</a>
+<?php if($networkOnly&&!empty($c['refresh_token_encrypted'])): ?><form method="post" action="<?= $e(route_url('/network-oauth/renew/'.(int)$c['id'])) ?>"><button type="submit" class="button secondary">Renouveler l’accès</button></form><?php endif ?>
+<?php endif ?>
+<?php if($networkOnly): ?><small>Connexion OAuth uniquement · collecte et publication non activées<?= $c['provider']==='linkedin'?' · profil personnel, pas les Pages entreprise':'' ?></small><?php endif ?>
+</div><span class="connection-state"><?= $e($c['status']==='Connected'?($networkOnly?'Compte connecté':($ready?'Prête':'Droits incomplets')):'À connecter') ?></span>
 </article>
 <?php endforeach ?></div></details>
 <?php endforeach ?>
+<?php if($canManage): ?>
+<details class="connect-form"><summary>+ Connecter TikTok, LinkedIn ou YouTube</summary>
+<form method="post" action="<?= $e(route_url('/social-publishing')) ?>">
+<input type="hidden" name="action" value="connection">
+<label>Réseau<select name="provider" required><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn · profil</option><option value="youtube">YouTube · chaîne</option></select></label>
+<label>Client<select name="client_id" required><option value="">Sélectionner</option><?php foreach($clients as$client): ?><option value="<?= (int)$client['id'] ?>"><?= $e($client['name']) ?></option><?php endforeach ?></select></label>
+<label>Libellé interne<input name="account_label" required placeholder="Compte à connecter"></label>
+<button class="button primary" type="submit">Préparer la connexion</button>
+<small>Après création, cliquez sur Connecter. LinkedIn nécessite le produit Sign In with LinkedIn using OpenID Connect.</small>
+</form></details>
+<?php endif ?>
 <script>
 document.querySelector('[data-destination-search]')?.addEventListener('input',function(){const q=this.value.trim().toLocaleLowerCase();document.querySelectorAll('.connection-group').forEach(group=>{let visible=0;group.querySelectorAll('[data-destination-searchable]').forEach(row=>{row.hidden=!row.dataset.destinationSearchable.includes(q);if(!row.hidden)visible++;});group.hidden=!visible;if(q)group.open=visible>0;});});
 </script>

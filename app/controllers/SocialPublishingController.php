@@ -4,7 +4,7 @@ class SocialPublishingController extends Controller {
     public function __construct(){parent::__construct();$this->requireAuth();$this->requirePermission('publishing.view');$this->model=new SocialPublishingModel();}
     public function index(){
         if($this->isPost()){$action=(string)($_POST['action']??'');$this->requirePermission(in_array($action,['approve','delete_remote'],true)?'publishing.approve':'publishing.manage');try{$user=(int)$this->currentUser()['id'];
-            if($action==='connection'){$id=$this->model->saveConnection($_POST,$user);$this->flash('success','Destination préparée. Lancez maintenant la connexion Meta.');}
+            if($action==='connection'){$id=$this->model->saveConnection($_POST,$user);$this->flash('success','Destination préparée. Cliquez sur Connecter pour autoriser le compte.');}
             elseif($action==='publication'){$id=$this->model->createPublication($_POST,$_FILES['media_file']??[],$user);$this->flash('success',!empty($_POST['submit_approval'])?'Publication envoyée en validation.':'Brouillon enregistré.');}
             elseif($action==='submit'){$this->model->submit((int)$_POST['publication_id'],$user);$this->flash('success','Brouillon envoyé en validation.');}
             elseif($action==='approve'){$this->requirePermission('publishing.approve');$this->model->approve((int)$_POST['publication_id'],$user);$run=(new SocialPublisherService())->processDue(100,TenantGuard::tenantId(),null,(int)$_POST['publication_id']);$this->flash($run['failed']?'error':'success',$run['processed']?($run['published'].' publication(s) envoyée(s), '.$run['failed'].' échec(s).'):'Publication approuvée et programmée.');}

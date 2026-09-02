@@ -9,7 +9,7 @@
 - OAuth Meta demande aussi `instagram_manage_insights`, même si la configuration existante contient une ancienne liste de scopes. Cela ne confère pas la permission sans validation Meta et consentement.
 - Instagram : vues, portée, likes, commentaires, partages et enregistrements selon ce que l’API retourne. Les enregistrements deviennent sélectionnables dans les rapports ; les Reels ont leur propre format. Un compteur absent n’est plus transformé en zéro.
 
-Les adaptateurs TikTok, LinkedIn et Google ne sont PAS encore implémentés. Les nouvelles vues analytiques ci-dessous sont un plan de construction, pas des fonctionnalités déjà disponibles.
+Mise à jour : la liaison OAuth TikTok, profil LinkedIn et chaîne YouTube est implémentée ; voir [la configuration des connexions](network-oauth-setup.md). Les collecteurs analytiques, les Pages LinkedIn et les autres services Google restent à construire. Les nouvelles vues analytiques ci-dessous sont un plan de construction, pas des fonctionnalités déjà disponibles.
 
 ## Comptes développeur et autorisations à préparer
 

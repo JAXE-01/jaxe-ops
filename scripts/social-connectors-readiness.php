@@ -16,8 +16,9 @@ foreach ($providers as $provider => $keys) {
     $report[$provider] = [
         'variables_presentes' => $presence,
         'identifiants_valides' => 'non testes : consentement OAuth requis',
-        'adaptateur_oauth' => 'non implemente',
-        'connexion_operationnelle' => false,
+        'adaptateur_oauth' => 'implemente : liaison de compte uniquement',
+        'redirect_uri' => NetworkOAuthService::callbackUrl($provider),
+        'connexion_operationnelle' => 'a verifier apres consentement sur le serveur',
     ];
 }
 echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL;

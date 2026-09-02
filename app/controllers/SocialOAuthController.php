@@ -7,7 +7,8 @@ class SocialOAuthController extends Controller {
 
     public function connect($connectionId){
         $connection=$this->connection((int)$connectionId);
-        if(!in_array($connection['provider'],['facebook','instagram'],true)){$this->flash('error','Les identifiants seuls ne suffisent pas : le connecteur OAuth de ce réseau n est pas encore implémenté.');$this->redirect('/social-publishing');}
+        if(in_array($connection['provider'],['tiktok','linkedin','youtube'],true)){$this->redirect('/network-oauth/connect/'.(int)$connection['id']);}
+        if(!in_array($connection['provider'],['facebook','instagram'],true)){$this->flash('error','Réseau non pris en charge.');$this->redirect('/social-publishing');}
         $clientId=trim((string)config_env_value('META_CLIENT_ID',''));$secret=trim((string)config_env_value('META_CLIENT_SECRET',''));
         if($clientId===''||$secret===''){$this->flash('error','Ajoutez META_CLIENT_ID et META_CLIENT_SECRET dans le fichier .env.');$this->redirect('/social-publishing');}
         $state=bin2hex(random_bytes(24));$_SESSION['social_oauth'][$state]=['connection_id'=>(int)$connection['id'],'tenant_id'=>TenantGuard::tenantId(),'created_at'=>time()];
