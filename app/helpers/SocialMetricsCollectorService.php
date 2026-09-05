@@ -113,38 +113,27 @@ class SocialMetricsCollectorService {
 
         $stmt = $this->db->prepare('SELECT * FROM social_connections
             WHERE id=:id AND tenant_id=:tenant AND status="Connected"
-              AND provider IN ("facebook","instagram") LIMIT 1');
+              AND provider IN ("facebook","instagram","youtube","tiktok","linkedin") LIMIT 1');
         $stmt->execute(['id'=>$connectionId,'tenant'=>$tenantId]);
         $connection = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$connection) throw new RuntimeException('Page Meta connectee introuvable.');
-        if (empty($connection['external_account_id'])) throw new RuntimeException('Identifiant Meta de la Page absent.');
+        if (!$connection) throw new RuntimeException('Compte social connecté introuvable.');
+        if (empty($connection['external_account_id'])) throw new RuntimeException('Identifiant du compte social absent.');
 
         $token = CryptoService::decrypt((string)$connection['access_token_encrypted']);
-        if ($token === '') throw new RuntimeException('Jeton Meta absent ou illisible.');
+        if ($token === '') throw new RuntimeException('Jeton social absent ou illisible.');
         $provider = (string)$connection['provider'];
-        $path = '/'.rawurlencode((string)$connection['external_account_id']).($provider === 'instagram' ? '/media' : '/posts');
-        $fields = $provider === 'instagram'
-            ? 'id,caption,media_type,timestamp,permalink'
-            : 'id,message,created_time,permalink_url,shares,comments.limit(0).summary(true),reactions.limit(0).summary(true)';
-        $params = [
-            'fields'=>$fields,
-            'since'=>$fromDate->format('Y-m-d'),
-            'until'=>$toDate->modify('+1 day')->format('Y-m-d'),
-            'limit'=>min(100,$limit),
-            'access_token'=>$token,
-        ];
-
-        $items=[]; $after=null;
-        do {
-            if ($after !== null) $params['after']=$after; else unset($params['after']);
-            $page=$this->graph($path,$params);
-            foreach ((array)($page['data']??[]) as $item) {
-                if (is_array($item) && !empty($item['id'])) $items[]=$item;
-                if (count($items) >= $limit) break 2;
-            }
-            $after=(string)($page['paging']['cursors']['after']??'');
-            if ($after==='') $after=null;
-        } while ($after !== null);
+        $items=[];
+        if($provider==='youtube'){
+            $channel=$this->networkJson('GET','https://www.googleapis.com/youtube/v3/channels?'.http_build_query(['part'=>'contentDetails','id'=>$connection['external_account_id']]),$token);
+            $playlist=(string)($channel['items'][0]['contentDetails']['relatedPlaylists']['uploads']??'');if($playlist==='')throw new RuntimeException('Playlist des vidéos YouTube introuvable.');
+            $pageToken=null;do{$query=['part'=>'snippet,contentDetails','playlistId'=>$playlist,'maxResults'=>min(50,$limit-count($items))];if($pageToken)$query['pageToken']=$pageToken;$page=$this->networkJson('GET','https://www.googleapis.com/youtube/v3/playlistItems?'.http_build_query($query),$token);foreach((array)($page['items']??[])as$item){$published=(string)($item['contentDetails']['videoPublishedAt']??$item['snippet']['publishedAt']??'');$time=strtotime($published);if($time!==false&&$time>=$fromDate->getTimestamp()&&$time<$toDate->modify('+1 day')->getTimestamp())$items[]=['id'=>(string)($item['contentDetails']['videoId']??''),'message'=>(string)($item['snippet']['title']??''),'created_time'=>$published,'permalink_url'=>'https://www.youtube.com/watch?v='.rawurlencode((string)($item['contentDetails']['videoId']??''))];if(count($items)>=$limit)break 2;}$pageToken=(string)($page['nextPageToken']??'');}while($pageToken!=='');
+        }elseif($provider==='tiktok'){
+            $cursor=0;do{$page=$this->networkJson('POST','https://open.tiktokapis.com/v2/video/list/?fields=id,create_time,share_url,video_description,title',$token,['max_count'=>min(20,$limit-count($items)),'cursor'=>$cursor]);foreach((array)($page['data']['videos']??[])as$item){$time=(int)($item['create_time']??0);if($time>=$fromDate->getTimestamp()&&$time<$toDate->modify('+1 day')->getTimestamp())$items[]=['id'=>(string)($item['id']??''),'message'=>(string)($item['video_description']??$item['title']??''),'created_time'=>date(DATE_ATOM,$time),'permalink_url'=>(string)($item['share_url']??'')];if(count($items)>=$limit)break 2;}$cursor=(int)($page['data']['cursor']??0);$more=!empty($page['data']['has_more']);}while($more&&$cursor>0);
+        }elseif($provider==='linkedin'){
+            throw new RuntimeException('LinkedIn requiert r_member_social et l’accès Community Management pour importer l’historique. La publication texte reste disponible avec w_member_social.');
+        }else{
+            $path='/'.rawurlencode((string)$connection['external_account_id']).($provider==='instagram'?'/media':'/posts');$fields=$provider==='instagram'?'id,caption,media_type,timestamp,permalink':'id,message,created_time,permalink_url,shares,comments.limit(0).summary(true),reactions.limit(0).summary(true)';$params=['fields'=>$fields,'since'=>$fromDate->format('Y-m-d'),'until'=>$toDate->modify('+1 day')->format('Y-m-d'),'limit'=>min(100,$limit),'access_token'=>$token];$after=null;do{if($after!==null)$params['after']=$after;else unset($params['after']);$page=$this->graph($path,$params);foreach((array)($page['data']??[])as$item){if(is_array($item)&&!empty($item['id']))$items[]=$item;if(count($items)>=$limit)break 2;}$after=(string)($page['paging']['cursors']['after']??'');if($after==='')$after=null;}while($after!==null);
+        }
 
         $result=['found'=>count($items),'imported'=>0,'existing'=>0,'collected'=>0,'failed'=>0,'errors'=>[]];
         $find=$this->db->prepare('SELECT t.id FROM social_publication_targets t

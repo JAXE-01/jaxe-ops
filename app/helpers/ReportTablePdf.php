@@ -19,7 +19,7 @@ class ReportTablePdf {
             foreach($fields as $field) $html.='<th width="'.round($weights[$field]/$total*100,3).'%">'.ReportIcons::pdf($field).'</th>';
             $html.='</tr></thead><tbody>';
             foreach($rows as $i=>$row) {
-                $html.='<tr nobr="true" bgcolor="'.($i%2?'#f5f8fb':'#ffffff').'">';
+                $html.='<tr bgcolor="'.($i%2?'#f5f8fb':'#ffffff').'">';
                 foreach($fields as $field) $html.='<td width="'.round($weights[$field]/$total*100,3).'%">'.PdfReportText::cell($row,$field).'</td>';
                 $html.='</tr>';
             }

@@ -1,6 +1,7 @@
 <?php
 class PdfExportService {
     public static function outputCalendarPdf(string $title, array $rows, string $fileName = 'calendrier-editorial.pdf'): void {
+        $rows=self::normalizeRows($rows);
         if (self::hasHtmlPdfEngine()) {
             self::renderHtmlPdf(self::buildCalendarHtml($title, $rows), $fileName, 'landscape');
             return;
@@ -9,6 +10,7 @@ class PdfExportService {
     }
 
     public static function outputBriefsPdf(string $title, array $rows, string $fileName = 'briefs-et-scripts.pdf'): void {
+        $rows=self::normalizeRows($rows);
         if (self::hasHtmlPdfEngine()) {
             self::renderHtmlPdf(self::buildBriefsHtml($title, $rows), $fileName, 'portrait');
             return;
@@ -257,7 +259,8 @@ class PdfExportService {
 
     private static function sendPdf(string $content, string $fileName): void {
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . str_replace(['"', "\r", "\n"], '', $fileName) . '"');
+        $safe=str_replace(['"', "\r", "\n"], '', $fileName);
+        header('Content-Disposition: attachment; filename="' . $safe . '"; filename*=UTF-8\'\'' . rawurlencode($safe));
         header('Content-Length: '.strlen($content));
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Pragma: no-cache');
@@ -267,8 +270,10 @@ class PdfExportService {
     }
 
     private static function documentCss(): string {
-        return '@page{margin:16mm 13mm 15mm}body{font-family:DejaVu Sans,Arial,sans-serif;color:#13233d;font-size:9.5px;margin:0}.head{background:#102743;color:#fff;padding:15px 18px;border-radius:10px;margin-bottom:12px}.head h1{font-size:19px;margin:0 0 4px}.head p{margin:0;color:#d7e6f5}.meta{color:#61738b;font-size:8.5px}.section-title{font-size:12px;margin:12px 0 6px}.chip{display:inline-block;padding:3px 7px;border-radius:10px;background:#eaf2fb;color:#244d78;margin-right:4px}.empty{padding:18px;border:1px dashed #b8c7d8;text-align:center;color:#61738b}.footer{position:fixed;bottom:-9mm;left:0;right:0;color:#718198;font-size:8px;text-align:right}';
+        return '@page{margin:16mm 13mm 15mm}body{font-family:DejaVu Sans,Arial,sans-serif;color:#13233d;font-size:9.2px;margin:0;line-height:1.35}td,p,div{word-wrap:break-word;overflow-wrap:anywhere}.head{background:#102743;color:#fff;padding:15px 18px;border-radius:10px;margin-bottom:12px}.head h1{font-size:19px;margin:0 0 4px}.head p{margin:0;color:#d7e6f5}.meta{color:#61738b;font-size:8.2px}.section-title{font-size:12px;margin:12px 0 6px}.chip{display:inline-block;padding:3px 7px;border-radius:10px;background:#eaf2fb;color:#244d78;margin-right:4px}.empty{padding:18px;border:1px dashed #b8c7d8;text-align:center;color:#61738b}.footer{position:fixed;bottom:-9mm;left:0;right:0;color:#718198;font-size:8px;text-align:right}';
     }
+
+    private static function normalizeRows(array$rows): array {foreach($rows as&$row)if(is_array($row))foreach($row as$key=>$value)if(is_string($value))$row[$key]=PdfReportText::normalize($value);unset($row);return$rows;}
 
     private static function buildCalendarHtml(string $title, array $rows): string {
         $groups = [];

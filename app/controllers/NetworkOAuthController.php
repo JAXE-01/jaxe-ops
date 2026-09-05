@@ -32,7 +32,12 @@ class NetworkOAuthController extends Controller {
             $tokens=$service->exchange((string)$provider,$code,$saved['redirect']);
             $account=$service->account((string)$provider,$tokens['access_token']);
             $this->save($connection,$account,$tokens);
-            $this->flash('success','Compte '.$account['name'].' connecté. La connexion seule n active pas encore la collecte ni la publication sur ce réseau.');
+            $scopes=isset($tokens['scope'])?preg_split('/[ ,]+/',trim((string)$tokens['scope']),-1,PREG_SPLIT_NO_EMPTY):NetworkOAuthService::scopes((string)$provider);
+            $capabilities=[];
+            if($provider==='linkedin'&&in_array('w_member_social',$scopes,true))$capabilities[]='publication texte';
+            if($provider==='youtube')$capabilities[]='publication vidéo et collecte';
+            if($provider==='tiktok'&&in_array('video.list',$scopes,true))$capabilities[]='collecte';
+            $this->flash('success','Compte '.$account['name'].' connecté'.($capabilities?' : '.implode(' et ',$capabilities).' activée(s).':'. Les produits complémentaires restent soumis à l’approbation du réseau.'));
         } catch (Throwable $e) { $this->failure($e); }
         $this->redirect('/social-connection');
     }
