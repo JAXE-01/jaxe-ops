@@ -256,8 +256,8 @@ class ModuleRegistry {
                     'canal_principal' => ['label' => 'Canal principal', 'type' => 'text'],
                     'duree_mois' => ['label' => 'Duree standard (mois)', 'type' => 'number'],
                     'sea_budget' => ['label' => 'Budget SEA', 'type' => 'number', 'step' => '0.01'],
-                    'quota_videos_mensuel' => ['label' => 'Videos / mois', 'type' => 'number'],
-                    'quota_visuels_mensuel' => ['label' => 'Visuels / mois', 'type' => 'number'],
+                    'quota_videos_mensuel' => ['label' => 'Plafond vidéos / mois', 'type' => 'number'],
+                    'quota_visuels_mensuel' => ['label' => 'Plafond visuels / mois', 'type' => 'number'],
                     'notes' => ['label' => 'Notes', 'type' => 'textarea'],
                     'statut' => ['label' => 'Statut', 'type' => 'select', 'options' => ['Actif' => 'Actif', 'Inactif' => 'Inactif']]
                 ]
@@ -281,8 +281,8 @@ class ModuleRegistry {
                     'date_fin' => ['label' => 'Date fin', 'type' => 'date', 'required' => true],
                     'duree_mois' => ['label' => 'Duree contractuelle (mois)', 'type' => 'number', 'showWhen' => ['field' => 'configuration_mode', 'values' => ['custom']]],
                     'sea_budget' => ['label' => 'Budget SEA', 'type' => 'number', 'step' => '0.01', 'showWhen' => ['field' => 'configuration_mode', 'values' => ['custom']]],
-                    'quota_videos_mensuel' => ['label' => 'Videos / mois', 'type' => 'number', 'showWhen' => ['field' => 'configuration_mode', 'values' => ['custom']]],
-                    'quota_visuels_mensuel' => ['label' => 'Visuels / mois', 'type' => 'number', 'showWhen' => ['field' => 'configuration_mode', 'values' => ['custom']]],
+                    'quota_videos_mensuel' => ['label' => 'Plafond vidéos / mois', 'type' => 'number', 'showWhen' => ['field' => 'configuration_mode', 'values' => ['custom']]],
+                    'quota_visuels_mensuel' => ['label' => 'Plafond visuels / mois', 'type' => 'number', 'showWhen' => ['field' => 'configuration_mode', 'values' => ['custom']]],
                     'charge_compte_id' => ['label' => 'Charge de communication', 'type' => 'relation', 'module' => 'user'],
                     'charge_clientele_id' => ['label' => 'Charge de clientele', 'type' => 'relation', 'module' => 'user', 'nullable' => true],
                     'cm_id' => ['label' => 'Community manager', 'type' => 'relation', 'module' => 'user', 'nullable' => true],

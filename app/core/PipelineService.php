@@ -16,11 +16,19 @@ class PipelineService {
         if(!$hasCadenceHistory)self::pruneExtraPlans($pdo, $project['id'], $periods);
         if(!$hasCadenceHistory)self::ensureProjectOnboarding($pdo, $project);
 
+        $videoMonthlyCap=max(0,(int)($project['quota_videos_mensuel']??0));
+        $visualMonthlyCap=max(0,(int)($project['quota_visuels_mensuel']??0));
         foreach ($periods as $index => $period) {
             if($hasCadenceHistory && ($period->format('Y-m')<$firstRevision || $period->format('Y-m')<date('Y-m')))continue;
             unset($project['_cadence']);
             $rules=CadenceRevision::rules((string)($project['publication_rules']??''),$period->format('Y-m'));
-            if($rules){$project['_cadence']=EditorialCadence::dates($rules,$project['date_debut'],$project['date_fin'],$period->format('Y-m'));$project['quota_videos_mensuel']=count($project['_cadence']['Video']);$project['quota_visuels_mensuel']=count($project['_cadence']['Visuel']);}
+            if($rules){
+                $project['_cadence']=EditorialCadence::dates($rules,$project['date_debut'],$project['date_fin'],$period->format('Y-m'));
+                if($videoMonthlyCap>0)$project['_cadence']['Video']=array_slice($project['_cadence']['Video'],0,$videoMonthlyCap);
+                if($visualMonthlyCap>0)$project['_cadence']['Visuel']=array_slice($project['_cadence']['Visuel'],0,$visualMonthlyCap);
+                $project['quota_videos_mensuel']=count($project['_cadence']['Video']);
+                $project['quota_visuels_mensuel']=count($project['_cadence']['Visuel']);
+            }
             $planId = self::ensureMonthlyPlan($pdo, $project, $period, $index + 1);
             $monthWithArticle = self::monthLabelWithArticle($period);
             $strategyId = self::ensureTask($pdo, [

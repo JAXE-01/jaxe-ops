@@ -18,7 +18,7 @@ $renderCadenceRow=static function(array$r,int$i)use($days){$frequency=(string)($
 <details class="panel field-wide cadence-builder" <?= $cadenceRows?'open':'' ?>>
  <summary><span><strong>Rythme de publication</strong><small>Optionnel · <?= count($cadenceRows) ?> créneau(x)</small></span></summary>
  <div class="cadence-builder-body">
-  <div class="cadence-intro"><div><strong>Planning récurrent</strong><p>Ajoutez une ligne par publication. Plusieurs créneaux peuvent utiliser le même jour.</p></div><button type="button" class="button secondary" data-add-cadence>+ Ajouter un créneau</button></div>
+  <div class="cadence-intro"><div><strong>Planning récurrent prioritaire</strong><p>Ces créneaux remplacent la répartition du forfait. Les plafonds mensuels du projet restent la limite maximale.</p></div><button type="button" class="button secondary" data-add-cadence>+ Ajouter un créneau</button></div>
   <input type="hidden" name="cadence_present" value="1">
   <?php if(!empty($record['id'])): ?><div class="cadence-revision"><label><span>Appliquer à partir de</span><input type="month" name="cadence_effective_month" min="<?= date('Y-m',strtotime('first day of next month')) ?>" value="<?= htmlspecialchars((string)($_POST['cadence_effective_month']??date('Y-m',strtotime('first day of next month')))) ?>"></label><label class="cadence-confirm"><input type="checkbox" name="cadence_confirm_future" value="1"><span>Confirmer la modification des mois futurs. Les contenus déjà travaillés restent conservés.</span></label></div><?php endif ?>
   <div class="cadence-rows" data-cadence-rows><?php foreach($cadenceRows as$i=>$row)$renderCadenceRow($row,$i); ?></div>

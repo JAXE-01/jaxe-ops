@@ -648,10 +648,13 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                         <span>Infos complementaires</span>
                         <textarea name="informations_complementaires"><?= htmlspecialchars((string) ($brief['informations_complementaires'] ?? '')) ?></textarea>
                     </label>
-                    <label class="field">
-                        <span>Descriptif publication</span>
-                        <textarea name="description_publication"><?= htmlspecialchars((string) ($brief['description_publication'] ?? '')) ?></textarea>
-                    </label>
+                    <div class="field caption-editor brief-caption-editor">
+                        <label for="brief-description-publication">Descriptif publication</label>
+                        <div class="text-toolbar" role="toolbar" aria-label="Mise en forme du descriptif"><button type="button" data-text-style="bold" title="Gras"><b>B</b></button><button type="button" data-text-style="italic" title="Italique"><i>I</i></button><button type="button" data-text-style="boldItalic" title="Gras italique"><b><i>BI</i></b></button><button type="button" data-text-style="mono" title="Monospace">M</button><span data-char-count>0 caractères</span></div>
+                        <textarea id="brief-description-publication" name="description_publication" rows="7" placeholder="Rédigez la légende, les mentions et les hashtags…"><?= htmlspecialchars((string) ($brief['description_publication'] ?? '')) ?></textarea>
+                        <div class="hashtag-row"><input type="text" data-hashtags placeholder="marketing, conseil, produit"><button class="button secondary" type="button" data-add-hashtags>Ajouter les hashtags</button></div>
+                        <div class="caption-preview"><span>Aperçu publication</span><p data-caption-preview></p></div>
+                    </div>
                     <label class="field">
                         <span>Nombre de pages</span>
                         <input type="number" min="1" name="nombre_pages_carrousel" value="<?= htmlspecialchars((string) ($brief['nombre_pages_carrousel'] ?? $deliverable['nombre_pages'] ?? 1)) ?>">
@@ -1599,3 +1602,4 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 </div>
 <?php if (in_array($taskType, ['Tournage', 'Montage'], true)) { require __DIR__ . '/production-inline.php'; } ?>
 <?php if (in_array($taskType, ['Validation interne', 'Validation client', 'Publication', 'Collecte KPI'], true)) { require __DIR__ . '/paired-task-inline.php'; } ?>
+<?php if ($isBriefTask): ?><script src="<?= htmlspecialchars(app_url('/public/assets/social-composer.js?v=1')) ?>"></script><?php endif; ?>
