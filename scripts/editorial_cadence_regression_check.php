@@ -12,6 +12,15 @@ $sept=EditorialCadence::dates($rules,'2026-09-01','2026-10-31','2026-09');
 $oct=EditorialCadence::dates($rules,'2026-09-01','2026-10-31','2026-10');
 cadenceAssert(count($sept['Visuel'])===9&&count($sept['Video'])===4,'September counts');
 cadenceAssert(count($oct['Video'])===5&&$oct['Video'][0]['label']==='Démo','Five Fridays and continuous alternation');
+$compactRules=EditorialCadence::normalize([
+ ['active'=>1,'day'=>2,'time'=>'08:30','type'=>'Visuel','frequency'=>'weekly','label'=>'Conseil'],
+ ['active'=>1,'day'=>2,'time'=>'17:45','type'=>'Video','frequency'=>'biweekly','label'=>'Coulisses'],
+ ['active'=>1,'day'=>4,'time'=>'12:00','type'=>'Visuel','frequency'=>'monthly','label'=>'Offre du mois'],
+]);
+$compactDates=EditorialCadence::dates($compactRules,'2026-09-01','2026-10-31','2026-09');
+cadenceAssert($compactDates['Visuel'][0]['time']==='08:30','Default time was not retained');
+cadenceAssert(count(array_filter($compactDates['Visuel'],static fn($slot)=>$slot['label']==='Offre du mois'))===1,'Monthly rule must create one slot');
+cadenceAssert(count(array_filter(array_merge($compactDates['Video'],$compactDates['Visuel']),static fn($slot)=>$slot['date']==='2026-09-01'))===2,'Same-day slots must be preserved');
 $db=Database::getConnection();
 try{
  $u=$db->query("SELECT * FROM users WHERE role='Admin' AND statut='Actif' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);$_SESSION['user']=$u;$_SESSION['user']['roles']=UserRoles::extractRoles($u);TenantContext::clear();$tenant=TenantGuard::tenantId();

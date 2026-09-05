@@ -4,10 +4,11 @@ class EditorialCadence {
   if(count($rows)>20)throw new RuntimeException('Maximum 20 règles hebdomadaires.');
   $rules=[];
   foreach($rows as $r){
-   if(trim((string)($r['label']??''))==='')continue;
-   $day=(int)($r['day']??0);$every=(int)($r['every']??1);$phase=(int)($r['phase']??0);$type=(string)($r['type']??'');
-   if($day<1||$day>7||!in_array($every,[1,2],true)||$phase<0||$phase>=$every||!in_array($type,['Video','Visuel'],true))throw new RuntimeException('Règle de publication invalide.');
-   $rules[]=['day'=>$day,'every'=>$every,'phase'=>$phase,'type'=>$type,'label'=>mb_substr(trim($r['label']),0,160),'format'=>mb_substr(trim((string)($r['format']??'')),0,80)];
+   if(array_key_exists('active',$r)&&empty($r['active']))continue;
+   $day=(int)($r['day']??0);$frequency=(string)($r['frequency']??(((int)($r['every']??1)===2)?'biweekly':'weekly'));$type=(string)($r['type']??'');$time=trim((string)($r['time']??'09:00'));
+   if($day<1||$day>7||!in_array($frequency,['weekly','biweekly','monthly'],true)||!in_array($type,['Video','Visuel'],true)||!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/',$time))throw new RuntimeException('Créneau de publication invalide.');
+   $phase=$frequency==='biweekly'?max(0,min(1,(int)($r['phase']??0))):0;
+   $rules[]=['day'=>$day,'every'=>$frequency==='biweekly'?2:1,'phase'=>$phase,'frequency'=>$frequency,'time'=>$time,'type'=>$type,'label'=>mb_substr(trim((string)($r['label']??'')),0,160),'format'=>mb_substr(trim((string)($r['format']??'')),0,80)];
   }
   return $rules;
  }
@@ -17,7 +18,7 @@ class EditorialCadence {
   for($date=$first;$date<=$last;$date=$date->modify('+1 day')){
    $iso=$date->format('Y-m-d');if($iso<$start||$iso>$end)continue;
    $weeks=(int)floor((int)$anchor->diff($date)->format('%r%a')/7);
-   foreach($rules as$r)if((int)$date->format('N')===$r['day']&&$weeks%$r['every']===$r['phase'])$out[$r['type']][]=$r+['date'=>$iso];
+   foreach($rules as$r){$frequency=(string)($r['frequency']??(((int)($r['every']??1)===2)?'biweekly':'weekly'));$matches=$frequency==='monthly'?((int)$date->format('j')<=7):($weeks%(int)($r['every']??1)===(int)($r['phase']??0));if((int)$date->format('N')===(int)$r['day']&&$matches)$out[$r['type']][]=$r+['date'=>$iso];}
   }
   return $out;
  }

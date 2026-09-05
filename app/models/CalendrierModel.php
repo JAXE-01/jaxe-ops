@@ -459,8 +459,9 @@ class CalendrierModel extends Model {
         $sql = "SELECT tp.*, pm.periode_mois, pm.index_mois,
                   pm.contexte_mois, pm.objectif_mois, pm.temps_forts_mois,
                        p.nom AS projet_nom, p.id AS projet_id, p.client_id, p.campagne_id, p.canal_principal,
+                       p.date_debut AS projet_date_debut, p.date_fin AS projet_date_fin, p.publication_rules,
                        c.entreprise AS client_nom,
-                       li.titre AS livrable_titre, li.type_livrable, li.sous_type, li.nombre_pages,
+                       li.titre AS livrable_titre, li.type_livrable, li.sous_type, li.nombre_pages, li.numero_ordre,
                   u.nom AS auteur_nom,
                   ct.id AS content_id, ct.sujet AS contenu_sujet, ct.message AS contenu_message,
                   ct.objectif_publication, ct.cible_libre, ct.reseau_cible, ct.statut AS contenu_statut,
@@ -499,6 +500,7 @@ class CalendrierModel extends Model {
                 ? $this->getContentPublicationEntries((int) $task['content_id'])
                 : [];
             $task['latest_publication'] = !empty($task['publication_entries']) ? $task['publication_entries'][0] : null;
+            $task['default_publication_time'] = $this->resolveCadenceTime($task);
             $task['result_entries'] = !empty($task['content_id'])
                 ? $this->getContentResultEntries((int) $task['content_id'])
                 : [];
@@ -507,10 +509,37 @@ class CalendrierModel extends Model {
             $task['brief'] = null;
             $task['publication_entries'] = [];
             $task['latest_publication'] = null;
+            $task['default_publication_time'] = '';
             $task['result_entries'] = [];
         }
 
         return $task;
+    }
+
+    private function resolveCadenceTime(array $task): string {
+        $scheduledDate = trim((string) ($task['date_prevue'] ?? $task['deadline'] ?? ''));
+        $rulesJson = (string) ($task['publication_rules'] ?? '');
+        $type = (string) ($task['type_livrable'] ?? '');
+        $index = max(1, (int) ($task['numero_ordre'] ?? 1));
+        if ($scheduledDate === '' || $rulesJson === '' || !in_array($type, ['Video', 'Visuel'], true)) {
+            return '';
+        }
+        try {
+            $month = substr($scheduledDate, 0, 7);
+            $rules = CadenceRevision::rules($rulesJson, $month);
+            $slots = EditorialCadence::dates(
+                $rules,
+                (string) ($task['projet_date_debut'] ?? $scheduledDate),
+                (string) ($task['projet_date_fin'] ?? $scheduledDate),
+                $month
+            );
+            $slot = $slots[$type][$index - 1] ?? null;
+            return is_array($slot) && ($slot['date'] ?? '') === $scheduledDate
+                ? (string) ($slot['time'] ?? '')
+                : '';
+        } catch (Throwable $e) {
+            return '';
+        }
     }
 
     public function getDeliverableWorkspace($deliverableId, array $currentUser = null) {

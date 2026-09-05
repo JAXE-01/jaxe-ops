@@ -852,7 +852,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 </label>
                 <label class="field">
                     <span>Heure</span>
-                    <input type="time" name="heure_publication" value="<?= htmlspecialchars((string) ($_POST['heure_publication'] ?? $latestPublication['heure_publication'] ?? '')) ?>">
+                    <input type="time" name="heure_publication" value="<?= htmlspecialchars((string) ($_POST['heure_publication'] ?? $latestPublication['heure_publication'] ?? $task['default_publication_time'] ?? '')) ?>">
                 </label>
                 <label class="field">
                     <span>Canal final</span>
