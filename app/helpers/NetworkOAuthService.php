@@ -6,19 +6,21 @@ class NetworkOAuthService {
     public static function definition(string $provider): array {
         $definitions = [
             'tiktok' => ['key'=>'TIKTOK_CLIENT_KEY','secret'=>'TIKTOK_CLIENT_SECRET','authorize'=>'https://www.tiktok.com/v2/auth/authorize/','token'=>'https://open.tiktokapis.com/v2/oauth/token/','scopes'=>['user.info.basic']],
-            'linkedin' => ['key'=>'LINKEDIN_CLIENT_ID','secret'=>'LINKEDIN_CLIENT_SECRET','authorize'=>'https://www.linkedin.com/oauth/v2/authorization','token'=>'https://www.linkedin.com/oauth/v2/accessToken','scopes'=>['openid','profile']],
-            'youtube' => ['key'=>'YOUTUBE_CLIENT_ID','secret'=>'YOUTUBE_CLIENT_SECRET','authorize'=>'https://accounts.google.com/o/oauth2/v2/auth','token'=>'https://oauth2.googleapis.com/token','scopes'=>['https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/yt-analytics.readonly']],
+            'linkedin' => ['key'=>'LINKEDIN_CLIENT_ID','secret'=>'LINKEDIN_CLIENT_SECRET','authorize'=>'https://www.linkedin.com/oauth/v2/authorization','token'=>'https://www.linkedin.com/oauth/v2/accessToken','scopes'=>['openid','profile','w_member_social']],
+            'youtube' => ['key'=>'YOUTUBE_CLIENT_ID','secret'=>'YOUTUBE_CLIENT_SECRET','authorize'=>'https://accounts.google.com/o/oauth2/v2/auth','token'=>'https://oauth2.googleapis.com/token','scopes'=>['https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/yt-analytics.readonly','https://www.googleapis.com/auth/youtube.upload']],
         ];
         if (!isset($definitions[$provider])) throw new RuntimeException('Réseau OAuth non pris en charge.');
         return $definitions[$provider];
     }
     public static function scopes(string $provider): array {
         $defaults=self::definition($provider)['scopes'];
-        if($provider!=='tiktok')return$defaults;
-        $raw=trim((string)config_env_value('TIKTOK_OAUTH_SCOPES',implode(',',$defaults)));
+        if($provider==='youtube')return$defaults;
+        $envKey=$provider==='tiktok'?'TIKTOK_OAUTH_SCOPES':'LINKEDIN_OAUTH_SCOPES';
+        $raw=trim((string)config_env_value($envKey,implode(',',$defaults)));
         $requested=array_values(array_unique(array_filter(preg_split('/[\s,]+/',$raw,-1,PREG_SPLIT_NO_EMPTY))));
-        $allowed=['user.info.basic','user.info.profile','user.info.stats','video.list'];
-        if(!$requested||array_diff($requested,$allowed)||!in_array('user.info.basic',$requested,true))throw new RuntimeException('TIKTOK_OAUTH_SCOPES invalide : user.info.basic est obligatoire.');
+        $allowed=$provider==='tiktok'?['user.info.basic','user.info.profile','user.info.stats','video.list']:['openid','profile','email','w_member_social','r_member_social'];
+        $required=$provider==='tiktok'?['user.info.basic']:['openid','profile'];
+        if(!$requested||array_diff($requested,$allowed)||array_diff($required,$requested))throw new RuntimeException($envKey.' contient des permissions invalides ou omet les permissions de base.');
         return$requested;
     }
     public static function callbackUrl(string $provider): string {

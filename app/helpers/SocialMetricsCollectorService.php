@@ -26,6 +26,9 @@ class SocialMetricsCollectorService {
         $metrics = match ((string) $target['provider']) {
             'facebook' => $this->collectFacebook($target, $token),
             'instagram' => $this->collectInstagram($target, $token),
+            'linkedin' => $this->collectLinkedIn($target, $token),
+            'youtube' => $this->collectYouTube($target, $token),
+            'tiktok' => $this->collectTikTok($target, $token),
             default => throw new RuntimeException('Collecte automatique non activée pour ce réseau.'),
         };
 
@@ -90,7 +93,7 @@ class SocialMetricsCollectorService {
         $stmt = $this->db->prepare('SELECT t.id FROM social_publication_targets t
             JOIN social_publications p ON p.id=t.publication_id
             WHERE p.tenant_id=:tenant AND t.status="Published" AND t.remote_deleted_at IS NULL
-              AND t.provider IN ("facebook","instagram")
+              AND t.provider IN ("facebook","instagram","linkedin","youtube","tiktok")
             ORDER BY COALESCE(t.published_at,t.updated_at) DESC LIMIT '.$limit);
         $stmt->execute(['tenant' => $tenantId]);
         $result = ['collected' => 0, 'failed' => 0, 'errors' => []];
@@ -246,6 +249,37 @@ class SocialMetricsCollectorService {
         foreach(['reach'=>'couverture','views'=>'vues','saved'=>'sauvegardes','shares'=>'partages'] as$meta=>$local)$this->collectInsight($metrics,$target,$token,$meta,$local);
         foreach(['impressions','clics']as$local){$metrics[$local]=null;$metrics['_availability'][$local]=['status'=>'unavailable','source'=>null,'reason'=>'Non fournie au niveau du média Instagram'];}
         return $metrics;
+    }
+
+    private function collectYouTube(array $target,string $token): array {
+        $data=$this->networkJson('GET','https://www.googleapis.com/youtube/v3/videos?'.http_build_query(['part'=>'statistics,snippet','id'=>(string)$target['external_post_id']]),$token);
+        $item=(array)(($data['items']??[])[0]??[]);if(!$item)throw new RuntimeException('Vidéo YouTube introuvable ou inaccessible.');$stats=(array)($item['statistics']??[]);
+        return $this->networkMetrics(['vues'=>$stats['viewCount']??null,'likes'=>$stats['likeCount']??null,'commentaires'=>$stats['commentCount']??null],['vues'=>'statistics.viewCount','likes'=>'statistics.likeCount','commentaires'=>'statistics.commentCount'],'video');
+    }
+
+    private function collectTikTok(array $target,string $token): array {
+        $data=$this->networkJson('POST','https://open.tiktokapis.com/v2/video/query/?fields=id,create_time,share_url,video_description,duration,title,like_count,comment_count,share_count,view_count',$token,['filters'=>['video_ids'=>[(string)$target['external_post_id']]]]);
+        $video=(array)(($data['data']['videos']??[])[0]??[]);if(!$video)throw new RuntimeException('Vidéo TikTok introuvable ou permission video.list absente.');
+        return $this->networkMetrics(['vues'=>$video['view_count']??null,'likes'=>$video['like_count']??null,'commentaires'=>$video['comment_count']??null,'partages'=>$video['share_count']??null],['vues'=>'view_count','likes'=>'like_count','commentaires'=>'comment_count','partages'=>'share_count'],'video');
+    }
+
+    private function collectLinkedIn(array $target,string $token): array {
+        $version=trim((string)config_env_value('LINKEDIN_API_VERSION','202608'));if(!preg_match('/^20\d{4}$/',$version))$version='202608';
+        $data=$this->networkJson('GET','https://api.linkedin.com/rest/socialMetadata/'.rawurlencode((string)$target['external_post_id']),$token,null,['LinkedIn-Version: '.$version,'X-Restli-Protocol-Version: 2.0.0']);
+        $likes=0;foreach((array)($data['reactionSummaries']??[])as$reaction)$likes+=(int)($reaction['count']??0);
+        return $this->networkMetrics(['likes'=>$likes,'commentaires'=>$data['commentSummary']['count']??null],['likes'=>'reactionSummaries','commentaires'=>'commentSummary.count'],'text');
+    }
+
+    private function networkMetrics(array$values,array$sources,string$type): array {
+        $keys=['impressions','couverture','vues','likes','commentaires','partages','clics','sauvegardes','abonnes_gagnes'];$metrics=['_content_type'=>$type,'_availability'=>[]];
+        foreach($keys as$key){$value=$values[$key]??null;$metrics[$key]=$value!==null&&is_numeric($value)?max(0,(int)$value):null;$metrics['_availability'][$key]=$metrics[$key]===null?['status'=>'unavailable','source'=>null,'reason'=>'Non fournie par ce réseau pour cette publication']:['status'=>'available','source'=>$sources[$key]??$key];}
+        return$metrics;
+    }
+
+    private function networkJson(string$method,string$url,string$token,?array$payload=null,array$extraHeaders=[]): array {
+        $headers=array_merge(['Accept: application/json','Authorization: Bearer '.$token],$extraHeaders);$options=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>60,CURLOPT_HTTPHEADER=>$headers,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS];
+        if($method==='POST'){$headers[]='Content-Type: application/json';$options[CURLOPT_POST]=true;$options[CURLOPT_POSTFIELDS]=json_encode($payload??[],JSON_UNESCAPED_SLASHES);$options[CURLOPT_HTTPHEADER]=$headers;}
+        $ch=curl_init($url);curl_setopt_array($ch,$options);$body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);$data=json_decode((string)$body,true);if($body===false||$status<200||$status>=300||!is_array($data))throw new RuntimeException('Collecte du réseau refusée (HTTP '.$status.').');if(!empty($data['error']))throw new RuntimeException('Le réseau a refusé la collecte.');return$data;
     }
 
     private function collectInsight(array &$metrics,array $target,string $token,string $meta,string $local): void {

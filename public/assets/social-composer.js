@@ -11,4 +11,7 @@
   document.addEventListener('click',event=>{const button=event.target.closest('[data-text-style]');if(button){event.preventDefault();const area=button.closest('.caption-editor')?.querySelector('textarea');if(area)transformSelection(area,button.dataset.textStyle);return}const hash=event.target.closest('[data-add-hashtags]');if(hash){event.preventDefault();const editor=hash.closest('.caption-editor'),area=editor?.querySelector('textarea'),input=editor?.querySelector('[data-hashtags]');if(!area||!input)return;const tags=input.value.split(/[\s,;]+/).filter(Boolean).map(x=>'#'+x.replace(/^#|[^\p{L}\p{N}_]/gu,'')).filter(x=>x.length>1);if(tags.length){area.value=area.value.trimEnd()+'\n\n'+Array.from(new Set(tags)).join(' ');input.value='';update(area)}}});
   document.addEventListener('input',event=>{if(event.target.matches('.caption-editor textarea'))update(event.target)});
   document.querySelectorAll('.caption-editor textarea').forEach(update);
+  const media=document.querySelector('input[name="media_file"]');
+  if(media){media.accept='image/jpeg,image/png,video/mp4';const hint=media.closest('label')?.querySelector('small');if(hint)hint.textContent='JPEG/PNG pour Meta, MP4 requis pour YouTube (100 Mo max).';}
+  const composeTitle=document.querySelector('#composeDialog h2');if(composeTitle)composeTitle.textContent='Composer pour plusieurs réseaux';
 })();

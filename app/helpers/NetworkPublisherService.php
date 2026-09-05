@@ -1,0 +1,23 @@
+<?php
+class NetworkPublisherService {
+    public static function publish(string $provider,array $row,string $token): array {
+        return match($provider){'linkedin'=>self::linkedIn($row,$token),'youtube'=>self::youTube($row,$token),default=>throw new RuntimeException('Adaptateur '.$provider.' non activé.')};
+    }
+    private static function linkedIn(array$row,string$token): array {
+        if(trim((string)($row['media_url']??''))!=='')throw new RuntimeException('LinkedIn est activé pour les publications texte.');
+        $person=(string)($row['external_account_id']??'');if($person==='')throw new RuntimeException('Identifiant LinkedIn manquant.');
+        $version=trim((string)config_env_value('LINKEDIN_API_VERSION','202608'));if(!preg_match('/^20\d{4}$/',$version))$version='202608';
+        $payload=['author'=>'urn:li:person:'.$person,'commentary'=>(string)$row['adapted_caption'],'visibility'=>'PUBLIC','distribution'=>['feedDistribution'=>'MAIN_FEED','targetEntities'=>[],'thirdPartyDistributionChannels'=>[]],'lifecycleState'=>'PUBLISHED','isReshareDisabledByAuthor'=>false];
+        [$data,$headers]=self::json('POST','https://api.linkedin.com/rest/posts',$payload,$token,['LinkedIn-Version: '.$version,'X-Restli-Protocol-Version: 2.0.0']);$id=(string)($headers['x-restli-id']??$data['id']??'');if($id==='')throw new RuntimeException('LinkedIn n a retourné aucun identifiant.');
+        return['external_post_id'=>$id,'external_post_url'=>'https://www.linkedin.com/feed/update/'.rawurlencode($id).'/','external_container_id'=>null];
+    }
+    private static function youTube(array$row,string$token): array {
+        $path=UPLOADS_PATH.'/'.ltrim((string)($row['media_path']??''),'/\\');if(!is_file($path)||($row['media_mime']??'')!=='video/mp4')throw new RuntimeException('Fichier vidéo MP4 YouTube introuvable.');
+        $privacy=strtolower(trim((string)config_env_value('YOUTUBE_PRIVACY_STATUS','private')));if(!in_array($privacy,['private','unlisted','public'],true))$privacy='private';
+        $boundary='strax'.bin2hex(random_bytes(12));$meta=json_encode(['snippet'=>['title'=>mb_substr((string)$row['master_title'],0,100),'description'=>(string)$row['adapted_caption']],'status'=>['privacyStatus'=>$privacy]],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);$video=file_get_contents($path);if($video===false)throw new RuntimeException('Lecture de la vidéo impossible.');$body="--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n$meta\r\n--$boundary\r\nContent-Type: video/mp4\r\n\r\n$video\r\n--$boundary--\r\n";
+        $ch=curl_init('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status');curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$body,CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>300,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$token,'Content-Type: multipart/related; boundary='.$boundary]]);$raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);unset($video,$body);$data=json_decode((string)$raw,true);if($raw===false||$status<200||$status>=300||!is_array($data))throw new RuntimeException('YouTube a refusé la vidéo (HTTP '.$status.').');$id=(string)($data['id']??'');if($id==='')throw new RuntimeException('YouTube n a retourné aucun identifiant vidéo.');return['external_post_id'=>$id,'external_post_url'=>'https://www.youtube.com/watch?v='.rawurlencode($id),'external_container_id'=>null];
+    }
+    private static function json(string$method,string$url,array$payload,string$token,array$extra): array {
+        $responseHeaders=[];$headers=array_merge(['Accept: application/json','Authorization: Bearer '.$token,'Content-Type: application/json'],$extra);$ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>60,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_HTTPHEADER=>$headers,CURLOPT_HEADERFUNCTION=>static function($ch,$line)use(&$responseHeaders){$length=strlen($line);if(str_contains($line,':')){[$name,$value]=explode(':',$line,2);$responseHeaders[strtolower(trim($name))]=trim($value);}return$length;}]);$raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);$data=json_decode((string)$raw,true);if($raw===false||$status<200||$status>=300)throw new RuntimeException('Le réseau a refusé la publication (HTTP '.$status.').');return[is_array($data)?$data:[],$responseHeaders];
+    }
+}
