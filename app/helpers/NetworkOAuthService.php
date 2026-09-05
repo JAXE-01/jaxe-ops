@@ -5,12 +5,21 @@ class NetworkOAuthService {
     public function __construct(?callable $transport = null) { $this->transport = $transport; }
     public static function definition(string $provider): array {
         $definitions = [
-            'tiktok' => ['key'=>'TIKTOK_CLIENT_KEY','secret'=>'TIKTOK_CLIENT_SECRET','authorize'=>'https://www.tiktok.com/v2/auth/authorize/','token'=>'https://open.tiktokapis.com/v2/oauth/token/','scopes'=>['user.info.basic','video.list']],
+            'tiktok' => ['key'=>'TIKTOK_CLIENT_KEY','secret'=>'TIKTOK_CLIENT_SECRET','authorize'=>'https://www.tiktok.com/v2/auth/authorize/','token'=>'https://open.tiktokapis.com/v2/oauth/token/','scopes'=>['user.info.basic']],
             'linkedin' => ['key'=>'LINKEDIN_CLIENT_ID','secret'=>'LINKEDIN_CLIENT_SECRET','authorize'=>'https://www.linkedin.com/oauth/v2/authorization','token'=>'https://www.linkedin.com/oauth/v2/accessToken','scopes'=>['openid','profile']],
             'youtube' => ['key'=>'YOUTUBE_CLIENT_ID','secret'=>'YOUTUBE_CLIENT_SECRET','authorize'=>'https://accounts.google.com/o/oauth2/v2/auth','token'=>'https://oauth2.googleapis.com/token','scopes'=>['https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/yt-analytics.readonly']],
         ];
         if (!isset($definitions[$provider])) throw new RuntimeException('Réseau OAuth non pris en charge.');
         return $definitions[$provider];
+    }
+    public static function scopes(string $provider): array {
+        $defaults=self::definition($provider)['scopes'];
+        if($provider!=='tiktok')return$defaults;
+        $raw=trim((string)config_env_value('TIKTOK_OAUTH_SCOPES',implode(',',$defaults)));
+        $requested=array_values(array_unique(array_filter(preg_split('/[\s,]+/',$raw,-1,PREG_SPLIT_NO_EMPTY))));
+        $allowed=['user.info.basic','user.info.profile','user.info.stats','video.list'];
+        if(!$requested||array_diff($requested,$allowed)||!in_array('user.info.basic',$requested,true))throw new RuntimeException('TIKTOK_OAUTH_SCOPES invalide : user.info.basic est obligatoire.');
+        return$requested;
     }
     public static function callbackUrl(string $provider): string {
         self::definition($provider);
@@ -28,7 +37,7 @@ class NetworkOAuthService {
     }
     public function authorize(string $provider, string $state, string $redirect): string {
         $d = self::definition($provider); [$id] = $this->credentials($provider);
-        $params = [$provider === 'tiktok' ? 'client_key' : 'client_id' => $id, 'redirect_uri'=>$redirect, 'response_type'=>'code', 'state'=>$state, 'scope'=>implode($provider==='tiktok'?',':' ', $d['scopes'])];
+        $params = [$provider === 'tiktok' ? 'client_key' : 'client_id' => $id, 'redirect_uri'=>$redirect, 'response_type'=>'code', 'state'=>$state, 'scope'=>implode($provider==='tiktok'?',':' ', self::scopes($provider))];
         if ($provider === 'youtube') $params += ['access_type'=>'offline','prompt'=>'consent'];
         return $d['authorize'].'?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986);
     }
@@ -47,7 +56,7 @@ class NetworkOAuthService {
         if (isset($data['token_type']) && strcasecmp((string)$data['token_type'],'Bearer')!==0) throw new RuntimeException('Type de jeton non pris en charge.');
         if (isset($data['scope'])) {
             $scopes = preg_split('/[ ,]+/', trim((string)$data['scope']), -1, PREG_SPLIT_NO_EMPTY);
-            if (array_diff(self::definition($provider)['scopes'], $scopes)) throw new RuntimeException('Permissions requises refusées. Reconnectez et autorisez les accès demandés.');
+            if (array_diff(self::scopes($provider), $scopes)) throw new RuntimeException('Permissions requises refusées. Reconnectez et autorisez les accès demandés.');
         }
         return $data;
     }

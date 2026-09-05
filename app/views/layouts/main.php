@@ -92,11 +92,18 @@ $mainNavItems = [
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>'
     ],
     [
-        'label' => 'Publication sociale',
+        'label' => 'Publications',
         'href' => route_url('/social-publishing'),
         'match' => [route_url('/social-publishing')],
         'permission' => 'publishing.view',
         'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-5 16-3-6-8-2Zm8 2 8-10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    ],
+    [
+        'label' => 'Comptes sociaux',
+        'href' => route_url('/social-connection'),
+        'match' => [route_url('/social-connection')],
+        'permission' => 'publishing.view',
+        'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 20a5 5 0 0 1 10 0m1-6a4 4 0 0 1 7 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
     ],
     [
         'label' => 'Messages & commentaires',
@@ -284,7 +291,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
                     $navLabel = (string) ($item['label'] ?? '');
                     if (in_array($navLabel, ['Dashboard', 'Démarrage', 'Calendrier global', 'Pilotage', 'Clients', 'Projets'], true)) {
                         $navGroup = 'Espace de travail';
-                    } elseif (in_array($navLabel, ['Matrice de creation', 'Publication sociale', 'Statistiques & rapports', 'Documentation', 'Realisations', 'Export documents'], true)) {
+                    } elseif (in_array($navLabel, ['Matrice de creation', 'Publications', 'Comptes sociaux', 'Statistiques & rapports', 'Documentation', 'Realisations', 'Export documents'], true)) {
                         $navGroup = 'Contenus & livrables';
                     } else {
                         $navGroup = 'Administration';

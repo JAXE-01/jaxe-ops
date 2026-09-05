@@ -14,7 +14,7 @@ class NetworkOAuthController extends Controller {
             $_SESSION['network_oauth'][$state]=['provider'=>$provider,'connection_id'=>(int)$connection['id'],'client_id'=>(int)$connection['client_id'],'tenant_id'=>TenantGuard::tenantId(),'user_id'=>(int)$this->currentUser()['id'],'created'=>time(),'redirect'=>$redirect];
             header('Location: '.$url); exit;
         } catch (Throwable $e) { $this->failure($e); }
-        $this->redirect('/social-publishing');
+        $this->redirect('/social-connection');
     }
     public function callback($provider): void {
         header('Referrer-Policy: no-referrer'); header('Cache-Control: no-store');
@@ -34,7 +34,7 @@ class NetworkOAuthController extends Controller {
             $this->save($connection,$account,$tokens);
             $this->flash('success','Compte '.$account['name'].' connecté. La connexion seule n active pas encore la collecte ni la publication sur ce réseau.');
         } catch (Throwable $e) { $this->failure($e); }
-        $this->redirect('/social-publishing');
+        $this->redirect('/social-connection');
     }
     public function renew($connectionId): void {
         if (!$this->isPost()) { http_response_code(405); header('Allow: POST'); return; }
@@ -47,7 +47,7 @@ class NetworkOAuthController extends Controller {
             $this->save($connection,$account,$tokens);
             $this->flash('success','Accès renouvelé et compte vérifié.');
         } catch (Throwable $e) { $this->failure($e); }
-        $this->redirect('/social-publishing');
+        $this->redirect('/social-connection');
     }
     private function connection(int $id): array {
         $stmt=Database::getConnection()->prepare('SELECT * FROM social_connections WHERE id=:id AND tenant_id=:tenant');
@@ -61,7 +61,7 @@ class NetworkOAuthController extends Controller {
         $access=NetworkOAuthService::encrypt($tokens['access_token']);
         $refresh=!empty($tokens['refresh_token'])?NetworkOAuthService::encrypt((string)$tokens['refresh_token']):null;
         $expires=isset($tokens['expires_in']) && (int)$tokens['expires_in']>0?date('Y-m-d H:i:s',time()+(int)$tokens['expires_in']):null;
-        $scopes=isset($tokens['scope'])?preg_split('/[ ,]+/',trim((string)$tokens['scope']),-1,PREG_SPLIT_NO_EMPTY):NetworkOAuthService::definition($connection['provider'])['scopes'];
+        $scopes=isset($tokens['scope'])?preg_split('/[ ,]+/',trim((string)$tokens['scope']),-1,PREG_SPLIT_NO_EMPTY):NetworkOAuthService::scopes($connection['provider']);
         $pdo=Database::getConnection();$pdo->beginTransaction();
         try {
             $lock=$pdo->prepare('SELECT * FROM social_connections WHERE id=:id AND tenant_id=:tenant FOR UPDATE');

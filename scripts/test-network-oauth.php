@@ -32,6 +32,13 @@ foreach(['tiktok','linkedin','youtube'] as $provider){
     $empty=new NetworkOAuthService(fn()=>[]);
     check(fails(fn()=>$empty->exchange($provider,'code','https://example.test/callback')),'missing token');
 }
+$config['TIKTOK_OAUTH_SCOPES']='user.info.basic,video.list';
+check(NetworkOAuthService::scopes('tiktok')===['user.info.basic','video.list'],'configurable TikTok scopes');
+$config['TIKTOK_OAUTH_SCOPES']='video.list';
+check(fails(fn()=>NetworkOAuthService::scopes('tiktok')),'TikTok basic scope required');
+$config['TIKTOK_OAUTH_SCOPES']='user.info.basic,video.publish';
+check(fails(fn()=>NetworkOAuthService::scopes('tiktok')),'TikTok unimplemented scope rejected');
+unset($config['TIKTOK_OAUTH_SCOPES']);
 check(fails(fn()=>NetworkOAuthService::definition('evil')),'provider allowlist');
 $config['YOUTUBE_REDIRECT_URI']='http://example.test/callback';
 check(fails(fn()=>NetworkOAuthService::callbackUrl('youtube')),'reject http');
