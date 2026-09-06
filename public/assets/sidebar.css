@@ -150,6 +150,21 @@ th {
 .cadence-empty[hidden] { display:none !important; }
 .is-ajax-loading { opacity:.68; pointer-events:none; transition:opacity .16s ease; }
 .button-spinner { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; vertical-align:-2px; animation:spin .65s linear infinite; }
+.project-list-panel { padding:18px 20px; border-radius:18px; }
+.project-list-panel .panel-head { margin-bottom:9px; }
+.project-list-panel .list-toolbar { margin-bottom:9px; padding:0; }
+.project-data-table { font-size:.78rem; white-space:nowrap; }
+.project-data-table th { padding:8px 9px; font-size:.64rem; }
+.project-data-table td { padding:9px; line-height:1.2; }
+.project-data-table .cell-content { display:block; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.project-data-table .actions-cell { width:116px; }
+.report-account-identity { display:inline-flex; align-items:center; gap:7px; min-width:0; }
+.report-account-identity > img,.report-account-identity > span { display:grid; place-items:center; flex:0 0 25px; width:25px; height:25px; border-radius:8px; object-fit:cover; background:#e9f1f8; color:#1f5f96; font-size:.65rem; font-weight:850; }
+.report-account-identity.provider-instagram > span { background:#f8e8f2; color:#b52f78; font-size:1rem; }
+.report-account-identity.provider-youtube > span { background:#ffe8eb; color:#df1734; }
+.report-account-identity.provider-tiktok > span { background:#111; color:#fff; font-size:.9rem; }
+.report-account-identity.provider-linkedin > span { background:#1675b9; color:#fff; }
+.report-account-identity b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:650; }
 
 @media (max-width: 720px) {
   .task-item.slim,

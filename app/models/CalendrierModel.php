@@ -4,6 +4,8 @@ class CalendrierModel extends Model {
 
     public function getProjectsOverview(array $currentUser = null, array $filters = []) {
         $params = [];
+        $reportMonth = preg_match('/^\d{4}-\d{2}$/', (string)($filters['month'] ?? '')) ? (string)$filters['month'] : date('Y-m');
+        $params['report_month'] = $reportMonth . '-01';
         $scopeSql = '';
         if (UserScope::isScopedOperationalUser($currentUser)) {
             $scopeSql = ' AND (' . $this->buildProjectScopeCondition('p', 'tp') . ')';
@@ -20,12 +22,12 @@ class CalendrierModel extends Model {
             MIN(pm.periode_mois) AS first_plan_month,
             MAX(pm.periode_mois) AS last_plan_month,
                 COUNT(DISTINCT tp.id) AS tasks_total,
-                SUM(CASE WHEN tp.statut = 'Terminee' THEN 1 ELSE 0 END) AS tasks_done,
+                COUNT(DISTINCT CASE WHEN tp.statut = 'Terminee' THEN tp.id END) AS tasks_done,
                 MIN(CASE WHEN tp.statut IN ('A faire', 'En cours') THEN tp.deadline END) AS prochaine_deadline
             FROM projets p
             JOIN clients c ON c.id = p.client_id
-            LEFT JOIN plans_mensuels pm ON pm.projet_id = p.id
-            LEFT JOIN taches_pipeline tp ON tp.projet_id = p.id AND tp.statut <> 'Bloquee'
+            LEFT JOIN plans_mensuels pm ON pm.projet_id = p.id AND pm.periode_mois = :report_month
+            LEFT JOIN taches_pipeline tp ON tp.plan_mensuel_id = pm.id AND tp.statut <> 'Bloquee'
             WHERE 1=1" . $scopeSql;
 
         if (!empty($filters['client_id'])) {
@@ -55,14 +57,7 @@ class CalendrierModel extends Model {
             $done = (int) ($row['tasks_done'] ?? 0);
             $row['completion_rate'] = $total > 0 ? round(($done / $total) * 100, 1) : 0;
 
-            $firstMonth = (string) ($row['first_plan_month'] ?? '');
-            $lastMonth = (string) ($row['last_plan_month'] ?? '');
-            $currentMonth = date('Y-m-01');
-            if ($firstMonth !== '' && $lastMonth !== '' && $currentMonth >= $firstMonth && $currentMonth <= $lastMonth) {
-                $row['calendar_month'] = $currentMonth;
-            } else {
-                $row['calendar_month'] = $lastMonth !== '' ? $lastMonth : $firstMonth;
-            }
+            $row['calendar_month'] = !empty($row['plans_total']) ? $reportMonth.'-01' : '';
         }
         unset($row);
 

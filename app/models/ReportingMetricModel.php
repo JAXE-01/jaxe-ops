@@ -271,6 +271,8 @@ class ReportingMetricModel extends Model {
             COALESCE(NULLIF(rm.url_publication,""),(SELECT link_target.external_post_url FROM social_publication_targets link_target WHERE link_target.id=rm.social_target_id)) AS url_publication,
             (SELECT scl.entreprise FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id JOIN clients scl ON scl.id=sc.client_id WHERE spt.id=rm.social_target_id) AS client_nom,
             (SELECT sc.account_label FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id WHERE spt.id=rm.social_target_id) AS page_nom,
+            (SELECT sc.provider FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id WHERE spt.id=rm.social_target_id) AS account_provider,
+            (SELECT JSON_UNQUOTE(JSON_EXTRACT(sc.metadata_json,"$.profile_image_url")) FROM social_publication_targets spt JOIN social_connections sc ON sc.id=spt.connection_id WHERE spt.id=rm.social_target_id) AS profile_image_url,
             COALESCE(CAST(rm.contenu_id AS CHAR), CONCAT("social-", rm.social_publication_id), CONCAT("manual-", rm.id)) AS publication_id,
                 DATE_FORMAT(DATE((SELECT ppt.published_at FROM social_publication_targets ppt WHERE ppt.id=rm.social_target_id)), "%Y-%m") AS periode_analysee
             FROM reporting_metrics rm
@@ -705,6 +707,9 @@ class ReportingMetricModel extends Model {
                 MAX('.ReportPresentation::typeSql().') AS content_type,
                 COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
                 COALESCE(sc.account_label, "Page non rattachee") AS page_nom,
+                MAX(sc.provider) AS account_provider,
+                MAX(JSON_UNQUOTE(JSON_EXTRACT(sc.metadata_json,"$.profile_image_url"))) AS profile_image_url,
+                MAX(rm.plateforme) AS plateforme,
                 COALESCE(MAX(NULLIF(rm.url_publication,"")), MAX(spt.external_post_url)) AS url_publication,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions,
@@ -744,6 +749,8 @@ class ReportingMetricModel extends Model {
                 rm.plateforme,
                 COALESCE(scl.entreprise, "Client non rattache") AS client_nom,
                 COALESCE(sc.account_label, "Page non rattachee") AS page_nom,
+                MAX(sc.provider) AS account_provider,
+                MAX(JSON_UNQUOTE(JSON_EXTRACT(sc.metadata_json,"$.profile_image_url"))) AS profile_image_url,
                 COUNT(DISTINCT COALESCE(rm.social_publication_id, rm.contenu_id, rm.id)) AS publications,
                 COUNT(*) AS collectes,
                 SUM(rm.impressions) AS impressions_total,

@@ -56,6 +56,14 @@ class ReportPresentation {
         return (string)$value;
     }
     public static function cell(array $row,string $key): string {
+        if($key==='page_nom') {
+            $provider=strtolower((string)($row['account_provider']??$row['plateforme']??''));
+            $label=htmlspecialchars(self::value($row,$key),ENT_QUOTES,'UTF-8');
+            $picture=self::url($row['profile_image_url']??'');
+            $fallback=['facebook'=>'f','instagram'=>'◎','linkedin'=>'in','youtube'=>'▶','tiktok'=>'♪'][$provider]??'●';
+            $media=$picture?'<img src="'.htmlspecialchars($picture,ENT_QUOTES,'UTF-8').'" alt="" loading="lazy" referrerpolicy="no-referrer">':'<span aria-hidden="true">'.htmlspecialchars($fallback,ENT_QUOTES,'UTF-8').'</span>';
+            return '<span class="report-account-identity provider-'.htmlspecialchars($provider,ENT_QUOTES,'UTF-8').'">'.$media.'<b>'.$label.'</b></span>';
+        }
         if($key==='url_publication') {
             $url=self::url($row[$key]??'');
             return $url?'<a href="'.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'" target="_blank" rel="noopener noreferrer" title="Ouvrir la publication" aria-label="Ouvrir la publication">'.ReportIcons::web($key).'</a>':'—';

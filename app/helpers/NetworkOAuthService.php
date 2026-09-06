@@ -65,18 +65,18 @@ class NetworkOAuthService {
     public function account(string $provider, string $accessToken): array {
         self::definition($provider);
         if ($provider === 'tiktok') {
-            $data=$this->request('GET','https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name',[],$accessToken);
+            $data=$this->request('GET','https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url',[],$accessToken);
             $user=$data['data']['user']??[];
-            $account=['id'=>$user['open_id']??'','name'=>$user['display_name']??'TikTok','type'=>'Profile'];
+            $account=['id'=>$user['open_id']??'','name'=>$user['display_name']??'TikTok','type'=>'Profile','picture_url'=>$user['avatar_url']??''];
         } elseif ($provider === 'linkedin') {
             // Use authenticated userinfo, never trust an unverified ID-token payload.
             $user=$this->request('GET','https://api.linkedin.com/v2/userinfo',[],$accessToken);
-            $account=['id'=>$user['sub']??'','name'=>$user['name']??'LinkedIn','type'=>'Profile'];
+            $account=['id'=>$user['sub']??'','name'=>$user['name']??'LinkedIn','type'=>'Profile','picture_url'=>$user['picture']??''];
         } else {
             $data=$this->request('GET','https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',[],$accessToken);
             $items=$data['items']??[];
             if (count($items)!==1 || !empty($data['nextPageToken'])) throw new RuntimeException('Sélectionnez une seule chaîne YouTube lors du consentement et reconnectez-la.');
-            $account=['id'=>$items[0]['id']??'','name'=>$items[0]['snippet']['title']??'YouTube','type'=>'Channel'];
+            $account=['id'=>$items[0]['id']??'','name'=>$items[0]['snippet']['title']??'YouTube','type'=>'Channel','picture_url'=>$items[0]['snippet']['thumbnails']['default']['url']??''];
         }
         if (!is_string($account['id']) || $account['id']==='' || strlen($account['id'])>190) throw new RuntimeException('Identifiant de compte manquant ou invalide.');
         $account['name']=mb_substr((string)$account['name'],0,190);

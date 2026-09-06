@@ -45,7 +45,7 @@ function crud_display_value(array $row, string $field, array $formFields, array 
 <?php if ($isProjectModule): ?>
 <section class="page-intro-card project-list-intro"><div><span class="page-eyebrow">Production éditoriale</span><h2>Projets</h2><p>Créez, filtrez et pilotez les projets rattachés à chaque client depuis un répertoire unique.</p></div><a class="button primary" href="<?= htmlspecialchars(route_url('/projet/create')) ?>">+ Nouveau projet</a></section>
 <div class="entity-stats-grid project-list-stats"><article class="entity-stat"><span>Projets affichés</span><strong><?= $crudRowCount ?></strong><small>Selon les filtres actifs</small></article><article class="entity-stat"><span>Clients représentés</span><strong><?= count($clientOptions) ?></strong><small>Portefeuille disponible</small></article><article class="entity-stat"><span>Vue</span><strong><?= $showClientPicker ? 'Clients' : 'Liste' ?></strong><small>Mode de navigation actuel</small></article></div>
-<?php endif; ?><section class="panel">
+<?php endif; ?><section class="panel <?= $isProjectModule ? 'project-list-panel' : '' ?>">
     <div class="panel-head">
         <div>
             <p>Gestion de <?= htmlspecialchars(strtolower($module['label'])) ?></p>
@@ -178,7 +178,7 @@ function crud_display_value(array $row, string $field, array $formFields, array 
 
         <?php if (!empty($group['rows'])): ?>
             <div class="table-wrap">
-                <table class="data-table">
+                <table class="data-table <?= $isProjectModule ? 'project-data-table' : '' ?>">
                     <thead>
                         <tr>
                             <?php if ($isUserModule): ?>

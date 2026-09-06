@@ -23,8 +23,7 @@ class ValidationPolicy {
     public static function saveProject(int $id,array $data): void {
         if(empty($data['validation_policy_present']))return;
         $db=Database::getConnection();$tenant=TenantGuard::tenantId();
-        $q=$db->prepare('SELECT p.id FROM projets p JOIN clients c ON c.id=p.client_id WHERE p.id=? AND c.tenant_id=?');$q->execute([$id,$tenant]);
-        if(!$q->fetchColumn())throw new RuntimeException('Projet inaccessible pour les validations.');
+        TenantGuard::assertProject($id);
         self::write($db,'validation_project_'.$tenant.'_'.$id,['inherit'=>($data['validation_mode']??'inherit')==='inherit','internal'=>!empty($data['validation_internal']),'client'=>!empty($data['validation_client'])]);
     }
     public static function forContent(PDO $db,int $project,int $item): array {

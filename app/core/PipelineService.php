@@ -545,7 +545,10 @@ class PipelineService {
         $datePrevue = $slot['date']??self::formatDate(clone $period, 5 + (($index - 1) * 7));
         $titre = $slot['label']??sprintf('%s %s #%s', $type, self::monthLabelForTitle($period), $index);
 
-        if ($existingId > 0 && isset($project['_cadence'])) return $existingId;
+        if ($existingId > 0 && isset($project['_cadence'])) {
+            if($slot)CadenceRevision::alignUntouchedItem($pdo,$existingId,$slot,$project);
+            return $existingId;
+        }
         if ($existingId > 0) {
             $existingDate = trim((string) ($existing['date_prevue'] ?? ''));
             $dateToKeep = $existingDate !== '' ? $existingDate : $datePrevue;

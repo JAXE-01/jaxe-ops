@@ -247,7 +247,7 @@ if (!function_exists('cal_global_type_icon')) {
         </label>
         <div class="toolbar-actions">
             <button class="button" type="submit">Afficher</button>
-            <a class="button secondary" href="<?= htmlspecialchars(route_url('/calendrier')) ?>">Mois courant</a>
+            <a class="button secondary" data-calendar-reset href="<?= htmlspecialchars(route_url('/calendrier-global') . '?month=' . date('Y-m')) ?>">Mois courant</a>
         </div>
     </form>
 
@@ -382,6 +382,14 @@ if (!function_exists('cal_global_type_icon')) {
     });
 
     document.addEventListener('submit', async function (event) {
+        var monthContextForm = event.target.closest('.work-month-form');
+        var visibleCalendarForm = document.querySelector('.js-global-calendar-filter');
+        if (monthContextForm && visibleCalendarForm && !event.defaultPrevented) {
+            event.preventDefault();
+            visibleCalendarForm.elements.month.value = monthContextForm.elements.month.value;
+            visibleCalendarForm.requestSubmit();
+            return;
+        }
         var form = event.target.closest('.js-global-calendar-filter');
         if (!form) { return; }
         event.preventDefault();
@@ -399,6 +407,8 @@ if (!function_exists('cal_global_type_icon')) {
             var next = doc.getElementById('global-month-calendar-section');
             if (!next) { throw new Error('Calendrier introuvable dans la réponse.'); }
             section.replaceWith(next);
+            var contextMonth = document.getElementById('global-working-month');
+            if (contextMonth) { contextMonth.value = String(new FormData(form).get('month') || contextMonth.value); }
             history.replaceState({}, '', url.toString());
         } catch (error) {
             section.classList.remove('is-ajax-loading');
@@ -407,6 +417,21 @@ if (!function_exists('cal_global_type_icon')) {
                 window.AppUI.toast('error', error.message || 'Actualisation impossible.');
             }
         }
+    });
+
+    document.addEventListener('change', function(event) {
+        var field=event.target.closest('.js-global-calendar-filter select, .js-global-calendar-filter input[type="month"], .js-global-calendar-filter input[type="checkbox"]');
+        if(field)field.form.requestSubmit();
+    });
+
+    document.addEventListener('click', function(event) {
+        var reset=event.target.closest('[data-calendar-reset]');
+        var form=document.querySelector('.js-global-calendar-filter');
+        if(!reset||!form)return;
+        event.preventDefault();
+        form.reset();
+        form.elements.month.value='<?= date('Y-m') ?>';
+        form.requestSubmit();
     });
 })();
 </script>
@@ -447,7 +472,7 @@ if (!function_exists('cal_global_type_icon')) {
                     <th>Periode projet</th>
                     <th>Mois calendrier</th>
                     <th>Plans</th>
-                    <th>Completion</th>
+                            <th>Completion du mois</th>
                     <th>Prochaine deadline</th>
                     <th>Action</th>
                 </tr>
@@ -468,7 +493,7 @@ if (!function_exists('cal_global_type_icon')) {
                         <td><?= htmlspecialchars((string) ($project['plans_total'] ?? 0)) ?></td>
                         <td>
                             <span class="status-badge status-terminee"><?= htmlspecialchars((string) ($project['completion_rate'] ?? 0)) ?>%</span>
-                            <div class="mini-text"><?= htmlspecialchars((string) ($project['tasks_done'] ?? 0)) ?>/<?= htmlspecialchars((string) ($project['tasks_total'] ?? 0)) ?> taches</div>
+                            <div class="mini-text"><?= htmlspecialchars((string) ($project['tasks_done'] ?? 0)) ?>/<?= htmlspecialchars((string) ($project['tasks_total'] ?? 0)) ?> tâches du mois</div>
                         </td>
                         <td><?= htmlspecialchars((string) ($project['prochaine_deadline'] ?? 'Aucune')) ?></td>
                         <td>

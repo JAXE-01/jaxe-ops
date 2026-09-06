@@ -58,6 +58,19 @@ class CadenceRevision {
         $history['revisions'][$effective]=['rules'=>$rules,'at'=>date(DATE_ATOM),'user_id'=>(int)($_SESSION['user']['id']??0),'summary'=>$stats];
         $db->prepare('UPDATE projets SET publication_rules=? WHERE id=?')->execute([json_encode($history,JSON_UNESCAPED_UNICODE),$id]);
     }
+    public static function alignUntouchedItem(PDO $db,int $itemId,array $slot,array $project): bool {
+        $q=$db->prepare('SELECT * FROM livrable_items WHERE id=?');$q->execute([$itemId]);$item=$q->fetch(PDO::FETCH_ASSOC);
+        if(!$item)return false;
+        $old=['date'=>(string)$item['date_prevue'],'label'=>(string)$item['titre'],'format'=>(string)$item['sous_type']];
+        if(!self::isUntouched($db,$item,$old,$project))return false;
+        $newDate=(string)$slot['date'];$newLabel=(string)($slot['label']??$old['label']);$newFormat=(string)($slot['format']??'');
+        if($old['date']===$newDate&&$old['label']===$newLabel&&$old['format']===$newFormat)return true;
+        $db->prepare('UPDATE livrable_items SET date_prevue=?,titre=?,sous_type=? WHERE id=?')->execute([$newDate,$newLabel,$newFormat?:null,$itemId]);
+        $db->prepare('UPDATE contenus SET sujet=?,sous_type=? WHERE livrable_item_id=?')->execute([$newLabel,$newFormat?:null,$itemId]);
+        $delta=(int)(new DateTimeImmutable($old['date']))->diff(new DateTimeImmutable($newDate))->format('%r%a');
+        $db->prepare('UPDATE taches_pipeline SET deadline=DATE_ADD(deadline, INTERVAL ? DAY) WHERE livrable_item_id=?')->execute([$delta,$itemId]);
+        return true;
+    }
     private static function isUntouched(PDO $db,array $item,array $old,array $project):bool {
         if($item['statut']!=='Planifie'||$item['date_prevue']!==$old['date']||$item['titre']!==$old['label']||(string)$item['sous_type']!==$old['format']||(string)$item['canal']!==(string)$project['canal_principal'])return false;
         if(!in_array(trim((string)$item['pieces_jointes']),['','[]','null'],true)||(int)$item['nombre_pages']>1)return false;
