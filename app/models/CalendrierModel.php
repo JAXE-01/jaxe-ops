@@ -145,7 +145,7 @@ class CalendrierModel extends Model {
         ];
     }
 
-    public function getGlobalPublicationCalendar($month, $clientId = '', array $currentUser = null) {
+    public function getGlobalPublicationCalendar($month, $clientId = '', array $currentUser = null, $includeInactiveProjects = false) {
         $month = preg_match('/^\d{4}-\d{2}$/', (string) $month) ? (string) $month : date('Y-m');
         $monthStart = $month . '-01';
         $monthEnd = date('Y-m-t', strtotime($monthStart));
@@ -183,6 +183,10 @@ class CalendrierModel extends Model {
             'month_start' => $monthStart,
             'month_end' => $monthEnd,
         ];
+
+        if (!$includeInactiveProjects) {
+            $sql .= " AND p.statut NOT IN ('Termine', 'Suspendu')";
+        }
 
         $accessScope=AgencyAccessPolicy::clientSqlScope('c','content','publication_calendar');
         $sql.=' AND '.$accessScope['sql'];

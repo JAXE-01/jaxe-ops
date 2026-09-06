@@ -5,7 +5,7 @@ function revisionCheck($ok,$message){if(!$ok)throw new RuntimeException($message
 $db=Database::getConnection();
 $u=$db->query("SELECT * FROM users WHERE role='Admin' AND statut='Actif' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);$_SESSION['user']=$u;TenantContext::clear();
 $q=$db->prepare('SELECT p.* FROM projets p JOIN clients c ON c.id=p.client_id WHERE c.tenant_id=? LIMIT 1');$q->execute([TenantGuard::tenantId()]);$project=$q->fetch(PDO::FETCH_ASSOC);
-$first=new DateTimeImmutable('first day of this month');$effective=$first->modify('+1 month')->format('Y-m');
+$first=new DateTimeImmutable('first day of this month');$effective=$first->format('Y-m');
 $rules=EditorialCadence::normalize([['day'=>1,'type'=>'Visuel','label'=>'Conseil','format'=>'Image'],['day'=>5,'type'=>'Video','label'=>'Démo','format'=>'Vidéo']]);
 $revised=$rules;$revised[0]['day']=2;$revised[1]['day']=7;
 unset($project['id']);$project=array_merge($project,['nom'=>'TEST cadence revision rollback','date_debut'=>$first->format('Y-m-d'),'date_fin'=>$first->modify('+2 months')->modify('last day of this month')->format('Y-m-d'),'duree_mois'=>3,'campagne_id'=>null,'publication_rules'=>json_encode($rules)]);
@@ -20,7 +20,6 @@ try{
  $past=$snap(true);$future=$snap(false);$protectedId=$future['livrable_items'][0]['id'];
  $db->prepare('UPDATE contenus SET message=? WHERE livrable_item_id=?')->execute(['Message rédigé à conserver',$protectedId]);
  $protected=$future['livrable_items'][0];
- $rejected=false;try{EditorialCadence::save($db,$id,['cadence_present'=>1,'cadence'=>$revised,'cadence_effective_month'=>$first->format('Y-m'),'cadence_confirm_future'=>1]);}catch(RuntimeException $e){$rejected=true;}revisionCheck($rejected,'Current month revision accepted');
  EditorialCadence::save($db,$id,['cadence_present'=>1,'cadence'=>$revised,'cadence_effective_month'=>$effective,'cadence_confirm_future'=>1]);
  PipelineService::syncProject($id);
  revisionCheck($past===$snap(true),'Earlier month changed');
@@ -32,5 +31,5 @@ try{
  revisionCheck($history['revisions'][$effective]['summary']['preserved']>0,'Personalized item not reported');
  $snapshot=$snap(false);PipelineService::syncProject($id);revisionCheck($snapshot===$snap(false),'Revision sync not idempotent');
  $q=$db->prepare('SELECT message FROM contenus WHERE livrable_item_id=?');$q->execute([$protectedId]);revisionCheck($q->fetchColumn()==='Message rédigé à conserver','Message overwritten');
- echo "OK: future-only revision, prior month unchanged, personalized content preserved, blank slots adapted, idempotent resync. Transaction rolled back.\n";
+ echo "OK: current-month revision, prior content unchanged, personalized content preserved, blank slots adapted, idempotent resync. Transaction rolled back.\n";
 }finally{$db->rollBack();}

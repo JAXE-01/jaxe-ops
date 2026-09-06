@@ -268,7 +268,7 @@ class ModuleRegistry {
                 'table' => 'projets',
                 'primaryKey' => 'id',
                 'titleField' => 'nom',
-                'listFields' => ['id', 'client_id', 'workspace_owner_type', 'nom', 'type_projet', 'charge_compte_id', 'charge_clientele_id', 'createur_id', 'cadreur_id', 'videaste_id', 'designer_id', 'date_debut', 'date_fin', 'quota_videos_mensuel', 'quota_visuels_mensuel', 'statut'],
+                'listFields' => ['id', 'client_id', 'nom', 'type_projet', 'date_debut', 'date_fin', 'quota_videos_mensuel', 'quota_visuels_mensuel', 'statut'],
                 'formFields' => [
                     'client_id' => ['label' => 'Client', 'type' => 'relation', 'module' => 'client'],
                     'campagne_id' => ['label' => 'Campagne complémentaire (optionnelle)', 'type' => 'relation', 'module' => 'campagne', 'nullable' => true],

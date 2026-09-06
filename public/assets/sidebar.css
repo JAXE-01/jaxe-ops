@@ -135,7 +135,7 @@ th {
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 1320px) and (min-width: 981px) {
+@media (max-width: 1500px) and (min-width: 981px) {
   .dashboard-dual-row {
     display: grid;
     grid-template-columns: 1fr;
@@ -144,6 +144,12 @@ th {
     width: 100%;
   }
 }
+
+.calendar-status-filter { display:flex; align-items:center; gap:9px; align-self:end; min-height:44px; padding:0 4px; color:#526981; font-size:.82rem; }
+.calendar-status-filter input { width:17px; height:17px; margin:0; flex:0 0 auto; }
+.cadence-empty[hidden] { display:none !important; }
+.is-ajax-loading { opacity:.68; pointer-events:none; transition:opacity .16s ease; }
+.button-spinner { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; vertical-align:-2px; animation:spin .65s linear infinite; }
 
 @media (max-width: 720px) {
   .task-item.slim,

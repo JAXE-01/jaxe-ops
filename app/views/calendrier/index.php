@@ -220,7 +220,7 @@ if (!function_exists('cal_global_type_icon')) {
     </div>
     <div id="global-calendar-body"<?= $openGlobalCalendar ? '' : ' hidden' ?>>
 
-    <form method="get" class="list-toolbar">
+    <form method="get" class="list-toolbar js-global-calendar-filter" data-no-global-loader>
         <label class="field toolbar-field">
             <span>Mois</span>
             <input type="month" name="month" value="<?= htmlspecialchars((string) ($filters['month'] ?? date('Y-m'))) ?>">
@@ -240,6 +240,10 @@ if (!function_exists('cal_global_type_icon')) {
                 <option value="0" <?= (($filters['group_by_client'] ?? '0') !== '1') ? 'selected' : '' ?>>Detail par contenu</option>
                 <option value="1" <?= (($filters['group_by_client'] ?? '0') === '1') ? 'selected' : '' ?>>Regrouper par client</option>
             </select>
+        </label>
+        <label class="calendar-status-filter">
+            <input type="checkbox" name="include_inactive_projects" value="1" <?= (($filters['include_inactive_projects'] ?? '0') === '1') ? 'checked' : '' ?>>
+            <span>Afficher les projets terminés ou suspendus</span>
         </label>
         <div class="toolbar-actions">
             <button class="button" type="submit">Afficher</button>
@@ -366,14 +370,43 @@ if (!function_exists('cal_global_type_icon')) {
 
 <script>
 (function () {
-    var btn = document.getElementById('global-calendar-toggle');
-    var body = document.getElementById('global-calendar-body');
-    if (!btn || !body) { return; }
-    btn.addEventListener('click', function () {
+    document.addEventListener('click', function (event) {
+        var btn = event.target.closest('#global-calendar-toggle');
+        if (!btn) { return; }
+        var body = document.getElementById('global-calendar-body');
+        if (!body) { return; }
         var expanded = btn.getAttribute('aria-expanded') === 'true';
         body.hidden = expanded;
         btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
         btn.textContent = expanded ? 'Afficher' : 'Masquer';
+    });
+
+    document.addEventListener('submit', async function (event) {
+        var form = event.target.closest('.js-global-calendar-filter');
+        if (!form) { return; }
+        event.preventDefault();
+        var section = document.getElementById('global-month-calendar-section');
+        var submit = form.querySelector('button[type="submit"]');
+        var original = submit ? submit.textContent : '';
+        var url = new URL(form.action || window.location.href, window.location.href);
+        url.search = new URLSearchParams(new FormData(form)).toString();
+        section.classList.add('is-ajax-loading');
+        if (submit) { submit.disabled = true; submit.innerHTML = '<span class="button-spinner" aria-hidden="true"></span> Chargement'; }
+        try {
+            var response = await fetch(url.toString(), {credentials:'same-origin', headers:{'X-Requested-With':'XMLHttpRequest'}});
+            if (!response.ok) { throw new Error('Actualisation impossible.'); }
+            var doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+            var next = doc.getElementById('global-month-calendar-section');
+            if (!next) { throw new Error('Calendrier introuvable dans la réponse.'); }
+            section.replaceWith(next);
+            history.replaceState({}, '', url.toString());
+        } catch (error) {
+            section.classList.remove('is-ajax-loading');
+            if (submit) { submit.disabled = false; submit.textContent = original; }
+            if (window.AppUI && typeof window.AppUI.toast === 'function') {
+                window.AppUI.toast('error', error.message || 'Actualisation impossible.');
+            }
+        }
     });
 })();
 </script>

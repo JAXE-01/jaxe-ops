@@ -27,7 +27,7 @@ class CadenceRevision {
         $q=$db->prepare('SELECT * FROM plans_mensuels WHERE projet_id=? ORDER BY periode_mois FOR UPDATE');$q->execute([$id]);$plans=$q->fetchAll(PDO::FETCH_ASSOC);
         if(!$plans){$db->prepare('UPDATE projets SET publication_rules=? WHERE id=?')->execute([$rules?json_encode($rules,JSON_UNESCAPED_UNICODE):null,$id]);return;}
         $effective=(string)($data['cadence_effective_month']??'');
-        if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$effective)||$effective<=date('Y-m'))throw new RuntimeException('Choisissez un mois strictement futur pour modifier une cadence existante.');
+        if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$effective)||$effective<date('Y-m'))throw new RuntimeException('Choisissez le mois courant ou un mois futur pour modifier la cadence.');
         if($effective<substr($project['date_debut'],0,7)||$effective>substr($project['date_fin'],0,7))throw new RuntimeException('Le mois de révision doit appartenir à la durée du projet.');
         if(!$rules)throw new RuntimeException('Conservez au moins un rendez-vous pour une révision de cadence.');
         if(empty($data['cadence_confirm_future']))throw new RuntimeException('Confirmez la révision des mois futurs et la conservation des contenus personnalisés.');
@@ -45,7 +45,8 @@ class CadenceRevision {
                 $type=$item['type_livrable'];$index=(int)$item['numero_ordre'];$slot=$newSlots[$type][$index-1]??null;
                 if(!$slot){$stats['extra']++;continue;}
                 $old=$oldSlots[$type][$index-1]??null;
-                if(!$old || !self::isUntouched($db,$item,$old,$project)){$stats['preserved']++;continue;}
+                if(!$old)$old=['date'=>$item['date_prevue'],'label'=>$item['titre'],'format'=>(string)$item['sous_type']];
+                if(!self::isUntouched($db,$item,$old,$project)){$stats['preserved']++;continue;}
                 $db->prepare('UPDATE livrable_items SET date_prevue=?,titre=?,sous_type=? WHERE id=?')->execute([$slot['date'],$slot['label'],$slot['format']?:null,$item['id']]);
                 $db->prepare('UPDATE contenus SET sujet=?,sous_type=? WHERE livrable_item_id=?')->execute([$slot['label'],$slot['format']?:null,$item['id']]);
                 $delta=(int)(new DateTimeImmutable($old['date']))->diff(new DateTimeImmutable($slot['date']))->format('%r%a');

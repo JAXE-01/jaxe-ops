@@ -25,6 +25,7 @@ class CalendrierGlobalController extends Controller {
             'completion_max' => trim((string) ($_GET['completion_max'] ?? '')),
             'month' => $monthFilter,
             'group_by_client' => trim((string) ($_GET['group_by_client'] ?? '0')),
+            'include_inactive_projects' => !empty($_GET['include_inactive_projects']) ? '1' : '0',
         ];
 
         $this->render('calendrier/index', [
@@ -33,7 +34,7 @@ class CalendrierGlobalController extends Controller {
             'clients' => $this->calendrierModel->getAllClientsSimple(),
             'filters' => $filters,
             'globalStats' => $this->calendrierModel->getGlobalCalendarStats($currentUser),
-            'globalMonthCalendar' => $this->calendrierModel->getGlobalPublicationCalendar($monthFilter, $filters['client_id'] ?? '', $currentUser),
+            'globalMonthCalendar' => $this->calendrierModel->getGlobalPublicationCalendar($monthFilter, $filters['client_id'] ?? '', $currentUser, $filters['include_inactive_projects'] === '1'),
             'calendarColorScheme' => $settingsModel->getCalendarColorScheme(),
             'openGlobalCalendar' => true,
             'showGlobalCalendar' => true,
