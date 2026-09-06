@@ -60,8 +60,9 @@ class ReportPresentation {
             $provider=strtolower((string)($row['account_provider']??$row['plateforme']??''));
             $label=htmlspecialchars(self::value($row,$key),ENT_QUOTES,'UTF-8');
             $picture=self::url($row['profile_image_url']??'');
-            $fallback=['facebook'=>'f','instagram'=>'◎','linkedin'=>'in','youtube'=>'▶','tiktok'=>'♪'][$provider]??'●';
-            $media=$picture?'<img src="'.htmlspecialchars($picture,ENT_QUOTES,'UTF-8').'" alt="" loading="lazy" referrerpolicy="no-referrer">':'<span aria-hidden="true">'.htmlspecialchars($fallback,ENT_QUOTES,'UTF-8').'</span>';
+            $fallback=['facebook'=>'f','linkedin'=>'in','youtube'=>'▶','tiktok'=>'♪'][$provider]??'●';
+            $instagramIcon='<span class="network-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.7" r="1" class="is-filled"/></svg></span>';
+            $media=$picture?'<img src="'.htmlspecialchars($picture,ENT_QUOTES,'UTF-8').'" alt="" loading="lazy" referrerpolicy="no-referrer">':($provider==='instagram'?$instagramIcon:'<span aria-hidden="true">'.htmlspecialchars($fallback,ENT_QUOTES,'UTF-8').'</span>');
             return '<span class="report-account-identity provider-'.htmlspecialchars($provider,ENT_QUOTES,'UTF-8').'">'.$media.'<b>'.$label.'</b></span>';
         }
         if($key==='url_publication') {

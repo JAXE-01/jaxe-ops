@@ -9,11 +9,11 @@ class DashboardModel extends Model {
         $params=$scope['params'];$where=$scope['sql'];
         return [
             'clients'=>$this->scalarPrepared('SELECT COUNT(*) FROM clients c WHERE '.$where,$params),
-            'projets'=>$this->scalarPrepared('SELECT COUNT(*) FROM projets p JOIN clients c ON c.id=p.client_id WHERE '.$where,$params),
-            'abonnements'=>$this->scalarPrepared("SELECT COUNT(*) FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$where." AND p.type_projet IN ('Abonnement mensuel','Abonnement mixte')",$params),
-            'sea'=>$this->scalarPrepared("SELECT COUNT(*) FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$where." AND p.type_projet='SEA ponctuel'",$params),
-            'taches_en_retard'=>$this->scalarPrepared("SELECT COUNT(*) FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id WHERE ".$where." AND tp.statut NOT IN ('Terminee','Annulee') AND tp.deadline<CURDATE()",$params),
-            'taches_a_faire'=>$this->scalarPrepared("SELECT COUNT(*) FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id WHERE ".$where." AND tp.statut IN ('A faire','En cours')",$params)
+            'projets'=>$this->scalarPrepared("SELECT COUNT(*) FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$where." AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé')",$params),
+            'abonnements'=>$this->scalarPrepared("SELECT COUNT(*) FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$where." AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND p.type_projet IN ('Abonnement mensuel','Abonnement mixte')",$params),
+            'sea'=>$this->scalarPrepared("SELECT COUNT(*) FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$where." AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND p.type_projet='SEA ponctuel'",$params),
+            'taches_en_retard'=>$this->scalarPrepared("SELECT COUNT(*) FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id WHERE ".$where." AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND tp.statut NOT IN ('Terminee','Annulee','Bloquee') AND tp.deadline<CURDATE()",$params),
+            'taches_a_faire'=>$this->scalarPrepared("SELECT COUNT(*) FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id WHERE ".$where." AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND tp.statut IN ('A faire','En cours')",$params)
         ];
     }
 
@@ -42,29 +42,34 @@ class DashboardModel extends Model {
         }
 
         $scope=AgencyAccessPolicy::clientSqlScope('c','projects','dashboard_types');
-        $stmt=$this->db->prepare("SELECT p.type_projet,COUNT(*) AS total FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$scope['sql']." GROUP BY p.type_projet ORDER BY total DESC");
+        $stmt=$this->db->prepare("SELECT p.type_projet,COUNT(*) AS total FROM projets p JOIN clients c ON c.id=p.client_id WHERE ".$scope['sql']." AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') GROUP BY p.type_projet ORDER BY total DESC");
         $stmt->execute($scope['params']);return $stmt->fetchAll();
     }
 
-    public function getCurrentMonthPlans(array $currentUser = null) {
+    public function getCurrentMonthPlans(array $currentUser = null, $workingMonth = null) {
+        $monthStart = (preg_match('/^\d{4}-\d{2}$/', (string) $workingMonth) ? $workingMonth : date('Y-m')) . '-01';
         $scope=AgencyAccessPolicy::clientSqlScope('c','projects','dashboard_month');$params=$scope['params'];
-        $sql="SELECT DISTINCT pm.id,pm.periode_mois,pm.videos_prevus,pm.videos_livres,pm.visuels_prevus,pm.visuels_livres,pm.livrables_prevus,pm.livrables_livres,pm.statut,p.nom AS projet_nom,c.entreprise
+        $params['working_month'] = $monthStart;
+        $sql="SELECT DISTINCT pm.id,p.id AS projet_id,pm.periode_mois,pm.videos_prevus,pm.videos_livres,pm.visuels_prevus,pm.visuels_livres,pm.livrables_prevus,pm.livrables_livres,pm.statut,p.nom AS projet_nom,c.entreprise
               FROM plans_mensuels pm JOIN projets p ON p.id=pm.projet_id JOIN clients c ON c.id=p.client_id";
         if(UserScope::isScopedOperationalUser($currentUser)){$sql.=' JOIN taches_pipeline scope_tp ON scope_tp.projet_id=p.id AND scope_tp.auteur_id=:user_id AND scope_tp.statut<>\'Bloquee\'';$params['user_id']=UserScope::userId($currentUser);}
-        $sql.=" WHERE pm.periode_mois=DATE_FORMAT(CURDATE(),'%Y-%m-01') AND ".$scope['sql'].' ORDER BY c.entreprise,p.nom';
+        $sql.=" WHERE pm.periode_mois=:working_month AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND ".$scope['sql'].' ORDER BY c.entreprise,p.nom';
         $stmt=$this->db->prepare($sql);$stmt->execute($params);return $stmt->fetchAll();
     }
-    public function getUpcomingDeadlines(array $currentUser = null) {
-        if(UserScope::isScopedOperationalUser($currentUser))return $this->getScopedPendingTasks(UserScope::userId($currentUser),$currentUser);
+    public function getUpcomingDeadlines(array $currentUser = null, $workingMonth = null) {
+        $monthStart = (preg_match('/^\d{4}-\d{2}$/', (string) $workingMonth) ? $workingMonth : date('Y-m')) . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+        if(UserScope::isScopedOperationalUser($currentUser))return $this->getScopedVisibleTasks(UserScope::userId($currentUser),$currentUser,"tp.statut IN ('A faire','En cours') AND tp.deadline BETWEEN :month_start AND :month_end AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé')",['month_start'=>$monthStart,'month_end'=>$monthEnd],12);
         $scope=AgencyAccessPolicy::clientSqlScope('c','projects','dashboard_upcoming');
-        $sql="SELECT tp.id,tp.titre,tp.type_tache,tp.statut,tp.deadline,u.nom AS auteur,p.nom AS projet_nom,c.entreprise FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id LEFT JOIN users u ON u.id=tp.auteur_id WHERE tp.statut IN ('A faire','En cours') AND ".$scope['sql'].' ORDER BY tp.deadline ASC LIMIT 12';
-        $stmt=$this->db->prepare($sql);$stmt->execute($scope['params']);return $stmt->fetchAll();
+        $sql="SELECT tp.id,tp.titre,tp.type_tache,tp.statut,tp.deadline,u.nom AS auteur,p.nom AS projet_nom,c.entreprise FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id LEFT JOIN users u ON u.id=tp.auteur_id WHERE tp.statut IN ('A faire','En cours') AND tp.deadline BETWEEN :month_start AND :month_end AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND ".$scope['sql'].' ORDER BY tp.deadline ASC LIMIT 12';
+        $params=array_merge($scope['params'],['month_start'=>$monthStart,'month_end'=>$monthEnd]);$stmt=$this->db->prepare($sql);$stmt->execute($params);return $stmt->fetchAll();
     }
-    public function getDelayedTasks(array $currentUser = null) {
-        if(UserScope::isScopedOperationalUser($currentUser))return $this->getScopedVisibleTasks(UserScope::userId($currentUser),$currentUser,"tp.statut NOT IN ('Terminee','Annulee','Bloquee') AND tp.deadline<CURDATE()",[],10);
+    public function getDelayedTasks(array $currentUser = null, $workingMonth = null) {
+        $monthEnd = date('Y-m-t', strtotime((preg_match('/^\d{4}-\d{2}$/', (string) $workingMonth) ? $workingMonth : date('Y-m')) . '-01'));
+        if(UserScope::isScopedOperationalUser($currentUser))return $this->getScopedVisibleTasks(UserScope::userId($currentUser),$currentUser,"tp.statut NOT IN ('Terminee','Annulee','Bloquee') AND tp.deadline<=:month_end AND tp.deadline<CURDATE() AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé')",['month_end'=>$monthEnd],10);
         $scope=AgencyAccessPolicy::clientSqlScope('c','projects','dashboard_delayed');
-        $sql="SELECT tp.id,tp.titre,tp.deadline,tp.statut,p.nom AS projet_nom,c.entreprise FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id WHERE tp.statut NOT IN ('Terminee','Annulee') AND tp.deadline<CURDATE() AND ".$scope['sql'].' ORDER BY tp.deadline ASC LIMIT 10';
-        $stmt=$this->db->prepare($sql);$stmt->execute($scope['params']);return $stmt->fetchAll();
+        $sql="SELECT tp.id,tp.titre,tp.deadline,tp.statut,p.nom AS projet_nom,c.entreprise FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id WHERE tp.statut NOT IN ('Terminee','Annulee','Bloquee') AND tp.deadline<=:month_end AND tp.deadline<CURDATE() AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé') AND ".$scope['sql'].' ORDER BY tp.deadline ASC LIMIT 10';
+        $params=array_merge($scope['params'],['month_end'=>$monthEnd]);$stmt=$this->db->prepare($sql);$stmt->execute($params);return $stmt->fetchAll();
     }
     public function getPhilsFocus(array $currentUser = null) {
         if(UserScope::isScopedOperationalUser($currentUser))return $this->getTasksToCorrect(UserScope::userId($currentUser),$currentUser);
@@ -157,7 +162,8 @@ class DashboardModel extends Model {
                 JOIN projets p ON p.id = tp.projet_id
                 JOIN clients c ON c.id = p.client_id
                 WHERE tp.auteur_id = :user_id AND c.tenant_id = :dashboard_tenant
-                  AND tp.statut <> 'Bloquee'";
+                  AND tp.statut <> 'Bloquee'
+                  AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé')";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['user_id' => $userId,'dashboard_tenant'=>TenantGuard::tenantId()]);
         return $this->filterVisibleOperationalTasks($stmt->fetchAll(), $currentUser, 'type_tache');

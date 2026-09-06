@@ -1588,6 +1588,38 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 })();
 </script>
 
+<script>
+(function () {
+    document.querySelectorAll('form[enctype="multipart/form-data"]').forEach(function (form) {
+        form.querySelectorAll('input[type="file"]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var bytes = Array.from(input.files || []).reduce(function (total, file) { return total + file.size; }, 0);
+                var help = input.parentElement ? input.parentElement.querySelector('.upload-selection') : null;
+                if (!help) {
+                    help = document.createElement('small');
+                    help.className = 'field-help upload-selection';
+                    input.insertAdjacentElement('afterend', help);
+                }
+                help.textContent = bytes > 0 ? input.files.length + ' fichier(s) · ' + (bytes / 1048576).toFixed(1).replace('.', ',') + ' Mo prêts à envoyer' : '';
+            });
+        });
+        form.addEventListener('submit', function () {
+            var files = Array.from(form.querySelectorAll('input[type="file"]')).reduce(function (all, input) { return all.concat(Array.from(input.files || [])); }, []);
+            if (!files.length) { return; }
+            var total = files.reduce(function (sum, file) { return sum + file.size; }, 0);
+            var status = form.querySelector('[data-autosave-status]');
+            if (status) {
+                status.textContent = 'Transfert de ' + (total / 1048576).toFixed(1).replace('.', ',') + ' Mo en cours…';
+                status.setAttribute('data-state', 'saving');
+            }
+            form.classList.add('is-uploading');
+            if (window.AppUI && typeof window.AppUI.toast === 'function') {
+                window.AppUI.toast('info', 'Transfert en cours : gardez cette page ouverte.');
+            }
+        });
+    });
+})();
+</script>
 <div class="preview-modal" id="task-preview-modal" hidden>
     <div class="preview-modal-backdrop" data-preview-close></div>
     <div class="preview-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="task-preview-title">

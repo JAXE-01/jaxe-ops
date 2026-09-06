@@ -192,7 +192,7 @@ function crud_display_value(array $row, string $field, array $formFields, array 
                     </thead>
                     <tbody>
                         <?php foreach ($group['rows'] as $row): ?>
-                            <tr>
+                            <tr class="clickable-row" tabindex="0" data-row-href="<?= htmlspecialchars(route_url('/' . $module['route'] . '/show/' . $row[$module['primaryKey']])) ?>" aria-label="Ouvrir <?= htmlspecialchars((string) ($module['label'] ?? 'cet élément')) ?>">
                                 <?php if ($isUserModule): ?>
                                     <td>
                                         <input type="checkbox" class="bulk-user-checkbox" name="selected_ids[]" value="<?= htmlspecialchars((string) $row[$module['primaryKey']]) ?>" form="user-bulk-form">

@@ -16,6 +16,7 @@ class HomeController extends Controller {
 
         $currentUser = $this->currentUser();
         $isScopedDashboard = UserScope::isScopedOperationalUser($currentUser);
+        $workingMonth = WorkingMonth::resolve($_GET['month'] ?? null);
 
         $stats = [];
         if (!$isScopedDashboard) {
@@ -40,9 +41,10 @@ class HomeController extends Controller {
             'isScopedDashboard' => $isScopedDashboard,
             'overview' => $this->dashboardModel->getOverviewStats($currentUser),
             'projectsByType' => $this->dashboardModel->getProjectsByType($currentUser),
-            'currentMonthPlans' => $this->dashboardModel->getCurrentMonthPlans($currentUser),
-            'upcomingDeadlines' => $this->dashboardModel->getUpcomingDeadlines($currentUser),
-            'delayedTasks' => $this->dashboardModel->getDelayedTasks($currentUser),
+            'currentMonthPlans' => $this->dashboardModel->getCurrentMonthPlans($currentUser, $workingMonth),
+            'upcomingDeadlines' => $this->dashboardModel->getUpcomingDeadlines($currentUser, $workingMonth),
+            'delayedTasks' => $this->dashboardModel->getDelayedTasks($currentUser, $workingMonth),
+            'workingMonth' => $workingMonth,
             'philsFocus' => $this->dashboardModel->getPhilsFocus($currentUser)
         ]);
     }

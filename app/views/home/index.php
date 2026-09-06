@@ -67,7 +67,7 @@ function home_task_status_label($taskType, $status) {
                     </thead>
                     <tbody>
                         <?php foreach ($currentMonthPlans as $plan): ?>
-                            <tr>
+                            <tr class="clickable-row" tabindex="0" data-row-href="<?= htmlspecialchars(route_url('/calendrier/projet/' . (int) ($plan['projet_id'] ?? 0)) . '?month=' . urlencode(date('Y-m', strtotime((string) $plan['periode_mois'])))) ?>" aria-label="Ouvrir le calendrier de <?= htmlspecialchars((string) $plan['projet_nom']) ?>">
                                 <td><?= htmlspecialchars($plan['entreprise']) ?></td>
                                 <td><?= htmlspecialchars($plan['projet_nom']) ?></td>
                                 <td><?= htmlspecialchars(date('m/Y', strtotime($plan['periode_mois']))) ?></td>
@@ -88,22 +88,22 @@ function home_task_status_label($taskType, $status) {
     </section>
 <?php else: ?>
     <section class="stats-grid dashboard-stats">
-        <article class="stat-card emphasis">
+        <article class="stat-card emphasis" title="Projets actifs accessibles. Les projets suspendus ou terminés sont exclus.">
             <span class="stat-label">Projets actifs</span>
             <strong class="stat-value"><?= htmlspecialchars((string) $overview['projets']) ?></strong>
             <span class="stat-link">Abonnements: <?= htmlspecialchars((string) $overview['abonnements']) ?> · SEA: <?= htmlspecialchars((string) $overview['sea']) ?></span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Tâches à faire ou en cours sur les projets actifs.">
             <span class="stat-label">Taches a faire</span>
             <strong class="stat-value"><?= htmlspecialchars((string) $overview['taches_a_faire']) ?></strong>
             <span class="stat-link">Charge immediate</span>
         </article>
-        <article class="stat-card warning-card">
+        <article class="stat-card warning-card" title="Tâches non terminées dont l’échéance est dépassée, sur les projets actifs.">
             <span class="stat-label">Taches en retard</span>
             <strong class="stat-value"><?= htmlspecialchars((string) $overview['taches_en_retard']) ?></strong>
             <span class="stat-link">A traiter en priorite</span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Clients accessibles dans votre portefeuille.">
             <span class="stat-label">Clients suivis</span>
             <strong class="stat-value"><?= htmlspecialchars((string) $overview['clients']) ?></strong>
             <span class="stat-link">Portefeuille actif</span>
@@ -136,7 +136,7 @@ function home_task_status_label($taskType, $status) {
                     </thead>
                     <tbody>
                         <?php foreach ($currentMonthPlans as $plan): ?>
-                            <tr>
+                            <tr class="clickable-row" tabindex="0" data-row-href="<?= htmlspecialchars(route_url('/calendrier/projet/' . (int) ($plan['projet_id'] ?? 0)) . '?month=' . urlencode(date('Y-m', strtotime((string) $plan['periode_mois'])))) ?>" aria-label="Ouvrir le calendrier de <?= htmlspecialchars((string) $plan['projet_nom']) ?>">
                                 <td><?= htmlspecialchars($plan['entreprise']) ?></td>
                                 <td><?= htmlspecialchars($plan['projet_nom']) ?></td>
                                 <td><?= htmlspecialchars(date('m/Y', strtotime($plan['periode_mois']))) ?></td>

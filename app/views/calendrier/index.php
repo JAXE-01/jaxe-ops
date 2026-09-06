@@ -149,35 +149,30 @@ if (!function_exists('cal_global_type_icon')) {
 <?php endforeach; ?>
 </style>
 <section class="page-intro-card calendar-page-intro"><div><span class="page-eyebrow">Planification éditoriale</span><h2>Calendrier et pilotage</h2><p>Suivez les plans mensuels, les échéances et la progression de tous les projets depuis une vue consolidée.</p></div><span class="context-pill"><?= count($projects) ?> projet<?= count($projects) > 1 ? 's' : '' ?></span></section>
-<section class="panel calendar-stats-panel">
-    <div class="panel-head">
-        <div>
-            <h2>Statistiques globales</h2>
-            <p class="panel-subtitle">Vue macro des calendriers et de leur taux de completion.</p>
-        </div>
-    </div>
+<details class="panel calendar-stats-panel secondary-insights">
+    <summary><strong>Indicateurs globaux</strong><span>Analyse secondaire</span></summary>
     <div class="stats-grid">
-        <article class="stat-card">
+        <article class="stat-card" title="Nombre de plans mensuels accessibles, tous mois confondus.">
             <span class="stat-label">Plans mensuels</span>
             <span class="stat-value"><?= htmlspecialchars((string) ($globalStats['plans_total'] ?? 0)) ?></span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Tâches de calendrier terminées sur le nombre total de tâches de calendrier.">
             <span class="stat-label">Calendriers termines</span>
             <span class="stat-value"><?= htmlspecialchars((string) ($globalStats['calendar_tasks_done'] ?? 0)) ?>/<?= htmlspecialchars((string) ($globalStats['calendar_tasks_total'] ?? 0)) ?></span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Part des tâches de calendrier terminées parmi toutes les tâches de calendrier.">
             <span class="stat-label">Taux de completion calendrier</span>
             <span class="stat-value"><?= htmlspecialchars((string) ($globalStats['calendar_completion_rate'] ?? 0)) ?>%</span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Décisions de calendrier marquées non valides.">
             <span class="stat-label">Calendriers invalides</span>
             <span class="stat-value"><?= htmlspecialchars((string) ($globalStats['calendar_tasks_invalid'] ?? 0)) ?></span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Retard moyen, en jours, calculé sur les tâches arrivées après leur échéance.">
             <span class="stat-label">Retard moyen</span>
             <span class="stat-value"><?= htmlspecialchars((string) ($globalStats['avg_delay_days'] ?? 0)) ?> j</span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Part des validations client acceptées sans demande de correction préalable.">
             <span class="stat-label">Validation client au 1er passage</span>
             <span class="stat-value"><?= htmlspecialchars((string) ($globalStats['first_pass_validation_rate'] ?? 0)) ?>%</span>
         </article>
@@ -207,7 +202,7 @@ if (!function_exists('cal_global_type_icon')) {
             </table>
         </div>
     <?php endif; ?>
-</section>
+</details>
 
 <?php if ($showGlobalCalendar): ?>
 <section class="panel" id="global-month-calendar-section">
@@ -479,7 +474,13 @@ if (!function_exists('cal_global_type_icon')) {
             </thead>
             <tbody>
                 <?php foreach ($projects as $project): ?>
-                    <tr>
+                    <?php
+                    $projectUrl = route_url('/calendrier/projet/' . $project['id']);
+                    if (!empty($project['calendar_month'])) {
+                        $projectUrl .= '?month=' . urlencode((string) $project['calendar_month']);
+                    }
+                    ?>
+                    <tr class="clickable-row" tabindex="0" data-row-href="<?= htmlspecialchars($projectUrl) ?>">
                         <td><?= htmlspecialchars((string) ($project['client_nom'] ?? '')) ?></td>
                         <td>
                             <strong><?= htmlspecialchars((string) ($project['nom'] ?? '')) ?></strong>
@@ -497,12 +498,6 @@ if (!function_exists('cal_global_type_icon')) {
                         </td>
                         <td><?= htmlspecialchars((string) ($project['prochaine_deadline'] ?? 'Aucune')) ?></td>
                         <td>
-                            <?php
-                            $projectUrl = route_url('/calendrier/projet/' . $project['id']);
-                            if (!empty($project['calendar_month'])) {
-                                $projectUrl .= '?month=' . urlencode((string) $project['calendar_month']);
-                            }
-                            ?>
                             <a class="button" href="<?= htmlspecialchars($projectUrl) ?>">Ouvrir le calendrier</a>
                         </td>
                     </tr>

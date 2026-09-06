@@ -623,5 +623,9 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
 <?php if($currentUser): ?><button id="install-app" class="install-app" type="button" hidden>Installer Strax</button><?php endif ?>
 <script src="<?= htmlspecialchars(app_url('/public/assets/reporting-workspace.js?v=1')) ?>"></script>
 <script src="<?= htmlspecialchars(app_url('/public/assets/app-install.js?v=1')) ?>"></script>
+<script>
+document.addEventListener('click',function(event){var row=event.target.closest('[data-row-href]');if(!row||event.target.closest('a,button,input,select,textarea,label,summary'))return;window.location.assign(row.dataset.rowHref);});
+document.addEventListener('keydown',function(event){if(event.key!=='Enter'&&event.key!==' ')return;var row=event.target.closest('[data-row-href]');if(!row)return;event.preventDefault();window.location.assign(row.dataset.rowHref);});
+</script>
 </body>
 </html>

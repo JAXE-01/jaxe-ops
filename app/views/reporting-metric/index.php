@@ -272,28 +272,23 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
 <?php endif; ?>
 
 <div id="reporting-results" aria-live="polite">
-<section class="panel" style="margin-top:14px;">
-    <div class="panel-head">
-        <div>
-            <h2>Vue d’ensemble des performances</h2>
-            <p class="panel-subtitle">Évolution, comparaison par réseau, publications fortes et points à optimiser.</p>
-        </div>
-    </div>
+<details class="panel report-overview secondary-insights" style="margin-top:14px;">
+    <summary><strong>Analyse globale</strong><span>Graphiques et corrélations · optionnel</span></summary>
 
     <div class="stats-grid" style="grid-template-columns:repeat(4,minmax(180px,1fr)); margin-bottom:12px;">
-        <article class="stat-card">
+        <article class="stat-card" title="Nombre total de relevés de statistiques inclus dans les filtres actuels.">
             <span class="stat-label">Collectes</span>
             <span class="stat-value"><?= (int) ($analysisCards['collectes'] ?? 0) ?></span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Moyenne du score normalisé des publications de la sélection.">
             <span class="stat-label">Score moyen</span>
             <span class="stat-value"><?= number_format((float) ($analysisCards['score_moyen'] ?? 0), 1, ',', ' ') ?></span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Évolution moyenne entre les relevés successifs disponibles.">
             <span class="stat-label">Croissance moyenne</span>
             <span class="stat-value"><?= number_format((float) ($analysisCards['growth_moyen'] ?? 0), 2, ',', ' ') ?>%</span>
         </article>
-        <article class="stat-card">
+        <article class="stat-card" title="Variation moyenne rapportée au nombre de jours entre deux relevés.">
             <span class="stat-label">Performance journaliere</span>
             <span class="stat-value"><?= number_format((float) ($analysisCards['daily_moyen'] ?? 0), 2, ',', ' ') ?></span>
         </article>
@@ -415,7 +410,7 @@ $barWidth = min(90, ($barPlotWidth / $barCount) * 0.65);
             </tbody>
         </table>
     </div>
-</section>
+</details>
 
 <?php require __DIR__ . '/tables.php'; ?>
 
