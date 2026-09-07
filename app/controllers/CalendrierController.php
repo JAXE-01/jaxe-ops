@@ -48,7 +48,14 @@ class CalendrierController extends Controller {
             } else {
                 try {
                     $sent=(new WorkflowNotificationService())->sendCalendarFlash($submitted,(int)($currentUser['id']??0),$monthFilter,(string)($_POST['progress_flash']??''));
-                    $this->flash($sent?'success':'error',$sent?'Flash d’avancement envoyé dans un seul courriel.':'Flash enregistré, mais l’envoi SMTP a échoué.');
+                    if($sent){
+                        $copies=StraxMailTransport::rejectedCcCount();
+                        $this->flash($copies?'warning':'success',$copies?'Flash envoyé au destinataire principal, mais '.$copies.' destinataire(s) en copie ont été refusés par le serveur.':'Flash d’avancement envoyé dans un seul courriel.');
+                    }else{
+                        $mailError=StraxMailTransport::lastError();
+                        $detail=$mailError ? ' '.$mailError['message'].' — référence '.$mailError['reference'].'.' : '';
+                        $this->flash('error','Flash enregistré, mais l’envoi SMTP a échoué.'.$detail);
+                    }
                 } catch(Throwable $exception) { $this->flash('error',$exception->getMessage()); }
             }
             header('Location: '.route_url('/calendrier').'?month='.urlencode($monthFilter));exit;
