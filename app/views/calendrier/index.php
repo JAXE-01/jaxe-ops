@@ -459,10 +459,14 @@ if (!function_exists('cal_global_type_icon')) {
             <a class="button secondary" href="<?= htmlspecialchars(route_url('/calendrier')) ?>">Reinitialiser</a>
         </div>
     </form>
+    <form method="post" class="calendar-flash-form">
+        <input type="hidden" name="calendar_action" value="send_progress_flash">
+        <input type="hidden" name="month" value="<?= htmlspecialchars((string) ($filters['month'] ?? date('Y-m'))) ?>">
     <div class="table-wrap compact-table">
         <table>
             <thead>
                 <tr>
+                    <th><input type="checkbox" data-flash-select-all aria-label="Sélectionner tous les calendriers affichés"></th>
                     <th>Client</th>
                     <th>Projet</th>
                     <th>Periode projet</th>
@@ -482,6 +486,7 @@ if (!function_exists('cal_global_type_icon')) {
                     }
                     ?>
                     <tr class="clickable-row" tabindex="0" data-row-href="<?= htmlspecialchars($projectUrl) ?>">
+                        <td><input type="checkbox" name="project_ids[]" value="<?= (int) $project['id'] ?>" data-flash-project aria-label="Inclure <?= htmlspecialchars((string) ($project['client_nom'] ?? 'ce client')) ?> dans le flash"></td>
                         <td><?= htmlspecialchars((string) ($project['client_nom'] ?? '')) ?></td>
                         <td>
                             <strong><?= htmlspecialchars((string) ($project['nom'] ?? '')) ?></strong>
@@ -504,10 +509,22 @@ if (!function_exists('cal_global_type_icon')) {
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($projects)): ?>
-                    <tr><td colspan="8">Aucun projet disponible avec ces filtres.</td></tr>
+                    <tr><td colspan="9">Aucun projet disponible avec ces filtres.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
+    <details class="panel inset-panel calendar-flash-panel">
+        <summary><strong>Envoyer un flash d’avancement</strong><span>Synthèse d’un ou plusieurs calendriers, sans notification tâche par tâche.</span></summary>
+        <div class="form-grid" style="margin-top:12px">
+            <label class="field" style="grid-column:1/-1"><span>Synthèse, décisions attendues ou blocages</span><textarea name="progress_flash" required placeholder="Résumez l’avancement réalisé sur la sélection, les retards et les points qui nécessitent une décision."></textarea></label>
+            <div class="info-banner" style="grid-column:1/-1">Le courriel inclut automatiquement la progression, les retards, la prochaine échéance et l’étape active de chaque calendrier sélectionné. Le premier responsable est destinataire et les autres intervenants concernés sont en copie.</div>
+            <div class="form-actions" style="grid-column:1/-1"><span class="mini-text" data-flash-count>0 calendrier sélectionné</span><button class="button" type="submit" data-flash-submit disabled>Envoyer le flash</button></div>
+        </div>
+    </details>
+    </form>
+    <script>
+    (function(){var form=document.querySelector('.calendar-flash-form');if(!form)return;var all=form.querySelector('[data-flash-select-all]'),items=Array.from(form.querySelectorAll('[data-flash-project]')),count=form.querySelector('[data-flash-count]'),submit=form.querySelector('[data-flash-submit]');function sync(){var selected=items.filter(function(item){return item.checked}).length;count.textContent=selected+' calendrier'+(selected>1?'s':'')+' sélectionné'+(selected>1?'s':'');submit.disabled=selected===0;all.checked=selected>0&&selected===items.length;all.indeterminate=selected>0&&selected<items.length;}all.addEventListener('change',function(){items.forEach(function(item){item.checked=all.checked});sync()});items.forEach(function(item){item.addEventListener('change',sync);item.addEventListener('click',function(event){event.stopPropagation()})});sync()})();
+    </script>
 </section>
 <?php endif; ?>

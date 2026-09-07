@@ -141,7 +141,6 @@ $showPublicationExisting = $canViewFutureContentInfo || $currentRank >= 6;
 $showResultExisting = $canViewFutureContentInfo || $currentRank >= 6;
 $selectedSocialAccountPreview = is_array($selectedSocialAccountPreview ?? null) ? $selectedSocialAccountPreview : [];
 $publicationConnections = is_array($publicationConnections ?? null) ? $publicationConnections : [];
-$progressReports = is_array($progressReports ?? null) ? $progressReports : [];
 $canReassignTask = !empty($canReassignTask);
 $canManageTaskPlanningDate = !empty($canManageTaskPlanningDate);
 $reassignmentOptions = is_array($reassignmentOptions ?? null) ? $reassignmentOptions : [];
@@ -1201,17 +1200,6 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
             </div>
         </form>
     </section>
-
-    <details class="panel progress-report-panel">
-        <summary><strong>Envoyer un rapport d’avancement</strong><span>Une synthèse volontaire, sans notification à chaque modification.</span></summary>
-        <form method="post" class="form-grid">
-            <input type="hidden" name="manager_action" value="send_progress_report">
-            <label class="field"><span>Avancement, blocage ou décision attendue</span><textarea name="progress_report" required placeholder="Résumez ce qui est terminé, ce qui reste à faire et les éventuels blocages."></textarea></label>
-            <div class="info-banner">Si l’étape suivante est une validation, seul son responsable est notifié. Sinon, le responsable principal reçoit le message et les autres responsables ainsi que le prochain exécutant sont en copie. Répondre au courriel répond directement à son auteur.</div>
-            <div class="form-actions"><button class="button" type="submit">Envoyer le rapport</button></div>
-        </form>
-        <?php if ($progressReports): ?><div class="progress-report-history"><?php foreach($progressReports as $report): ?><article><strong><?= htmlspecialchars((string)$report['sender_name']) ?></strong><span><?= htmlspecialchars((string)$report['created_at']) ?> · <?= htmlspecialchars((string)$report['delivery_status']) ?></span><p><?= nl2br(htmlspecialchars((string)$report['message'])) ?></p></article><?php endforeach; ?></div><?php endif; ?>
-    </details>
 
     <?php if ($isPublicationTask && $canViewFutureContentInfo): ?>
         <section class="panel inset-panel">
