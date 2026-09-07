@@ -253,10 +253,10 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/style.css')) ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/style.css?v=' . (string) @filemtime(dirname(__DIR__, 3) . '/public/assets/style.css'))) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/sidebar.css?v=' . (string) @filemtime(dirname(__DIR__, 3) . '/public/assets/sidebar.css'))) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/public-site.css?v=20260826-1')) ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/app-experience.css?v=2')) ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/app-experience.css?v=' . (string) @filemtime(dirname(__DIR__, 3) . '/public/assets/app-experience.css'))) ?>">
 </head>
 <body class="<?= $currentUser ? 'authenticated-user' : 'public-visitor' ?>" data-role-profile="<?= htmlspecialchars($roleProfile) ?>">
 <div class="global-loader" id="globalLoader" aria-hidden="true" role="status">
@@ -390,6 +390,7 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
         <?php endif; ?>
     <?php endif; ?>
 </div>
+<script src="<?= htmlspecialchars(app_url('/public/assets/live-refresh.js?v=' . (string) @filemtime(dirname(__DIR__, 3) . '/public/assets/live-refresh.js'))) ?>" defer></script>
 <script>
 (function () {
     var loader = document.getElementById('globalLoader');

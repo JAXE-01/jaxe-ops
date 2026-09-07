@@ -83,7 +83,9 @@ function crud_decode_files($value) {
                     <?php if (!empty($files)): ?>
                         <div class="file-list">
                             <?php foreach ($files as $file): ?>
-                                <a class="file-link" href="<?= htmlspecialchars(upload_url($file['path'] ?? '')) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($file['name'] ?? 'Fichier') ?></a>
+                                <?php $fileUrl=upload_url($file['path']??''); ?>
+                                <?php if(($module['route']??'')==='client'&&$field==='logo'): ?><img class="client-logo-preview" src="<?= htmlspecialchars($fileUrl) ?>" alt="Logo <?= htmlspecialchars((string)($record['entreprise']??$record['nom']??'client')) ?>"><?php endif ?>
+                                <a class="file-link" href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($file['name'] ?? 'Fichier') ?></a>
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>

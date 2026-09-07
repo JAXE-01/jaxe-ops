@@ -484,7 +484,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 <?php endif; ?>
 
 <?php if (!empty($task['livrable_item_id'])): ?>
-    <details class="panel inset-panel collapsible-panel task-existing-context" open>
+    <details class="panel inset-panel collapsible-panel task-existing-context">
         <summary class="collapsible-summary">
             <span>
                 <strong>Informations existantes</strong>

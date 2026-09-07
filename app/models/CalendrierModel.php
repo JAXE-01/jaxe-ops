@@ -154,7 +154,7 @@ class CalendrierModel extends Model {
                        p.id AS projet_id,
                        p.nom AS projet_nom,
                        c.id AS client_id,
-                       c.entreprise AS client_nom,
+                       c.entreprise AS client_nom, c.logo AS client_logo,
                        ts.statut AS script_statut,
                        tb.statut AS brief_statut,
                        tpv.statut AS production_statut,

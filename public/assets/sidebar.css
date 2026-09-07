@@ -32,6 +32,26 @@
     .content { margin-left:0; padding-bottom:92px; }
 }
 
+/* Portable desktop: navigation en rail, déployée au survol ou au clavier. */
+@media (min-width:981px) and (max-width:1366px) {
+    :root { --sidebar-width:72px; }
+    .shell-header.shell-header-unified { width:72px; padding:18px 12px; gap:14px; overflow-x:hidden; transition:width .22s ease,box-shadow .22s ease; z-index:110; }
+    .shell-header.shell-header-unified:hover,
+    .shell-header.shell-header-unified:focus-within { width:264px; box-shadow:18px 0 44px rgba(11,23,40,.22); }
+    .brand-block-inline { padding-inline:2px; }
+    .brand-block-inline>span:last-child,.sidebar-context,.workspace-switch,.sidebar-nav-heading,.nav-label-text,.nav-utility-label { opacity:0!important; visibility:hidden!important; pointer-events:none; transition:opacity .14s ease; }
+    .shell-header:hover .brand-block-inline>span:last-child,.shell-header:focus-within .brand-block-inline>span:last-child,
+    .shell-header:hover .sidebar-context,.shell-header:focus-within .sidebar-context,
+    .shell-header:hover .workspace-switch,.shell-header:focus-within .workspace-switch,
+    .shell-header:hover .sidebar-nav-heading,.shell-header:focus-within .sidebar-nav-heading,
+    .shell-header:hover .nav-label-text,.shell-header:focus-within .nav-label-text,
+    .shell-header:hover .nav-utility-label,.shell-header:focus-within .nav-utility-label { opacity:1!important; visibility:visible!important; pointer-events:auto; }
+    .nav-pill.nav-pill-icon,.nav-icon-button { width:46px!important; min-width:46px; overflow:hidden; transition:width .2s ease,background-color .18s ease,transform .18s ease; }
+    .shell-header:hover .nav-pill.nav-pill-icon,.shell-header:focus-within .nav-pill.nav-pill-icon,
+    .shell-header:hover .nav-icon-button,.shell-header:focus-within .nav-icon-button { width:100%!important; }
+    .content { margin-left:72px; width:calc(100% - 72px); padding:20px 22px 38px; }
+}
+
 /* Premium white workspace */
 body { background: #f6f8fb; color: #172b45; }
 .content { background: radial-gradient(circle at 96% 2%, rgba(76,139,196,.07), transparent 25rem), #f7f9fc; }

@@ -213,7 +213,7 @@ if (!function_exists('cal_global_type_icon')) {
 </details>
 
 <?php if ($showGlobalCalendar): ?>
-<section class="panel" id="global-month-calendar-section">
+<section class="panel" id="global-month-calendar-section" data-live-refresh="30000" aria-live="polite">
     <div class="panel-head">
         <div>
             <h2>Calendrier global mensuel</h2>
