@@ -94,3 +94,32 @@ details>summary[data-icon-toggle=true]{display:grid!important;place-items:center
 @keyframes workbench-in{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}
 @media(min-width:981px) and (max-width:1440px){.workflow-workbench-nav{top:102px}.workflow-workbench{min-height:410px}.content-specific-panel>.form-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.task-workspace-hero{position:absolute;right:16px;top:58px;width:auto!important;border:0!important;background:transparent!important;box-shadow:none!important}.task-guided-panel{grid-template-columns:auto minmax(160px,320px) 1fr}.task-guided-panel .requirement-list .requirement-item:nth-child(n+4){display:none}}
 @media(max-width:900px){.workflow-workbench-nav{top:102px}.workflow-workbench-nav button{padding-inline:8px}.workflow-workbench-nav button>span{display:none}.workbench-progress{display:none}.content-specific-panel>.form-grid{grid-template-columns:1fr 1fr!important}.content-specific-panel .field:has([name=sujet]),.content-specific-panel .field:has([name=message]){grid-column:1/-1}.task-guided-panel{grid-template-columns:1fr}.task-guided-panel .requirement-list{display:none!important}}
+
+/* Correctifs de densité des sept étapes : en-tête unique, grille sans colonnes mortes. */
+[data-workspace-shell][hidden], [data-workspace-accessory][hidden]{display:none!important}
+@media(min-width:981px){
+ .task-workspace-hero,.content-workspace-hero{display:none!important}
+ .task-workspace-hero>.detail-grid,.task-workspace-hero>.panel-head>div:first-child{display:none!important}
+ .workflow-workbench-nav{top:102px}
+ .task-workspace-compact[data-workspace-panel],.task-existing-context[data-workspace-panel]{min-height:0!important}
+ .task-existing-context[data-workspace-panel]{max-height:calc(100vh - 185px);overflow:auto}
+ .task-workspace-compact>.form-grid{display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;align-items:start}
+ .task-workspace-compact>.form-grid>.autosave-status,.task-workspace-compact>.form-grid>.info-banner,.task-workspace-compact>.form-grid>.panel,.task-workspace-compact>.form-grid>.form-actions{grid-column:1/-1}
+ .task-workspace-compact>.form-grid>.field{grid-column:span 4;min-width:0}
+ .task-workspace-compact>.form-grid>.field:has(textarea){grid-column:span 6}
+ .task-workspace-compact>.form-grid>.field:has([name=validation_decision]){grid-column:span 4}
+ .task-workspace-compact>.form-grid>.field:has([name=note_sur_10]){grid-column:span 2}
+ .task-workspace-compact>.form-grid>.field:has([name=validation_commentaire]){grid-column:span 6}
+ .task-workspace-compact>.form-grid>.field:has([name=tournage_disque]),.task-workspace-compact>.form-grid>.field:has([name=tournage_dossier]){grid-column:span 6}
+ .task-workspace-compact>.form-grid>.field:has([name='fichiers_livres[]']){grid-column:span 7}
+ .task-workspace-compact>.form-grid>.field:has([name=notes]){grid-column:span 5}
+ .task-workspace-compact>.form-grid textarea{min-height:64px!important}
+ .task-workspace-compact>.form-grid>.panel.inset-panel{padding:10px!important;margin:0!important}
+ .task-workspace-compact>.form-grid>.panel.inset-panel .panel-head{margin-bottom:6px!important}
+ .task-workspace-compact>.form-grid>.panel.inset-panel .empty-state{min-height:62px!important;padding:18px!important;margin:0}
+ .workflow-workbench{min-height:0!important}
+ .workbench-pane{min-height:0!important}
+ .content-general-panel .workbench-pane>.field{display:inline-flex;vertical-align:top;width:calc(33.333% - 8px);margin-right:8px}
+ .content-general-panel .workbench-pane>.field:last-of-type{margin-right:0}
+ .content-general-panel .workbench-pane>.field textarea{min-height:92px!important}
+}

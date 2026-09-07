@@ -1,4 +1,4 @@
-<form method="get" class="matrix-quick-select" data-matrix-quick-select>
+<form method="get" class="matrix-quick-select" data-matrix-quick-select data-workspace-accessory="month">
  <label class="field"><span>Matrice de composition du client</span><select name="composition_matrix_id" onchange="this.form.requestSubmit()"><option value="0">Choisir une matrice</option>
  <?php foreach($compositionContext['matrices'] as $option): ?><option value="<?= (int)$option['id'] ?>" <?= (int)($compositionContext['selected']['id']??0)===(int)$option['id']?'selected':'' ?>><?= htmlspecialchars($option['name']) ?></option><?php endforeach ?>
  </select></label>

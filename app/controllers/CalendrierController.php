@@ -707,10 +707,16 @@ class CalendrierController extends Controller {
         $selectedSocialAccountPreview = [];
         $publicationConnections = [];
         if ((string) ($task['type_tache'] ?? '') === 'Publication') {
-            $selectedSocialAccountPreview = $this->calendrierModel->getClientSocialAccountPreview(
-                (int) ($task['client_id'] ?? 0),
-                (string) ($_POST['canal'] ?? $task['latest_publication']['canal'] ?? $task['reseau_cible'] ?? $task['canal_principal'] ?? '')
-            );
+            try {
+                $selectedSocialAccountPreview = $this->calendrierModel->getClientSocialAccountPreview(
+                    (int) ($task['client_id'] ?? 0),
+                    (string) ($_POST['canal'] ?? $task['latest_publication']['canal'] ?? $task['reseau_cible'] ?? $task['canal_principal'] ?? '')
+                );
+            } catch (Throwable $exception) {
+                // Une connexion sociale ancienne ou incomplète ne doit jamais bloquer
+                // l'ouverture de la tâche Publication. L'utilisateur garde l'option manuelle.
+                $selectedSocialAccountPreview = [];
+            }
             try {
                 $publicationConnections = (new SocialPublishingModel())->publishableConnectionsForProject(
                     (int) ($task['client_id'] ?? 0),
