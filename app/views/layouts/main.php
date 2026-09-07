@@ -331,15 +331,18 @@ $mobileHasOverflow = !empty($mobileOverflowNavItems) || !empty($mobileUtilityIte
         <?php endif; ?>
     </header>
 
-    <main class="content"><?php require dirname(__DIR__).'/calendrier/month-context-bar.php'; ?>
+    <main class="content" id="app-main" data-live-refresh="30000"><?php require dirname(__DIR__).'/calendrier/month-context-bar.php'; ?>
         <header class="topbar">
             <div>
                 <h1><?= htmlspecialchars($pageTitle ?? 'Strax') ?></h1>
             </div>
-            <div class="page-context">
+            <div class="topbar-context-actions" aria-label="Actions de la page">
+                <nav class="topbar-actions" data-topbar-actions></nav>
+                <div class="page-context">
                 <?php if ($currentUser): ?>
-                    <span class="page-context-text">Tableau de bord collaboratif, optimisé desktop et mobile.</span>
+                    <span class="live-status" data-live-status title="Actualisation automatique active" aria-label="Actualisation automatique active"></span>
                 <?php endif; ?>
+                </div>
             </div>
         </header>
 
