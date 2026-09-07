@@ -103,6 +103,10 @@ class PipelineService {
 
             self::ensureDeliverableChain($pdo, $project, $planId, $calendarId, 'Video', (int) $project['quota_videos_mensuel'], $period);
             self::ensureDeliverableChain($pdo, $project, $planId, $calendarId, 'Visuel', (int) $project['quota_visuels_mensuel'], $period);
+            if(isset($project['_cadence'])){
+                self::reconcileCadenceExtras($pdo,$planId,'Video',(int)$project['quota_videos_mensuel']);
+                self::reconcileCadenceExtras($pdo,$planId,'Visuel',(int)$project['quota_visuels_mensuel']);
+            }
             if(!$hasCadenceHistory)self::syncContentReadinessForPlan($planId);
             if($hasCadenceHistory){
                 $actual=$pdo->prepare("UPDATE plans_mensuels SET videos_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Video'),visuels_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Visuel'),livrables_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=?) WHERE id=?");
@@ -532,7 +536,7 @@ class PipelineService {
     }
 
     private static function ensureDeliverableItem(PDO $pdo, array $project, $planId, $type, $index, DateTime $period) {
-        $stmt = $pdo->prepare('SELECT id, date_prevue FROM livrable_items WHERE plan_mensuel_id = :plan_mensuel_id AND type_livrable = :type_livrable AND numero_ordre = :numero_ordre LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, date_prevue, statut FROM livrable_items WHERE plan_mensuel_id = :plan_mensuel_id AND type_livrable = :type_livrable AND numero_ordre = :numero_ordre LIMIT 1');
         $stmt->execute([
             'plan_mensuel_id' => $planId,
             'type_livrable' => $type,
@@ -546,6 +550,7 @@ class PipelineService {
         $titre = $slot['label']??sprintf('%s %s #%s', $type, self::monthLabelForTitle($period), $index);
 
         if ($existingId > 0 && isset($project['_cadence'])) {
+            if(($existing['statut']??'')==='Annule'){$pdo->prepare("UPDATE livrable_items SET statut='Planifie' WHERE id=?")->execute([$existingId]);$pdo->prepare("UPDATE taches_pipeline SET statut='Bloquee' WHERE livrable_item_id=? AND statut='Annulee'")->execute([$existingId]);}
             if($slot)CadenceRevision::alignUntouchedItem($pdo,$existingId,$slot,$project);
             return $existingId;
         }
@@ -579,6 +584,12 @@ class PipelineService {
         $createdId=(int)$pdo->lastInsertId();
         if(!empty($slot['format']))$pdo->prepare('UPDATE livrable_items SET sous_type=:format WHERE id=:id')->execute(['format'=>$slot['format'],'id'=>$createdId]);
         return $createdId;
+    }
+
+    private static function reconcileCadenceExtras(PDO $pdo,int $planId,string $type,int $quantity): void {
+        $q=$pdo->prepare("SELECT li.id FROM livrable_items li WHERE li.plan_mensuel_id=? AND li.type_livrable=? AND li.numero_ordre>? AND COALESCE(li.statut,'') NOT IN ('Publie','Exclu') AND NOT EXISTS(SELECT 1 FROM taches_pipeline tp WHERE tp.livrable_item_id=li.id AND tp.type_tache='Publication' AND tp.statut='Terminee')");
+        $q->execute([$planId,$type,$quantity]);$ids=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN));
+        foreach($ids as$id){$pdo->prepare("UPDATE livrable_items SET statut='Annule' WHERE id=?")->execute([$id]);$pdo->prepare("UPDATE taches_pipeline SET statut='Annulee' WHERE livrable_item_id=? AND statut<>'Terminee'")->execute([$id]);}
     }
 
     private static function ensureContentItem(PDO $pdo, array $project, $planId, $deliverableId, $type, $index, DateTime $period) {

@@ -337,6 +337,9 @@ if ($deliverableType === 'Video') {
                                                     <button class="button secondary mini-submit" type="submit">OK</button>
                                                 </form>
                                             </details>
+                                            <form method="post" action="<?= htmlspecialchars(route_url('/livrable-item/delete/' . (int) ($deliverable['id'] ?? 0))) ?>" style="margin-top:6px" onsubmit="return confirm('Retirer ce contenu du calendrier ? Son historique sera conservé.');">
+                                                <button class="mini-reassign-trigger" type="submit" style="color:#b42318">Retirer</button>
+                                            </form>
                                         <?php endif; ?>
                                     </td>
                                     <td data-label="Fiche">

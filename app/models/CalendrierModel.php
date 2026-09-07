@@ -190,7 +190,8 @@ class CalendrierModel extends Model {
                     ) publication_dates
                     GROUP BY publication_dates.livrable_item_id
                 ) pub ON pub.livrable_item_id = li.id
-                WHERE COALESCE(pub.actual_date, li.date_prevue) BETWEEN :month_start AND :month_end";
+                WHERE COALESCE(pub.actual_date, li.date_prevue) BETWEEN :month_start AND :month_end
+                  AND COALESCE(li.statut,'') NOT IN ('Annule','Exclu')";
 
         $params = [
             'month_start' => $monthStart,
@@ -2868,6 +2869,7 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
         $sql = "SELECT li.*
                 FROM livrable_items li
                 WHERE li.plan_mensuel_id = :plan_id
+                  AND COALESCE(li.statut,'') NOT IN ('Annule','Exclu')
                 " . (UserScope::isScopedOperationalUser($currentUser) ? " AND EXISTS (SELECT 1 FROM taches_pipeline scope_tp WHERE scope_tp.livrable_item_id = li.id AND scope_tp.auteur_id = :scope_user_id AND scope_tp.statut <> 'Bloquee')" : '') . "
                 ORDER BY FIELD(li.type_livrable, 'Video', 'Visuel'), li.numero_ordre ASC";
         $stmt = $this->db->prepare($sql);
