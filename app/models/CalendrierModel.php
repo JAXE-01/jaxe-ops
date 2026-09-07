@@ -2122,14 +2122,15 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
     }
 
     public function getExportableCalendars(array $filters = []) {
+        $scope = AgencyAccessPolicy::clientSqlScope('c', 'projects', 'export_plans');
         $sql = "SELECT pm.id AS plan_id, pm.periode_mois, pm.index_mois,
                        p.nom AS projet_nom, p.id AS projet_id,
                        c.id AS client_id, c.entreprise AS client_nom
                 FROM plans_mensuels pm
                 JOIN projets p ON p.id = pm.projet_id
                 JOIN clients c ON c.id = p.client_id
-                WHERE 1=1";
-        $params = [];
+                WHERE " . $scope['sql'];
+        $params = $scope['params'];
 
         if (!empty($filters['client_id'])) {
             $sql .= ' AND c.id = :client_id';
@@ -2156,7 +2157,15 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
             return [];
         }
 
-        $placeholders = implode(',', array_fill(0, count($planIds), '?'));
+        $scope = AgencyAccessPolicy::clientSqlScope('c', 'projects', 'export_rows');
+        $planParams = [];
+        $placeholders = [];
+        foreach ($planIds as $index => $planId) {
+            $key = 'export_plan_' . $index;
+            $placeholders[] = ':' . $key;
+            $planParams[$key] = $planId;
+        }
+        $placeholders = implode(',', $placeholders);
         $sql = "SELECT c.entreprise AS client, p.nom AS projet, pm.periode_mois,
                        li.titre, li.type_livrable, li.date_prevue,
                        COALESCE(ct.reseau_cible, p.canal_principal, '') AS reseau,
@@ -2170,9 +2179,10 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
                 LEFT JOIN contenus ct ON ct.livrable_item_id = li.id
                 LEFT JOIN briefs b ON b.livrable_item_id = li.id
                 WHERE li.plan_mensuel_id IN ($placeholders)
+                  AND " . $scope['sql'] . "
                 ORDER BY pm.periode_mois ASC, p.nom ASC, li.numero_ordre ASC";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($planIds);
+        $stmt->execute(array_merge($planParams, $scope['params']));
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (!$includeScripts) {

@@ -920,7 +920,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
             </div>
         <?php endif; ?>
 
-        <form method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>" data-task-type="<?= htmlspecialchars($taskType) ?>" data-task-blocked="<?= $taskIsBlocked ? '1' : '0' ?>">
+        <form method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>" data-task-type="<?= htmlspecialchars($taskType) ?>" data-task-blocked="<?= $taskIsBlocked ? '1' : '0' ?>" <?= $isProductionTask && !$isTournageTask ? 'data-ajax-upload="true"' : '' ?>>
             <div class="autosave-status" data-autosave-status>Modifications locales</div>
             <?php if ($isValidationTask): ?>
                 <div class="info-banner">La note mesure l appreciation qualitative. La decision Valide/Non valide confirme la conformite finale. Ces deux champs sont independants.</div>
@@ -945,6 +945,17 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
             <?php endif; ?>
 
             <?php if ($isPublicationTask): ?>
+                <?php
+                $publicationDescription = '';
+                foreach ([$brief['description_publication'] ?? '', $task['contenu_message'] ?? '', $brief['details_message'] ?? '', $task['notes'] ?? ''] as $descriptionCandidate) {
+                    if (trim((string) $descriptionCandidate) !== '') { $publicationDescription = trim((string) $descriptionCandidate); break; }
+                }
+                ?>
+                <article class="detail-card publication-caption-confirmation" style="grid-column:1/-1">
+                    <span class="detail-label">Descriptif de publication — dernière vérification</span>
+                    <div class="detail-value"><?= $publicationDescription !== '' ? nl2br(htmlspecialchars($publicationDescription)) : 'Aucun descriptif renseigné dans le brief.' ?></div>
+                    <div class="mini-text">Ce texte provient du brief et sera utilisé pour la publication. Toute correction du brief met aussi à jour les publications planifiées non encore diffusées.</div>
+                </article>
                 <input type="hidden" name="publication_entry_id" value="<?= htmlspecialchars((string) ($latestPublication['id'] ?? '')) ?>">
                 <?php if ($canManageTaskPlanningDate): ?>
                     <label class="field">
@@ -1056,6 +1067,10 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                     <label class="field">
                         <span>Fichiers de contribution</span>
                         <input type="file" name="fichiers_livres[]" multiple data-accumulate-files="true" data-existing-count="<?= htmlspecialchars((string) count($taskFiles)) ?>" accept=".png,.jpg,.jpeg,.pdf,.psd,.psb,.mp4,.mov,.zip" class="<?= task_field_has_error($inlineErrors, 'fichiers_livres') ? 'has-error' : '' ?>">
+                        <div data-upload-progress hidden role="status" aria-live="polite" style="margin-top:8px">
+                            <div style="height:8px;background:#e5edf5;border-radius:999px;overflow:hidden"><span data-upload-progress-bar style="display:block;width:0;height:100%;background:#3977ad;transition:width .15s ease"></span></div>
+                            <small data-upload-progress-label>Préparation de l’envoi…</small>
+                        </div>
                         <small class="field-error" data-field-error-for="fichiers_livres"><?= htmlspecialchars(task_field_error($inlineErrors, 'fichiers_livres')) ?></small>
                         <small class="field-help"><?php if (($task['type_livrable'] ?? '') === 'Video' && $taskType === 'Montage'): ?><?php if ($requireSecondMontageVideo): ?>Pour terminer le montage, charge les 2 exports finaux: version avec musique et version sans musique.<?php else: ?>Pour terminer le montage, charge au moins un export video final (la 2e version est optionnelle pour le moment).<?php endif; ?><?php elseif (($task['type_livrable'] ?? '') === 'Video'): ?>Charge les rush pour le tournage puis les exports video pour le montage.<?php elseif (strcasecmp((string) ($task['sous_type'] ?? ''), 'Carrousel') === 0): ?>Charge les exports par page, le PDF et le PSD ou PSB du carrousel.<?php else: ?>Charge l export visuel et le fichier source.<?php endif; ?><?php if ($phpUploadLimitLabel !== ''): ?> Limite serveur actuelle: <?= htmlspecialchars($phpUploadLimitLabel) ?>.<?php endif; ?></small>
                     </label>
@@ -1753,6 +1768,57 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 window.AppUI.toast('info', 'Transfert en cours : gardez cette page ouverte.');
             }
         });
+    });
+})();
+</script>
+<script>
+(function () {
+    var form = document.querySelector('form[data-ajax-upload="true"]');
+    if (!form) { return; }
+    form.addEventListener('submit', function (event) {
+        var fileInput = form.querySelector('input[type="file"][name="fichiers_livres[]"]');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) { return; }
+        event.preventDefault();
+        var submitter = event.submitter;
+        var payload = new FormData(form);
+        payload.set('ajax_upload', '1');
+        if (submitter && submitter.name) { payload.set(submitter.name, submitter.value); }
+        var progress = form.querySelector('[data-upload-progress]');
+        var bar = form.querySelector('[data-upload-progress-bar]');
+        var label = form.querySelector('[data-upload-progress-label]');
+        var buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
+        if (progress) { progress.hidden = false; }
+        buttons.forEach(function (button) { button.disabled = true; });
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action || window.location.href, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('X-Strax-Upload', '1');
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.upload.addEventListener('progress', function (uploadEvent) {
+            if (!uploadEvent.lengthComputable) { if (label) { label.textContent = 'Envoi en cours…'; } return; }
+            var percent = Math.min(99, Math.round((uploadEvent.loaded / uploadEvent.total) * 100));
+            if (bar) { bar.style.width = percent + '%'; }
+            if (label) { label.textContent = percent + '% envoyé'; }
+        });
+        xhr.addEventListener('load', function () {
+            var data = null;
+            try { data = JSON.parse(xhr.responseText || '{}'); } catch (ignore) {}
+            if (xhr.status >= 200 && xhr.status < 300 && data && data.ok) {
+                if (bar) { bar.style.width = '100%'; }
+                if (label) { label.textContent = '100% — traitement terminé'; }
+                if (window.AppUI && typeof window.AppUI.toast === 'function') { window.AppUI.toast('success', data.message || 'Fichiers envoyés.'); }
+                window.setTimeout(function () { window.location.href = data.redirect || window.location.href; }, 350);
+                return;
+            }
+            buttons.forEach(function (button) { button.disabled = false; });
+            if (label) { label.textContent = (data && data.message) ? data.message : 'Échec du téléversement.'; }
+            if (window.AppUI && typeof window.AppUI.toast === 'function') { window.AppUI.toast('error', (data && data.message) ? data.message : 'Échec du téléversement.'); }
+        });
+        xhr.addEventListener('error', function () {
+            buttons.forEach(function (button) { button.disabled = false; });
+            if (label) { label.textContent = 'Connexion interrompue. Vous pouvez réessayer.'; }
+        });
+        xhr.send(payload);
     });
 })();
 </script>

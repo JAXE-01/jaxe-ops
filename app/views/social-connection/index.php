@@ -9,4 +9,4 @@
  <?php require dirname(__DIR__).'/social-publishing/destinations.php'; ?>
  <?php if($canManage): ?><details class="connect-form"><summary>+ Connecter Meta à un client</summary><form method="post"><input type="hidden" name="action" value="create"><input type="hidden" name="provider" value="facebook"><label>Client<select name="client_id" required><option value="">Sélectionner</option><?php foreach($clients as$c):?><option value="<?= (int)$c['id']?>"><?= $e($c['name'])?></option><?php endforeach?></select></label><label>Libellé interne<input name="account_label" required placeholder="Connexion Meta"></label><button class="button primary" type="submit">Préparer Meta</button><small>Facebook et les comptes Instagram liés seront proposés pendant OAuth.</small></form></details><?php endif ?>
 </section>
-<script src="<?= $e(app_url('/public/assets/social-connections.js?v=2')) ?>"></script>
+<script src="<?= $e(app_url('/public/assets/social-connections.js?v=3')) ?>"></script>

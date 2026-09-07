@@ -47,6 +47,7 @@ class ExportDocumentController extends Controller {
 
         if ($this->isPost()) {
             $planIds = array_values(array_filter(array_map('intval', (array) ($_POST['plan_ids'] ?? []))));
+            $planIds = $this->authorizedPlanIds($planIds);
             $action = (string) ($_POST['action'] ?? '');
             $selectedFields = $this->normalizeSelectedFields((array) ($_POST['selected_fields'] ?? []), $availableFields, $defaultFields);
             $selectedReportSections = $this->normalizeSelectedSections((array) ($_POST['report_sections'] ?? []), $availableReportSections, $defaultReportSections);
@@ -97,6 +98,19 @@ class ExportDocumentController extends Controller {
             'availableReportSections' => $availableReportSections,
             'defaultReportSections' => $defaultReportSections,
         ]);
+    }
+
+    private function authorizedPlanIds(array $submitted): array {
+        $submitted = array_values(array_unique(array_filter(array_map('intval', $submitted))));
+        if (!$submitted) {
+            throw new RuntimeException('Sélectionnez au moins un calendrier à exporter.');
+        }
+        $allowed = array_fill_keys(array_map(static fn($row) => (int) $row['plan_id'], $this->calendrierModel->getExportableCalendars()), true);
+        $authorized = array_values(array_filter($submitted, static fn($id) => isset($allowed[$id])));
+        if (count($authorized) !== count($submitted)) {
+            throw new RuntimeException('Export refusé : un calendrier sélectionné est hors de votre périmètre autorisé.');
+        }
+        return $authorized;
     }
 
     private function downloadCsv($fileName, array $rows, array $headers = []) {

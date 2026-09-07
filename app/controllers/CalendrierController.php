@@ -487,6 +487,8 @@ class CalendrierController extends Controller {
 
     public function task($taskId) {
         $isInlineAutosave = $this->isPost() && $this->isAjaxRequest() && !empty($_POST['autosave_mode']);
+        $isAjaxUpload = $this->isPost() && $this->isAjaxRequest()
+            && (!empty($_POST['ajax_upload']) || (string) ($_SERVER['HTTP_X_STRAX_UPLOAD'] ?? '') === '1');
         $inlineErrors = [];
         $canManageTaskActions = $this->canManageBoardActions($this->currentUser());
         $task = $this->calendrierModel->getTaskWorkspace($taskId, $this->currentUser());
@@ -587,6 +589,7 @@ class CalendrierController extends Controller {
 
                     [$briefPayload, $deliverablePayload, $taskPayload] = $this->buildDeliverablePayload($deliverable, ($task['type_tache'] ?? '') === 'Script');
                     $this->calendrierModel->saveDeliverableBrief((int) $deliverable['id'], $briefPayload, $deliverablePayload);
+                    (new SocialPublishingModel())->syncPendingCaptionForContent((int) ($briefPayload['contenu_id'] ?? 0), (string) ($briefPayload['description_publication'] ?? ''));
                     if ($taskPayload !== null) {
                         $this->calendrierModel->saveTaskWorkflow((int) $taskPayload['id'], $taskPayload['update']);
                         if ($taskPayload['update']['statut'] === 'Terminee') {
@@ -659,6 +662,9 @@ class CalendrierController extends Controller {
                 if ($isInlineAutosave) {
                     $this->respondJson(['ok' => true, 'autosaved' => true, 'message' => 'Brouillon enregistre.', 'at' => date('H:i:s')]);
                 }
+                if ($isAjaxUpload) {
+                    $this->respondJson(['ok' => true, 'message' => 'Fichiers envoyés et tâche mise à jour.', 'redirect' => route_url('/calendrier/task/' . (int) $taskId)]);
+                }
                 header('Location: ' . $returnTo);
                 exit;
             } catch (Throwable $exception) {
@@ -667,6 +673,9 @@ class CalendrierController extends Controller {
                     $fieldErrors = $exception->getFieldErrors();
                 }
                 if ($isInlineAutosave) {
+                    $this->respondJson(['ok' => false, 'message' => $exception->getMessage(), 'errors' => $fieldErrors], 422);
+                }
+                if ($isAjaxUpload) {
                     $this->respondJson(['ok' => false, 'message' => $exception->getMessage(), 'errors' => $fieldErrors], 422);
                 }
                 $this->flash('error', $exception->getMessage());
@@ -1058,7 +1067,10 @@ class CalendrierController extends Controller {
         }
 
         $brief = is_array($task['brief'] ?? null) ? $task['brief'] : [];
-        $caption = trim((string) ($brief['descriptif_publication'] ?? $task['contenu_message'] ?? $brief['message_detaille'] ?? $task['notes'] ?? ''));
+        $caption = '';
+        foreach ([$brief['description_publication'] ?? '', $task['contenu_message'] ?? '', $brief['details_message'] ?? '', $task['notes'] ?? ''] as $candidateCaption) {
+            if (trim((string) $candidateCaption) !== '') { $caption = trim((string) $candidateCaption); break; }
+        }
         if ($caption === '') {
             throw new RuntimeException('Le descriptif de publication est vide. Complétez le script avant de publier.');
         }
