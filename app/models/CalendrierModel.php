@@ -2939,6 +2939,14 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function setTaskStatus($taskId, string $status): void {
+        if (!in_array($status, ['A faire', 'En cours', 'Terminee'], true)) {
+            throw new InvalidArgumentException('Statut de tâche invalide.');
+        }
+        $stmt = $this->db->prepare('UPDATE taches_pipeline SET statut = :statut WHERE id = :id');
+        $stmt->execute(['statut' => $status, 'id' => (int) $taskId]);
+    }
+
     private function getContentPublishedDestinations($contentId) {
         try {
             $stmt = $this->db->prepare("SELECT spt.id AS target_id,

@@ -593,6 +593,16 @@ class CalendrierController extends Controller {
                     $this->calendrierModel->syncDeliverableStatus((int) $deliverable['id']);
                     PipelineService::syncContentStatusByDeliverable((int) $deliverable['id']);
                 } else {
+                    $publicationAction = ($task['type_tache'] ?? '') === 'Publication'
+                        ? trim((string) ($_POST['publication_action'] ?? ''))
+                        : '';
+                    if ($publicationAction !== '' && !$isInlineAutosave) {
+                        $this->calendrierModel->setTaskStatus((int) $taskId, 'En cours');
+                        $this->executeTaskPublicationAction($task, $publicationAction);
+                        $_POST['statut'] = 'Terminee';
+                    } elseif (($task['type_tache'] ?? '') === 'Publication' && !$isInlineAutosave) {
+                        $_POST['statut'] = 'En cours';
+                    }
                     $payload = $this->buildTaskPayload($task);
 
                     if (($task['type_tache'] ?? '') === 'Publication' && !empty($task['livrable_item_id'])) {
@@ -665,11 +675,20 @@ class CalendrierController extends Controller {
         $previousTaskUrl = !empty($navigation['previous']) ? route_url('/calendrier/task/' . (int) $navigation['previous']) : null;
         $nextTaskUrl = !empty($navigation['next']) ? route_url('/calendrier/task/' . (int) $navigation['next']) : null;
         $selectedSocialAccountPreview = [];
+        $publicationConnections = [];
         if ((string) ($task['type_tache'] ?? '') === 'Publication') {
             $selectedSocialAccountPreview = $this->calendrierModel->getClientSocialAccountPreview(
                 (int) ($task['client_id'] ?? 0),
                 (string) ($_POST['canal'] ?? $task['latest_publication']['canal'] ?? $task['reseau_cible'] ?? $task['canal_principal'] ?? '')
             );
+            try {
+                $publicationConnections = (new SocialPublishingModel())->publishableConnectionsForProject(
+                    (int) ($task['client_id'] ?? 0),
+                    (int) ($task['projet_id'] ?? 0)
+                );
+            } catch (Throwable $exception) {
+                $publicationConnections = [];
+            }
         }
         $canReassignTask = $canManageTaskActions;
         $reassignmentOptions = $canReassignTask ? $this->getTaskReassignmentOptions($task) : [];
@@ -694,6 +713,7 @@ class CalendrierController extends Controller {
             'previousTaskUrl' => $previousTaskUrl,
             'nextTaskUrl' => $nextTaskUrl,
             'selectedSocialAccountPreview' => $selectedSocialAccountPreview,
+            'publicationConnections' => $publicationConnections,
             'canReassignTask' => $canReassignTask,
             'canManageTaskPlanningDate' => $canManageTaskActions,
             'reassignmentOptions' => $reassignmentOptions,
@@ -913,10 +933,6 @@ class CalendrierController extends Controller {
             }
         }
 
-        if ($task['type_tache'] === 'Publication' && !empty($networks)) {
-            $status = 'Terminee';
-        }
-
         if (($task['type_tache'] ?? '') === 'Tournage') {
             $storageDisk = trim((string) ($_POST['tournage_disque'] ?? ''));
             $storageFolder = trim((string) ($_POST['tournage_dossier'] ?? ''));
@@ -982,10 +998,98 @@ class CalendrierController extends Controller {
                 'date_publication' => $date,
                 'heure_publication' => $time,
                 'canal' => $canal,
-                'statut' => $taskPayload['statut'] === 'Terminee' ? 'Publie' : 'Planifie',
+                'statut' => (($_POST['publication_action'] ?? '') === 'schedule' || $taskPayload['statut'] !== 'Terminee') ? 'Planifie' : 'Publie',
                 'note' => $note,
             ]
         ];
+    }
+
+    private function executeTaskPublicationAction(array $task, string $action): void {
+        if (!in_array($action, ['now', 'schedule', 'manual'], true)) {
+            throw new RuntimeException('Action de publication invalide.');
+        }
+
+        $date = trim((string) ($_POST['date_publication'] ?? ''));
+        $time = trim((string) ($_POST['heure_publication'] ?? ''));
+        $note = trim((string) ($_POST['publication_note'] ?? ''));
+        $networks = array_values(array_unique(array_filter(array_map('trim', (array) ($_POST['publication_reseaux'] ?? [])))));
+
+        if ($action === 'manual') {
+            preg_match_all('~https?://[^\\s<>"\']+~iu', $note, $matches);
+            $links = array_values(array_unique(array_filter((array) ($matches[0] ?? []), static fn($url) => filter_var($url, FILTER_VALIDATE_URL) !== false)));
+            if (empty($links)) {
+                throw $this->taskValidationError('Une publication manuelle doit contenir au moins un lien public.', ['publication_note' => 'Collez le lien exact de chaque publication manuelle.']);
+            }
+            if (empty($networks)) {
+                throw $this->taskValidationError('Sélectionnez au moins un réseau publié manuellement.', ['publication_reseaux' => 'Choisissez le ou les réseaux concernés.']);
+            }
+            if ($date === '') {
+                $_POST['date_publication'] = date('Y-m-d');
+            }
+            return;
+        }
+
+        if (!$this->can('publishing.manage') || !$this->can('publishing.approve')) {
+            throw new RuntimeException('La publication SaaS exige les droits de gestion et d approbation des publications.');
+        }
+        $connectionIds = array_values(array_unique(array_filter(array_map('intval', (array) ($_POST['connection_ids'] ?? [])))));
+        if (empty($connectionIds)) {
+            throw new RuntimeException('Sélectionnez au moins une page connectée.');
+        }
+
+        if ($action === 'now') {
+            $_POST['date_publication'] = date('Y-m-d');
+            $_POST['heure_publication'] = date('H:i');
+        } else {
+            if ($date === '' || $time === '') {
+                throw $this->taskValidationError('La planification exige une date et une heure.', ['date_publication' => $date === '' ? 'Choisissez la date.' : '', 'heure_publication' => $time === '' ? 'Choisissez l heure.' : '']);
+            }
+            if (strtotime($date . ' ' . $time) <= time()) {
+                throw new RuntimeException('La date de planification doit être dans le futur.');
+            }
+        }
+
+        $brief = is_array($task['brief'] ?? null) ? $task['brief'] : [];
+        $caption = trim((string) ($brief['descriptif_publication'] ?? $task['contenu_message'] ?? $brief['message_detaille'] ?? $task['notes'] ?? ''));
+        if ($caption === '') {
+            throw new RuntimeException('Le descriptif de publication est vide. Complétez le script avant de publier.');
+        }
+        $mediaUrl = '';
+        $files = [];
+        if (!empty($task['deliverable']['pieces_jointes'])) {
+            $files = json_decode((string) $task['deliverable']['pieces_jointes'], true) ?: [];
+        }
+        foreach ($files as $file) {
+            $path = trim((string) ($file['path'] ?? ''));
+            $extension = strtolower(pathinfo((string) ($file['name'] ?? $path), PATHINFO_EXTENSION));
+            if ($path !== '' && in_array($extension, ['jpg', 'jpeg', 'png', 'mp4'], true)) {
+                $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
+                $mediaUrl = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . upload_url($path);
+                break;
+            }
+        }
+
+        $publishing = new SocialPublishingModel();
+        $publicationId = $publishing->createPublication([
+            'client_id' => (int) ($task['client_id'] ?? 0),
+            'project_id' => (int) ($task['projet_id'] ?? 0),
+            'content_id' => (int) ($task['content_id'] ?? 0),
+            'connection_ids' => $connectionIds,
+            'master_title' => (string) ($task['livrable_titre'] ?? $task['titre'] ?? 'Publication'),
+            'master_caption' => $caption,
+            'media_url' => $mediaUrl,
+            'publish_mode' => $action === 'now' ? 'Now' : 'Scheduled',
+            'scheduled_at' => $action === 'now' ? date('Y-m-d H:i:s') : ($date . ' ' . $time . ':00'),
+            'submit_approval' => '1',
+        ], [], (int) ($this->currentUser()['id'] ?? 0));
+        $publishing->approve($publicationId, (int) ($this->currentUser()['id'] ?? 0));
+
+        if ($action === 'now') {
+            $result = (new SocialPublisherService())->processDue(count($connectionIds), TenantGuard::tenantId(), null, $publicationId);
+            if ((int) ($result['published'] ?? 0) !== count($connectionIds)) {
+                throw new RuntimeException('La publication n a pas abouti sur toutes les pages. La tâche reste ouverte ; consultez le détail dans Publications.');
+            }
+        }
     }
 
     private function buildContentResultPayloads() {

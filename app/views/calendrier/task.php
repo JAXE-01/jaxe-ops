@@ -140,6 +140,7 @@ $showValidationExisting = $canViewFutureContentInfo || $currentRank >= 4;
 $showPublicationExisting = $canViewFutureContentInfo || $currentRank >= 6;
 $showResultExisting = $canViewFutureContentInfo || $currentRank >= 6;
 $selectedSocialAccountPreview = is_array($selectedSocialAccountPreview ?? null) ? $selectedSocialAccountPreview : [];
+$publicationConnections = is_array($publicationConnections ?? null) ? $publicationConnections : [];
 $canReassignTask = !empty($canReassignTask);
 $canManageTaskPlanningDate = !empty($canManageTaskPlanningDate);
 $reassignmentOptions = is_array($reassignmentOptions ?? null) ? $reassignmentOptions : [];
@@ -851,7 +852,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 
         <div class="info-banner"><?= htmlspecialchars(task_completion_note($taskType, $task)) ?></div>
 
-        <?php if ($isPublicationTask && (($task['statut'] ?? '') === 'Terminee' || !empty($publishedDestinations))): ?>
+        <?php if ($isPublicationTask && (!empty($publishedDestinations) || (($latestPublication['statut'] ?? '') === 'Publie' && !empty($manualPublicationUrls)))): ?>
             <section class="published-proof" aria-labelledby="published-proof-title">
                 <div class="published-proof-head">
                     <div>
@@ -911,6 +912,12 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 </div>
             </section>
         <?php endif; ?>
+        <?php if ($isPublicationTask && ($latestPublication['statut'] ?? '') === 'Planifie'): ?>
+            <div class="publication-queued-notice" role="status">
+                <div><strong>Publication planifiée</strong><span>La diffusion est en file pour le <?= htmlspecialchars((string) ($latestPublication['date_publication'] ?? '')) ?><?= !empty($latestPublication['heure_publication']) ? ' à ' . htmlspecialchars((string) $latestPublication['heure_publication']) : '' ?>.</span></div>
+                <a class="button secondary" href="<?= htmlspecialchars(route_url('/social-publishing')) ?>">Suivre l’exécution →</a>
+            </div>
+        <?php endif; ?>
 
         <form method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>" data-task-type="<?= htmlspecialchars($taskType) ?>" data-task-blocked="<?= $taskIsBlocked ? '1' : '0' ?>">
             <div class="autosave-status" data-autosave-status>Modifications locales</div>
@@ -969,6 +976,21 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                         <?php endforeach; ?>
                     </div>
                 </label>
+                <div class="field publication-target-picker">
+                    <span>Pages connectées</span>
+                    <?php if (!empty($publicationConnections)): ?>
+                        <div class="checkbox-grid">
+                            <?php foreach ($publicationConnections as $connection): ?>
+                                <label class="checkbox-pill">
+                                    <input type="checkbox" name="connection_ids[]" value="<?= (int) $connection['id'] ?>">
+                                    <span><?= htmlspecialchars(ucfirst((string) $connection['provider']) . ' · ' . (string) $connection['account_label']) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="info-banner">Aucune page publiable n’est connectée à ce projet. Utilisez « Publier manuellement » ou configurez Comptes sociaux.</div>
+                    <?php endif; ?>
+                </div>
                 <article class="detail-card readonly-selector-card">
                     <span class="detail-label">Compte social choisi (auto)</span>
                     <div class="detail-value">
@@ -1152,7 +1174,13 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
             <?php endif; ?>
 
             <div class="form-actions">
-                <button class="button" type="submit" name="statut" value="Terminee" data-gated-complete>Terminer le travail</button>
+                <?php if ($isPublicationTask): ?>
+                    <button class="button" type="submit" name="publication_action" value="now">Publier maintenant</button>
+                    <button class="button secondary" type="submit" name="publication_action" value="schedule">Planifier</button>
+                    <button class="button secondary" type="submit" name="publication_action" value="manual">Publier manuellement</button>
+                <?php else: ?>
+                    <button class="button" type="submit" name="statut" value="Terminee" data-gated-complete>Terminer le travail</button>
+                <?php endif; ?>
                 <button class="button secondary" type="submit" name="statut" value="En cours">Enregistrer en cours</button>
             </div>
         </form>
