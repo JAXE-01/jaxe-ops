@@ -9,6 +9,7 @@ $deliverable = $task['deliverable'] ?? null;
 $brief = $task['brief'] ?? [];
 $publicationEntries = $task['publication_entries'] ?? [];
 $latestPublication = $task['latest_publication'] ?? null;
+$publishedDestinations = is_array($task['published_destinations'] ?? null) ? $task['published_destinations'] : [];
 $resultEntries = $task['result_entries'] ?? [];
 $isBriefTask = in_array($taskType, ['Brief', 'Script'], true);
 $isValidationTask = in_array($taskType, ['Validation interne', 'Validation client'], true);
@@ -32,6 +33,40 @@ if ($deliverable && !empty($deliverable['pieces_jointes'])) {
     $deliverableFiles = is_array($deliverableFiles) ? $deliverableFiles : [];
 }
 $downloadBaseName = (string) ($task['livrable_titre'] ?? $task['titre'] ?? 'contenu');
+
+$publishedMediaUrl = '';
+$publishedMediaMime = '';
+$manualPublicationUrls = [];
+$manualPublicationNote = (string) ($latestPublication['note'] ?? '');
+if ($manualPublicationNote !== '' && preg_match_all('~https?://[^\\s<>"\']+~iu', $manualPublicationNote, $manualUrlMatches)) {
+    $manualPublicationUrls = array_values(array_unique(array_filter($manualUrlMatches[0], static function ($url) {
+        return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    })));
+}
+foreach ($publishedDestinations as $destination) {
+    $remoteMedia = trim((string) ($destination['media_url'] ?? ''));
+    $localMedia = trim((string) ($destination['media_path'] ?? ''));
+    if ($remoteMedia !== '' && filter_var($remoteMedia, FILTER_VALIDATE_URL)) {
+        $publishedMediaUrl = $remoteMedia;
+        $publishedMediaMime = (string) ($destination['media_mime'] ?? '');
+        break;
+    }
+    if ($localMedia !== '') {
+        $publishedMediaUrl = upload_url($localMedia);
+        $publishedMediaMime = (string) ($destination['media_mime'] ?? '');
+        break;
+    }
+}
+if ($publishedMediaUrl === '') {
+    foreach (array_merge($deliverableFiles, $taskFiles) as $publishedFile) {
+        if (!is_array($publishedFile) || !in_array(task_preview_kind($publishedFile), ['image', 'video'], true)) {
+            continue;
+        }
+        $publishedMediaUrl = task_view_url($publishedFile, $downloadBaseName);
+        $publishedMediaMime = task_preview_kind($publishedFile) === 'video' ? 'video/' : 'image/';
+        break;
+    }
+}
 
 $taskMap = $deliverable['taskMap'] ?? [];
 $validationInterneTask = $taskMap['Validation interne'] ?? null;
@@ -816,6 +851,67 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
 
         <div class="info-banner"><?= htmlspecialchars(task_completion_note($taskType, $task)) ?></div>
 
+        <?php if ($isPublicationTask && (($task['statut'] ?? '') === 'Terminee' || !empty($publishedDestinations))): ?>
+            <section class="published-proof" aria-labelledby="published-proof-title">
+                <div class="published-proof-head">
+                    <div>
+                        <span class="published-proof-kicker">Publication en ligne</span>
+                        <h3 id="published-proof-title"><?= htmlspecialchars((string) ($task['livrable_titre'] ?? $task['contenu_sujet'] ?? 'Contenu publié')) ?></h3>
+                    </div>
+                    <span class="status-badge status-success">Publié</span>
+                </div>
+                <div class="published-proof-body">
+                    <?php if ($publishedMediaUrl !== ''): ?>
+                        <a class="published-media" href="<?= htmlspecialchars($publishedMediaUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir le média publié">
+                            <?php if (str_starts_with(strtolower($publishedMediaMime), 'video/')): ?>
+                                <video controls preload="metadata"><source src="<?= htmlspecialchars($publishedMediaUrl) ?>"></video>
+                            <?php else: ?>
+                                <img src="<?= htmlspecialchars($publishedMediaUrl) ?>" alt="Aperçu du contenu publié" loading="lazy">
+                            <?php endif; ?>
+                        </a>
+                    <?php endif; ?>
+                    <div class="published-destinations">
+                        <?php if (!empty($publishedDestinations)): ?>
+                            <?php foreach ($publishedDestinations as $destination): ?>
+                                <?php
+                                $postUrl = trim((string) ($destination['external_post_url'] ?? ''));
+                                $postUrl = filter_var($postUrl, FILTER_VALIDATE_URL) ? $postUrl : '';
+                                ?>
+                                <article class="published-destination">
+                                    <div>
+                                        <strong><?= htmlspecialchars(ucfirst((string) ($destination['provider'] ?? 'Réseau'))) ?></strong>
+                                        <span><?= htmlspecialchars((string) ($destination['account_label'] ?? 'Page sociale')) ?></span>
+                                        <?php if (!empty($destination['published_at'])): ?><small><?= htmlspecialchars((string) $destination['published_at']) ?></small><?php endif; ?>
+                                    </div>
+                                    <?php if ($postUrl !== ''): ?>
+                                        <a class="button secondary" href="<?= htmlspecialchars($postUrl) ?>" target="_blank" rel="noopener noreferrer">Voir la publication ↗</a>
+                                    <?php else: ?>
+                                        <span class="mini-text">Lien non retourné par le réseau</span>
+                                    <?php endif; ?>
+                                </article>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="published-destination published-destination-manual">
+                                <div>
+                                    <strong>Publication manuelle confirmée</strong>
+                                    <span><?= htmlspecialchars((string) ($latestPublication['canal'] ?? $task['reseau_cible'] ?? 'Réseau non précisé')) ?></span>
+                                </div>
+                                <?php if (!empty($manualPublicationUrls)): ?>
+                                    <div class="published-manual-links">
+                                        <?php foreach ($manualPublicationUrls as $manualIndex => $manualUrl): ?>
+                                            <a class="button secondary" href="<?= htmlspecialchars($manualUrl) ?>" target="_blank" rel="noopener noreferrer">Voir la page <?= count($manualPublicationUrls) > 1 ? (int) ($manualIndex + 1) : '' ?> ↗</a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="mini-text">Ajoutez les liens des pages dans les consignes pour conserver la preuve de diffusion.</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </section>
+        <?php endif; ?>
+
         <form method="post" class="form-grid" enctype="multipart/form-data" data-autosave-form="true" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) ($task['id'] ?? 0))) ?>" data-task-type="<?= htmlspecialchars($taskType) ?>" data-task-blocked="<?= $taskIsBlocked ? '1' : '0' ?>">
             <div class="autosave-status" data-autosave-status>Modifications locales</div>
             <?php if ($isValidationTask): ?>
@@ -863,7 +959,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 </label>
                 <label class="field">
                     <span>Consignes / publication manuelle</span>
-                    <textarea name="publication_note" placeholder="Précisez ici les autres pages ou réseaux publiés manuellement. Leur collecte KPI devra aussi être saisie manuellement."><?= htmlspecialchars((string) ($_POST['publication_note'] ?? $latestPublication['note'] ?? '')) ?></textarea>
+                    <textarea name="publication_note" placeholder="Précisez les autres pages ou réseaux publiés manuellement et collez leurs liens. Leur collecte KPI devra aussi être saisie manuellement."><?= htmlspecialchars((string) ($_POST['publication_note'] ?? $latestPublication['note'] ?? '')) ?></textarea>
                 </label>
                 <label class="field">
                     <span>Reseaux</span>
@@ -886,7 +982,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                             Aucun compte mappe pour ce client/reseau.
                         <?php endif; ?>
                     </div>
-                    <div class="mini-text">Lecture seule. Le mapping se configure dans la fiche client.</div>
+                    <div class="mini-text">Lecture seule. Le compte se configure dans le module Comptes sociaux.</div>
                 </article>
             <?php endif; ?>
 

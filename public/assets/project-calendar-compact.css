@@ -144,6 +144,20 @@ html{scroll-padding-top:76px}
 .task-existing-context .detail-card{min-width:130px}
 @media(max-width:1100px){.task-guided-panel{grid-template-columns:1fr auto}.task-guided-panel>.deliverable-progress-card,.task-guided-panel>.requirement-list{grid-column:1/-1;grid-row:auto}.task-guided-panel>.requirement-list{flex-wrap:wrap}}
 @media(max-width:760px){.task-brief-grid{grid-template-columns:1fr!important}.production-inline-panel [data-production-host] form,.task-workspace-compact form[data-task-type="Tournage"],.task-workspace-compact form[data-task-type="Montage"]{grid-template-columns:1fr}.task-workspace-hero{top:48px}}
+.published-proof{margin:8px 0 12px;padding:12px;border:1px solid #b9dec9;border-radius:12px;background:linear-gradient(135deg,#f3fbf6,#fff)}
+.published-proof-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.published-proof-head h3{margin:2px 0 0;font-size:16px;color:#183b2a}
+.published-proof-kicker{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#27734b}
+.published-proof-body{display:grid;grid-template-columns:minmax(150px,240px) minmax(0,1fr);gap:12px;align-items:start}
+.published-media{display:block;overflow:hidden;border-radius:10px;background:#e9f0ed;aspect-ratio:16/10;border:1px solid #d7e7dd}
+.published-media img,.published-media video{display:block;width:100%;height:100%;object-fit:cover}
+.published-destinations{display:grid;gap:7px}
+.published-destination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #dbe8e0;border-radius:9px;background:#fff}
+.published-destination>div{display:flex;min-width:0;flex-direction:column;gap:2px}
+.published-destination strong{font-size:12px}.published-destination span,.published-destination small{font-size:11px;color:#65778c}
+.published-destination .button{flex:0 0 auto;padding:7px 10px;font-size:11px}
+.published-manual-links{display:flex!important;flex-direction:row!important;gap:6px!important;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:700px){.published-proof-body{grid-template-columns:1fr}.published-media{max-height:240px}.published-destination{align-items:flex-start;flex-direction:column}}
 .paired-task-inline{border-top:3px solid #8dbbe2}
 .paired-task-inline [data-paired-host]>.form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 10px}
 .paired-task-inline [data-paired-host] textarea{min-height:68px;height:68px;overflow:auto}

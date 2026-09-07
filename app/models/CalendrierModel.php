@@ -517,6 +517,9 @@ class CalendrierModel extends Model {
                 ? $this->getContentPublicationEntries((int) $task['content_id'])
                 : [];
             $task['latest_publication'] = !empty($task['publication_entries']) ? $task['publication_entries'][0] : null;
+            $task['published_destinations'] = !empty($task['content_id'])
+                ? $this->getContentPublishedDestinations((int) $task['content_id'])
+                : [];
             $task['default_publication_time'] = $this->resolveCadenceTime($task);
             $task['result_entries'] = !empty($task['content_id'])
                 ? $this->getContentResultEntries((int) $task['content_id'])
@@ -526,6 +529,7 @@ class CalendrierModel extends Model {
             $task['brief'] = null;
             $task['publication_entries'] = [];
             $task['latest_publication'] = null;
+            $task['published_destinations'] = [];
             $task['default_publication_time'] = '';
             $task['result_entries'] = [];
         }
@@ -2933,6 +2937,32 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
             ORDER BY COALESCE(date_publication, '9999-12-31') DESC, id DESC");
         $stmt->execute(['content_id' => $contentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function getContentPublishedDestinations($contentId) {
+        try {
+            $stmt = $this->db->prepare("SELECT spt.id AS target_id,
+                                               spt.provider,
+                                               spt.published_at,
+                                               spt.external_post_url,
+                                               sp.media_url,
+                                               sp.media_path,
+                                               sp.media_mime,
+                                               sp.master_title,
+                                               sc.account_label
+                                        FROM social_publications sp
+                                        JOIN social_publication_targets spt ON spt.publication_id = sp.id
+                                        JOIN social_connections sc ON sc.id = spt.connection_id
+                                        WHERE sp.content_id = :content_id
+                                          AND spt.status = 'Published'
+                                          AND spt.remote_deleted_at IS NULL
+                                        ORDER BY spt.published_at DESC, spt.id DESC");
+            $stmt->execute(['content_id' => $contentId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $exception) {
+            // Les anciennes installations restent utilisables tant que les migrations sociales ne sont pas appliquees.
+            return [];
+        }
     }
 
     private function getLatestPublicationEntry($contentId) {
