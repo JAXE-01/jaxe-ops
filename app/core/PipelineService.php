@@ -547,7 +547,7 @@ class PipelineService {
 
         $slot=$project['_cadence'][$type][$index-1]??null;
         $datePrevue = $slot['date']??self::formatDate(clone $period, 5 + (($index - 1) * 7));
-        $titre = $slot['label']??sprintf('%s %s #%s', $type, self::monthLabelForTitle($period), $index);
+        $titre = !empty($slot['label'])?(string)$slot['label']:sprintf('%s %s #%s', $type, self::monthLabelForTitle($period), $index);
 
         if ($existingId > 0 && isset($project['_cadence'])) {
             if(($existing['statut']??'')==='Annule'){$pdo->prepare("UPDATE livrable_items SET statut='Planifie' WHERE id=?")->execute([$existingId]);$pdo->prepare("UPDATE taches_pipeline SET statut='Bloquee' WHERE livrable_item_id=? AND statut='Annulee'")->execute([$existingId]);}

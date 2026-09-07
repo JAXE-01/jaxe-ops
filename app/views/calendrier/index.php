@@ -8,6 +8,14 @@ $globalMonthCalendar = is_array($globalMonthCalendar ?? null) ? $globalMonthCale
 $openGlobalCalendar = !empty($openGlobalCalendar);
 $showGlobalCalendar = array_key_exists('showGlobalCalendar', get_defined_vars()) ? (bool) $showGlobalCalendar : true;
 $showProjectsPilotage = array_key_exists('showProjectsPilotage', get_defined_vars()) ? (bool) $showProjectsPilotage : true;
+if (!function_exists('cal_client_logo_url')) {
+    function cal_client_logo_url($value) {
+        $files=is_array($value)?$value:json_decode((string)$value,true);
+        if(!is_array($files)||empty($files))return '';
+        $file=end($files);$path=is_array($file)?trim((string)($file['path']??'')):'';
+        return $path!==''?upload_url($path):'';
+    }
+}
 $calendarColorDefaults = [
     'retard' => ['label' => 'Contenu retard', 'bg' => '#F3E4E6', 'border' => '#CC7A82', 'text' => '#8B3A41'],
     'non_rempli' => ['label' => 'Fiche non remplie', 'bg' => '#E9EFF5', 'border' => '#AAB7C5', 'text' => '#5D6E80'],
@@ -344,7 +352,8 @@ if (!function_exists('cal_global_type_icon')) {
                                 $stageTextColor = cal_global_item_text_color($stageClass, $calendarColorScheme, $calendarStageSchemeMap);
                                 ?>
                                 <a class="global-calendar-item <?= htmlspecialchars($stageClass) ?>" href="<?= htmlspecialchars($projectUrl) ?>" title="<?= htmlspecialchars((string) ($item['stage_label'] ?? '')) ?>"<?= $stageStyle !== '' ? ' style="' . htmlspecialchars($stageStyle) . '"' : '' ?>>
-                                    <span class="global-calendar-client-mark" aria-hidden="true"><?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($item['client_nom'] ?? '?'), 0, 1))) ?></span>
+                                    <?php $clientLogo=cal_client_logo_url($item['client_logo']??''); ?>
+                                    <span class="global-calendar-client-mark" aria-hidden="true"><?php if($clientLogo!==''): ?><img src="<?= htmlspecialchars($clientLogo) ?>" alt=""><?php else: ?><?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($item['client_nom'] ?? '?'), 0, 1))) ?><?php endif ?></span>
                                     <span class="global-calendar-type-icon" title="<?= htmlspecialchars((string) ($item['type_livrable'] ?? 'Contenu')) ?>"><?= htmlspecialchars(cal_global_type_icon($item['type_livrable'] ?? '')) ?></span>
                                     <span class="global-calendar-client" style="color: <?= htmlspecialchars($stageTextColor) ?>;"><?= htmlspecialchars((string) ($item['client_nom'] ?? 'Client')) ?></span>
                                     <span class="global-calendar-title" style="color: <?= htmlspecialchars($stageTextColor) ?>;"><?= htmlspecialchars((string) ($item['titre'] ?? 'Contenu')) ?><?= !empty($item['date_publication_reelle']) ? ' · publié' : '' ?></span>

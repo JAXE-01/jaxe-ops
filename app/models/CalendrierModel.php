@@ -478,8 +478,8 @@ class CalendrierModel extends Model {
                   pm.contexte_mois, pm.objectif_mois, pm.temps_forts_mois,
                        p.nom AS projet_nom, p.id AS projet_id, p.client_id, p.campagne_id, p.canal_principal,
                        p.date_debut AS projet_date_debut, p.date_fin AS projet_date_fin, p.publication_rules,
-                       c.entreprise AS client_nom,
-                       li.titre AS livrable_titre, li.type_livrable, li.sous_type, li.nombre_pages, li.numero_ordre,
+                       c.entreprise AS client_nom, c.logo AS client_logo,
+                       li.titre AS livrable_titre, li.type_livrable, li.sous_type, li.nombre_pages, li.numero_ordre, li.date_prevue,
                   u.nom AS auteur_nom,
                   ct.id AS content_id, ct.sujet AS contenu_sujet, ct.message AS contenu_message,
                   ct.objectif_publication, ct.cible_libre, ct.reseau_cible, ct.statut AS contenu_statut,
@@ -555,10 +555,8 @@ class CalendrierModel extends Model {
                 (string) ($task['projet_date_fin'] ?? $scheduledDate),
                 $month
             );
-            $slot = $slots[$type][$index - 1] ?? null;
-            return is_array($slot) && ($slot['date'] ?? '') === $scheduledDate
-                ? (string) ($slot['time'] ?? '')
-                : '';
+            foreach($slots[$type]??[] as$slot)if(($slot['date']??'')===$scheduledDate)return(string)($slot['time']??'');
+            return '';
         } catch (Throwable $e) {
             return '';
         }

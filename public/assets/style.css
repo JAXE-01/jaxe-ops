@@ -2043,6 +2043,15 @@ textarea {
     background: color-mix(in srgb, currentColor 13%, white);
     font-size: .68rem;
     font-weight: 800;
+    overflow: hidden;
+}
+
+.global-calendar-client-mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    background: #fff;
 }
 
 .global-calendar-item:has(.global-calendar-client-mark) {

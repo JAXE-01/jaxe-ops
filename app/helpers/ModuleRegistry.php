@@ -42,6 +42,7 @@ class ModuleRegistry {
                 'formFields' => [
                     'nom' => ['label' => 'Nom', 'type' => 'text', 'required' => true],
                     'entreprise' => ['label' => 'Entreprise', 'type' => 'text'],
+                    'logo' => ['label' => 'Logo du client', 'type' => 'file', 'accept' => 'image/png,image/jpeg,image/webp', 'extensions' => ['png','jpg','jpeg','webp'], 'hint' => 'PNG, JPG ou WebP. Format carré conseillé.'],
                     'secteur' => ['label' => 'Secteur', 'type' => 'text'],
                     'telephone' => ['label' => 'Telephone', 'type' => 'text'],
                     'email' => ['label' => 'Email', 'type' => 'email'],

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS clients (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     entreprise VARCHAR(100),
+    logo JSON NULL,
     secteur VARCHAR(100),
     telephone VARCHAR(30),
     email VARCHAR(100),
