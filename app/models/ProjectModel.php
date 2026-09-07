@@ -61,14 +61,14 @@ class ProjectModel extends CrudModel {
     }
 
     public function getDefaultProjectValues() {
-        $defaults = $this->settingsModel->getProjectDefaults();
+        $defaults = $this->getApplicableProjectDefaults();
         $defaults['configuration_mode'] = 'abonnement';
         return $defaults;
     }
 
     private function normalizeProjectPayload(array $data) {
         $payload = $data;
-        $payload = array_merge($this->settingsModel->getProjectDefaults(), $payload);
+        $payload = array_merge($this->getApplicableProjectDefaults(), $payload);
         $mode = trim((string) ($data['configuration_mode'] ?? (!empty($data['abonnement_id']) ? 'abonnement' : 'custom')));
         unset($payload['configuration_mode']);
 
@@ -110,6 +110,21 @@ class ProjectModel extends CrudModel {
             'statut' => 'Actif', 'tenant'=>TenantGuard::tenantId()
         ]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function getApplicableProjectDefaults() {
+        $defaults = $this->settingsModel->getProjectDefaults();
+        foreach ($this->settingsModel->getProjectRoleFieldMap() as $field => $roles) {
+            $defaultId = (int) ($defaults[$field] ?? 0);
+            if ($defaultId <= 0) {
+                continue;
+            }
+            $allowed = $this->settingsModel->getUserOptionsByRoles($roles);
+            if (!array_key_exists((string) $defaultId, $allowed) && !array_key_exists($defaultId, $allowed)) {
+                $defaults[$field] = null;
+            }
+        }
+        return $defaults;
     }
 
     private function resolveDurationMonths($startDate, $endDate, $fallbackDuration) {

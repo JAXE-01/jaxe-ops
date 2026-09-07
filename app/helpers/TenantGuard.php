@@ -65,6 +65,7 @@ class TenantGuard {
         $userId=(int)$userId;if($userId<=0)return;
         $tenantId=self::requireTenantId();
         if(self::userBelongsToTenant($userId,$tenantId))return;
+        $stmt=Database::getConnection()->prepare("SELECT 1 FROM users u WHERE u.id=:user AND u.statut='Actif' AND NOT EXISTS (SELECT 1 FROM tenant_memberships tm WHERE tm.user_id=u.id) LIMIT 1");$stmt->execute(['user'=>$userId]);if($stmt->fetchColumn())return;
         $organizationIds=[];$currentOrganizationId=self::currentOrganizationId($tenantId);if($currentOrganizationId>0)$organizationIds[]=$currentOrganizationId;
         if((int)$clientId>0){$stmt=Database::getConnection()->prepare('SELECT managed_by_organization_id FROM clients WHERE id=:id LIMIT 1');$stmt->execute(['id'=>(int)$clientId]);$managedBy=(int)$stmt->fetchColumn();if($managedBy>0)$organizationIds[]=$managedBy;}
         $organizationIds=array_values(array_unique(array_filter($organizationIds)));

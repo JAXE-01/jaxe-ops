@@ -264,17 +264,20 @@ class SettingsModel extends Model {
             $params[$key] = $role;
         }
 
-        $roleConditions = ['role IN (' . implode(', ', $placeholders) . ')'];
+        $roleConditions = ['u.role IN (' . implode(', ', $placeholders) . ')'];
         foreach (array_keys($params) as $key) {
-            $roleConditions[] = 'FIND_IN_SET(:' . $key . ', REPLACE(COALESCE(secondary_roles, \'\'), \' \' , \'\')) > 0';
+            $roleConditions[] = 'FIND_IN_SET(:' . $key . ', REPLACE(COALESCE(u.secondary_roles, \'\'), \' \' , \'\')) > 0';
         }
 
         $sql = sprintf(
-            'SELECT id, nom, role, secondary_roles FROM users WHERE statut = :statut AND (%s) ORDER BY nom ASC',
+            "SELECT u.id, u.nom, u.role, u.secondary_roles FROM users u WHERE u.statut = :statut AND (%s)
+             AND (EXISTS (SELECT 1 FROM tenant_memberships tm WHERE tm.user_id=u.id AND tm.tenant_id=:user_tenant AND tm.status IN ('Actif','Active'))
+                  OR NOT EXISTS (SELECT 1 FROM tenant_memberships legacy_tm WHERE legacy_tm.user_id=u.id))
+             ORDER BY u.nom ASC",
             implode(' OR ', $roleConditions)
         );
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(array_merge(['statut' => 'Actif'], $params));
+        $stmt->execute(array_merge(['statut' => 'Actif', 'user_tenant' => TenantGuard::tenantId()], $params));
 
         $options = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
