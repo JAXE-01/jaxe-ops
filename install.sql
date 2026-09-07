@@ -486,7 +486,7 @@ CREATE TABLE IF NOT EXISTS livrable_items (
     nombre_pages INT DEFAULT 1,
     numero_ordre INT NOT NULL,
     titre VARCHAR(190) NOT NULL,
-    statut ENUM('Planifie','En production','Pret','Publie') DEFAULT 'Planifie',
+    statut ENUM('Planifie','En production','Pret','Publie','Annule','Exclu') DEFAULT 'Planifie',
     date_prevue DATE NULL,
     canal VARCHAR(100) NULL,
     pieces_jointes JSON NULL,

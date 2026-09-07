@@ -6,6 +6,7 @@ class SchemaSynchronizer {
             $pending = MigrationRunner::pendingFiles($pdo);
             if (!empty($pending)) { DatabaseBackupService::create($pdo, 'pre-migration'); }
             MigrationRunner::runIfNeeded($pdo);
+            if (!empty($pending)) { self::syncProjectPipelines($pdo); }
             return;
         }
         if (!defined('AUTO_SYNC_SCHEMA') || AUTO_SYNC_SCHEMA !== true) {

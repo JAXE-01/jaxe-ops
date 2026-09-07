@@ -109,7 +109,7 @@ class PipelineService {
             }
             if(!$hasCadenceHistory)self::syncContentReadinessForPlan($planId);
             if($hasCadenceHistory){
-                $actual=$pdo->prepare("UPDATE plans_mensuels SET videos_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Video'),visuels_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Visuel'),livrables_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=?) WHERE id=?");
+                $actual=$pdo->prepare("UPDATE plans_mensuels SET videos_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Video' AND COALESCE(statut,'') NOT IN ('Annule','Exclu')),visuels_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND type_livrable='Visuel' AND COALESCE(statut,'') NOT IN ('Annule','Exclu')),livrables_prevus=(SELECT COUNT(*) FROM livrable_items WHERE plan_mensuel_id=? AND COALESCE(statut,'') NOT IN ('Annule','Exclu')) WHERE id=?");
                 $actual->execute([$planId,$planId,$planId,$planId]);
             }
         }
