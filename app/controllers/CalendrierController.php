@@ -556,6 +556,12 @@ class CalendrierController extends Controller {
                     exit;
                 }
 
+                if ((string) ($_POST['manager_action'] ?? '') === 'send_progress_report') {
+                    $sent=(new WorkflowNotificationService())->sendProgressReport((int)$taskId,(int)($this->currentUser()['id']??0),(string)($_POST['progress_report']??''));
+                    $this->flash($sent?'success':'error',$sent?'Rapport d’avancement envoyé dans un même fil avec les responsables en copie.':'Rapport enregistré, mais l’envoi SMTP a échoué.');
+                    header('Location: '.route_url('/calendrier/task/'.(int)$taskId));exit;
+                }
+
                 if ($this->requestExceededPostMaxSize()) {
                     throw new RuntimeException('Le fichier selectionne depasse la taille maximale acceptee par le serveur (' . $this->getPhpUploadLimitLabel() . '). Augmente upload_max_filesize et post_max_size dans PHP/XAMPP pour charger ce fichier.');
                 }
@@ -702,6 +708,7 @@ class CalendrierController extends Controller {
         }
         $requireSecondMontageVideo = $this->isSecondMontageVideoRequired();
         $kpiNetworkConfig = $this->getKpiNetworkConfig();
+        try { $progressReports=(new WorkflowNotificationService())->reportsForTask((int)$taskId); } catch(Throwable $exception) { $progressReports=[]; }
 
         $this->render('calendrier/task', [
             'pageTitle' => $task['titre'],
@@ -723,6 +730,7 @@ class CalendrierController extends Controller {
             'taskReadyDeliverablesForPublicValidation' => $taskReadyDeliverablesForPublicValidation,
             'requireSecondMontageVideo' => $requireSecondMontageVideo,
             'kpiNetworkConfig' => $kpiNetworkConfig,
+            'progressReports' => $progressReports,
         ]);
     }
 

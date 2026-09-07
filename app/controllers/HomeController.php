@@ -14,6 +14,10 @@ class HomeController extends Controller {
         }
         $this->requirePermission('dashboard.view');
 
+        if (trim((string) SMTP_HOST) !== '') {
+            try { (new WorkflowNotificationService())->sendDeadlineDigests(3); } catch (Throwable $exception) { error_log('[workflow-notifications] '.$exception->getMessage()); }
+        }
+
         $currentUser = $this->currentUser();
         $isScopedDashboard = UserScope::isScopedOperationalUser($currentUser);
         $workingMonth = WorkingMonth::resolve($_GET['month'] ?? null);

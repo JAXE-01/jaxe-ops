@@ -1,0 +1,37 @@
+<?php
+class WorkflowNotificationService {
+    private PDO $db;
+    public function __construct() { $this->db = Database::getConnection(); }
+
+    public function sendProgressReport(int $taskId,int $senderId,string $message): bool {
+        $message=trim($message);if($message==='')throw new RuntimeException('Rédigez un bref rapport d’avancement.');
+        $stmt=$this->db->prepare("SELECT tp.*,p.nom projet_nom,p.charge_compte_id,p.charge_clientele_id,p.cm_id,p.createur_id,p.designer_id,p.cadreur_id,p.videaste_id,c.entreprise client_nom,s.nom sender_name,s.email sender_email FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id JOIN users s ON s.id=:sender WHERE tp.id=:task LIMIT 1");
+        $stmt->execute(['sender'=>$senderId,'task'=>$taskId]);$task=$stmt->fetch(PDO::FETCH_ASSOC);if(!$task)throw new RuntimeException('Tâche introuvable.');TenantGuard::assertProject((int)$task['projet_id']);
+        $next=$this->db->prepare("SELECT tp.id,tp.titre,tp.type_tache,tp.auteur_id,u.nom,u.email FROM taches_pipeline tp LEFT JOIN users u ON u.id=tp.auteur_id WHERE tp.parent_task_id=:task AND tp.statut<>'Annulee' ORDER BY tp.ordre_pipeline,tp.id LIMIT 1");$next->execute(['task'=>$taskId]);$nextTask=$next->fetch(PDO::FETCH_ASSOC)?:[];
+        $userIds=array_values(array_unique(array_filter(array_map('intval',[$task['charge_compte_id'],$task['charge_clientele_id'],$task['cm_id'],$task['createur_id'],$task['designer_id'],$task['cadreur_id'],$task['videaste_id']]))));
+        $validationNext=in_array((string)($nextTask['type_tache']??''),['Validation interne','Validation client'],true);
+        $primaryId=$validationNext?(int)($nextTask['auteur_id']??0):(int)($task['charge_compte_id']??0);
+        if($primaryId<=0)$primaryId=(int)($nextTask['auteur_id']??0);if($primaryId<=0)throw new RuntimeException('Aucun responsable avec une adresse e-mail n’est défini.');
+        if(!$validationNext&&!empty($nextTask['auteur_id']))$userIds[]=(int)$nextTask['auteur_id'];
+        $userIds=array_values(array_unique(array_filter($userIds,static fn($id)=>$id!==$senderId)));
+        $people=$this->usersByIds(array_values(array_unique(array_merge([$primaryId],$userIds))));$primary=$people[$primaryId]??null;
+        if(!$primary||!filter_var($primary['email']??'',FILTER_VALIDATE_EMAIL))throw new RuntimeException('Le destinataire principal n’a pas d’adresse e-mail valide.');
+        $cc=[];if(!$validationNext){foreach($userIds as$id){$email=trim((string)($people[$id]['email']??''));if($id!==$primaryId&&filter_var($email,FILTER_VALIDATE_EMAIL))$cc[]=$email;}}
+        $subject='Avancement · '.$task['client_nom'].' · '.$task['titre'];$lines=['Rapport envoyé par '.($task['sender_name']?:'Un membre de l’équipe').'.','','Client : '.$task['client_nom'],'Projet : '.$task['projet_nom'],'Étape : '.$task['titre'],'Statut : '.$task['statut'],'Échéance : '.($task['deadline']?:'Non définie')];
+        if($nextTask)$lines[]='Étape suivante : '.$nextTask['titre'].' · '.($nextTask['nom']?:'Non assignée');$lines[]='';$lines[]=$message;
+        $url=route_url('/calendrier/task/'.$taskId);$sent=StraxMailTransport::send([$primary['email']],$subject,implode("\n",$lines),$url,'Ouvrir la tâche',$cc,(string)($task['sender_email']??''));
+        $save=$this->db->prepare('INSERT INTO workflow_progress_reports(tenant_id,task_id,sender_id,subject,message,primary_recipient,cc_recipients,delivery_status) VALUES(:tenant,:task,:sender,:subject,:message,:primary,:cc,:status)');$save->execute(['tenant'=>TenantGuard::tenantId(),'task'=>$taskId,'sender'=>$senderId,'subject'=>$subject,'message'=>$message,'primary'=>$primary['email'],'cc'=>implode(',',$cc),'status'=>$sent?'Sent':'Failed']);
+        return $sent;
+    }
+
+    public function sendDeadlineDigests(int $daysAhead=3): array {
+        $daysAhead=max(1,min(14,$daysAhead));$tenant=TenantGuard::tenantId();
+        $stmt=$this->db->prepare("SELECT tp.id,tp.titre,tp.deadline,tp.statut,p.nom projet_nom,c.entreprise client_nom,u.email,u.nom FROM taches_pipeline tp JOIN projets p ON p.id=tp.projet_id JOIN clients c ON c.id=p.client_id JOIN users u ON u.id=tp.auteur_id WHERE c.tenant_id=:tenant AND tp.statut IN ('A faire','En cours') AND tp.deadline IS NOT NULL AND tp.deadline<=DATE_ADD(CURDATE(),INTERVAL :days DAY) AND COALESCE(p.statut,'Actif') NOT IN ('Suspendu','Termine','Terminé','Archive') ORDER BY u.email,tp.deadline,tp.id");$stmt->bindValue(':tenant',$tenant,PDO::PARAM_INT);$stmt->bindValue(':days',$daysAhead,PDO::PARAM_INT);$stmt->execute();$groups=[];foreach($stmt->fetchAll(PDO::FETCH_ASSOC)as$row){if(filter_var($row['email'],FILTER_VALIDATE_EMAIL))$groups[$row['email']][]=$row;}
+        $sent=0;$skipped=0;foreach($groups as$email=>$tasks){$key='deadline-digest:'.date('Y-m-d').':'.hash('sha256',$email);if($this->alreadyLogged($tenant,$key,$email)){$skipped++;continue;}$lines=['Bonjour '.($tasks[0]['nom']?:''),'',"Voici vos échéances nécessitant une attention :",''];foreach($tasks as$t){$delay=(strtotime($t['deadline'])<strtotime(date('Y-m-d')))?'EN RETARD':'À VENIR';$lines[]='['.$delay.'] '.$t['deadline'].' · '.$t['client_nom'].' · '.$t['projet_nom'].' · '.$t['titre'];}$ok=StraxMailTransport::send([$email],'Échéances Strax · '.date('d/m/Y'),implode("\n",$lines),route_url('/'),'Ouvrir le tableau de bord');$this->log($tenant,$key,'deadline_digest',$email,$ok);$sent+=(int)$ok;}
+        return compact('sent','skipped');
+    }
+    public function reportsForTask(int$taskId): array {$stmt=$this->db->prepare('SELECT r.*,u.nom sender_name FROM workflow_progress_reports r JOIN users u ON u.id=r.sender_id WHERE r.tenant_id=:tenant AND r.task_id=:task ORDER BY r.id DESC LIMIT 20');$stmt->execute(['tenant'=>TenantGuard::tenantId(),'task'=>$taskId]);return$stmt->fetchAll(PDO::FETCH_ASSOC);}
+    private function usersByIds(array$ids): array {if(!$ids)return[];$marks=implode(',',array_fill(0,count($ids),'?'));$stmt=$this->db->prepare("SELECT id,nom,email FROM users WHERE id IN ($marks) AND statut='Actif'");$stmt->execute($ids);$out=[];foreach($stmt->fetchAll(PDO::FETCH_ASSOC)as$row)$out[(int)$row['id']]=$row;return$out;}
+    private function alreadyLogged(int$t,string$key,string$email): bool {$s=$this->db->prepare("SELECT 1 FROM workflow_notification_log WHERE tenant_id=? AND notification_key=? AND recipient_email=? AND delivery_status='Sent'");$s->execute([$t,$key,$email]);return(bool)$s->fetchColumn();}
+    private function log(int$t,string$key,string$type,string$email,bool$ok): void {$s=$this->db->prepare('INSERT INTO workflow_notification_log(tenant_id,notification_key,notification_type,recipient_email,delivery_status) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE delivery_status=VALUES(delivery_status),created_at=CURRENT_TIMESTAMP');$s->execute([$t,$key,$type,$email,$ok?'Sent':'Failed']);}
+}
