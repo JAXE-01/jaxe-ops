@@ -14,9 +14,10 @@ class ProjectSocialPages {
     public static function save(int $project, int $client, array $ids): void {
         TenantGuard::assertClient($client);
         $db=Database::getConnection();
-        $check=$db->prepare('SELECT p.id FROM projets p JOIN clients c ON c.id=p.client_id WHERE p.id=:project AND p.client_id=:client AND c.tenant_id=:tenant');
-        $check->execute(['project'=>$project,'client'=>$client,'tenant'=>TenantGuard::tenantId()]);
+        $check=$db->prepare('SELECT p.id FROM projets p WHERE p.id=:project AND p.client_id=:client');
+        $check->execute(['project'=>$project,'client'=>$client]);
         if(!$check->fetchColumn()) throw new RuntimeException('Projet inaccessible pour ce client.');
+        TenantGuard::assertProject($project);
         $ids=array_values(array_unique(array_map('intval',$ids)));
         $check=$db->prepare("SELECT id FROM social_connections WHERE id=:id AND client_id=:client AND tenant_id=:tenant AND status='Connected'");
         foreach($ids as $id){
