@@ -1784,9 +1784,9 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
         xhr.setRequestHeader('Accept', 'application/json');
         xhr.upload.addEventListener('progress', function (uploadEvent) {
             if (!uploadEvent.lengthComputable) { if (label) { label.textContent = 'Envoi en cours…'; } return; }
-            var percent = Math.min(99, Math.round((uploadEvent.loaded / uploadEvent.total) * 100));
+            var percent = Math.min(100, Math.round((uploadEvent.loaded / uploadEvent.total) * 100));
             if (bar) { bar.style.width = percent + '%'; }
-            if (label) { label.textContent = percent + '% envoyé'; }
+            if (label) { label.textContent = percent >= 100 ? '100% transféré — enregistrement en cours…' : percent + '% envoyé'; }
         });
         xhr.addEventListener('load', function () {
             var data = null;
@@ -1795,7 +1795,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 if (bar) { bar.style.width = '100%'; }
                 if (label) { label.textContent = '100% — traitement terminé'; }
                 if (window.AppUI && typeof window.AppUI.toast === 'function') { window.AppUI.toast('success', data.message || 'Fichiers envoyés.'); }
-                window.setTimeout(function () { window.location.href = data.redirect || window.location.href; }, 350);
+                window.setTimeout(function () { window.location.href = data.redirect || window.location.href; }, 100);
                 return;
             }
             buttons.forEach(function (button) { button.disabled = false; });

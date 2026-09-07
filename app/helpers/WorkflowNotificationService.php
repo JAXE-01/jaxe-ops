@@ -36,14 +36,20 @@ class WorkflowNotificationService {
         $rows=[];$primaryIds=[];$copyIds=[];$period=$month.'-01';
         foreach($projectIds as$projectId){TenantGuard::assertProject($projectId);$projectStmt->execute(['period'=>$period,'project'=>$projectId]);$row=$projectStmt->fetch(PDO::FETCH_ASSOC);if(!$row)continue;$activeStmt->execute(['project'=>$projectId,'period'=>$period]);$active=$activeStmt->fetch(PDO::FETCH_ASSOC)?:[];$row['active']=$active;$rows[]=$row;$isValidation=in_array((string)($active['type_tache']??''),['Validation interne','Validation client'],true);$primary=$isValidation?(int)($active['auteur_id']??0):(int)($row['charge_compte_id']??0);if($primary<=0)$primary=(int)($active['auteur_id']??0);if($primary>0)$primaryIds[]=$primary;if(!$isValidation){foreach([$row['charge_compte_id'],$row['charge_clientele_id'],$row['cm_id'],$active['auteur_id']??0]as$id){$id=(int)$id;if($id>0)$copyIds[]=$id;}}}
         if(!$rows)throw new RuntimeException('Aucun calendrier accessible dans la sélection.');
-        $recipientIds=array_values(array_unique(array_filter(array_merge($primaryIds,$copyIds),static fn($id)=>(int)$id!==$senderId)));$people=$this->usersByIds($recipientIds);$primary=null;
-        foreach(array_unique($primaryIds)as$id){if((int)$id!==$senderId&&filter_var($people[(int)$id]['email']??'',FILTER_VALIDATE_EMAIL)){$primary=(int)$id;break;}}
-        if($primary===null){foreach($recipientIds as$id){if(filter_var($people[$id]['email']??'',FILTER_VALIDATE_EMAIL)){$primary=$id;break;}}}
-        if($primary===null)throw new RuntimeException('Aucun responsable sélectionné ne possède une adresse e-mail valide.');
-        $cc=[];foreach($recipientIds as$id){$email=trim((string)($people[$id]['email']??''));if($id!==$primary&&filter_var($email,FILTER_VALIDATE_EMAIL))$cc[$email]=true;}
+        $recipientIds=array_values(array_unique(array_filter(array_merge($primaryIds,$copyIds),static fn($id)=>(int)$id!==$senderId)));$people=$this->usersByIds($recipientIds);
+        $candidateIds=array_values(array_unique(array_merge($primaryIds,$recipientIds)));$candidateIds=array_values(array_filter($candidateIds,static fn($id)=>(int)$id!==$senderId&&filter_var($people[(int)$id]['email']??'',FILTER_VALIDATE_EMAIL)));
+        if(!$candidateIds)throw new RuntimeException('Aucun responsable sélectionné ne possède une adresse e-mail valide.');
         $lines=['Flash calendrier envoyé par '.($sender['nom']?:'Un membre de l’équipe').'.','Période : '.$month,'Calendriers : '.count($rows),''];$snapshot=[];
         foreach($rows as$row){$total=(int)$row['tasks_total'];$done=(int)$row['tasks_done'];$rate=$total>0?round($done*100/$total):0;$active=$row['active'];$lines[]=$row['client_nom'].' · '.$row['nom'];$lines[]='Avancement : '.$done.'/'.$total.' ('.$rate.' %) · Retards : '.(int)$row['tasks_late'].' · Prochaine échéance : '.($row['next_deadline']?:'Aucune');$lines[]='Étape active : '.($active['titre']??'Aucune').' · '.($active['nom']??'Non assignée');$lines[]='';$snapshot[]=['project_id'=>(int)$row['id'],'client'=>$row['client_nom'],'project'=>$row['nom'],'done'=>$done,'total'=>$total,'late'=>(int)$row['tasks_late'],'active_task_id'=>(int)($active['id']??0)];}
-        $lines[]='Synthèse';$lines[]=$message;$subject='Flash calendrier · '.$month.' · '.count($rows).' projet(s)';$url=route_url('/calendrier').'?month='.urlencode($month);$sent=StraxMailTransport::send([$people[$primary]['email']],$subject,implode("\n",$lines),$url,'Ouvrir le pilotage',array_keys($cc),(string)($sender['email']??''));
+        $lines[]='Synthèse';$lines[]=$message;$subject='Flash calendrier · '.$month.' · '.count($rows).' projet(s)';$url=route_url('/calendrier').'?month='.urlencode($month);$sent=false;$primary=null;$cc=[];
+        foreach($candidateIds as$candidateId){
+            $primary=(int)$candidateId;$cc=[];
+            foreach($recipientIds as$id){$email=trim((string)($people[$id]['email']??''));if($id!==$primary&&filter_var($email,FILTER_VALIDATE_EMAIL))$cc[$email]=true;}
+            $sent=StraxMailTransport::send([$people[$primary]['email']],$subject,implode("\n",$lines),$url,'Ouvrir le pilotage',array_keys($cc),(string)($sender['email']??''));
+            if($sent)break;
+            $mailError=StraxMailTransport::lastError();
+            if(($mailError['stage']??'')!=='recipient')break;
+        }
         $save=$this->db->prepare('INSERT INTO calendar_progress_flashes(tenant_id,sender_id,period_month,project_ids,subject,message,snapshot_json,primary_recipient,cc_recipients,delivery_status) VALUES(:tenant,:sender,:period,:projects,:subject,:message,:snapshot,:primary,:cc,:status)');$save->execute(['tenant'=>TenantGuard::tenantId(),'sender'=>$senderId,'period'=>$period,'projects'=>json_encode($projectIds),'subject'=>$subject,'message'=>$message,'snapshot'=>json_encode($snapshot,JSON_UNESCAPED_UNICODE),'primary'=>$people[$primary]['email'],'cc'=>implode(',',array_keys($cc)),'status'=>$sent?'Sent':'Failed']);return$sent;
     }
 
