@@ -14,6 +14,7 @@ if ($selectedObjective !== '' && !in_array($selectedObjective, $contentObjective
     $contentObjectiveOptions[] = $selectedObjective;
 }
 $contentRequirements = ContentCompletion::requirements($deliverable);
+$completed = count(array_filter($contentRequirements, static fn($item) => !empty($item['done'])));
 $compositionContext=ContentMatrixReferences::load((int)$deliverable['client_id'],(int)($_GET['composition_matrix_id']??0));
 $tpackRefs=$compositionContext['refs'];
 foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_problem'=>'problems','tpack_product'=>'products','tpack_format'=>'formats','tpack_cta'=>'ctas','tpack_platform'=>'platforms'] as $field=>$key){
@@ -21,7 +22,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
  if($saved!==''&&!in_array($saved,$tpackRefs[$key],true))$tpackRefs[$key][]=$saved;
 }
 ?>
-<link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-compact.css')) ?>"><link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-density.css')) ?>"><script src="<?= htmlspecialchars(app_url('/public/assets/content-date-picker.js')) ?>" defer></script><section class="panel content-workspace-hero">
+<link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-compact.css')) ?>"><link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-density.css')) ?>"><link rel="stylesheet" href="<?= htmlspecialchars(app_url('/public/assets/content-completion.css')) ?>"><script src="<?= htmlspecialchars(app_url('/public/assets/content-date-picker.js')) ?>" defer></script><section class="panel content-workspace-hero" data-page-client="<?= htmlspecialchars($deliverable['client_nom']) ?>">
     <div class="panel-head">
         <div>
             <h2>Fiche contenu</h2>
@@ -34,7 +35,6 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
             <?php if (!empty($nextContentUrl)): ?>
                 <a class="button secondary" href="<?= htmlspecialchars((string) $nextContentUrl) ?>" data-shortcut-next title="Contenu suivant" aria-label="Contenu suivant">→</a>
             <?php endif; ?>
-            <button class="button secondary" type="button" data-compact-toggle data-icon-toggle title="Changer la densité" aria-label="Changer la densité">▤</button>
             <?php if (!empty($briefEditUrl)): ?>
                 <a class="button secondary" href="#inline-content-brief" data-open-inline-brief title="Voir ou modifier le script / brief" aria-label="Voir ou modifier le script / brief">✎</a>
             <?php endif; ?>
@@ -50,7 +50,15 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
     </div>
 </section>
 
-<?php require __DIR__.'/content-overview.php'; require __DIR__.'/matrix-selector.php'; ?>
+<nav class="workflow-workbench-nav" data-workspace-tabs aria-label="Sections de la fiche contenu">
+    <button type="button" class="is-active" data-workspace-target="month"><span>01</span>Informations générales du mois</button>
+    <button type="button" data-workspace-target="content"><span>02</span>Informations spécifiques du contenu</button>
+    <?php if (!empty($briefEditUrl)): ?><button type="button" data-workspace-target="script"><span>03</span><?= ($deliverable['type_livrable'] ?? '') === 'Video' ? 'Script vidéo' : 'Brief créatif' ?></button><?php endif; ?>
+    <div class="workbench-progress" title="<?= $completed ?> éléments renseignés sur <?= count($contentRequirements) ?>"><strong><?= $completed ?>/<?= count($contentRequirements) ?></strong><progress max="<?= count($contentRequirements) ?>" value="<?= $completed ?>"></progress></div>
+</nav>
+<script type="application/json" data-completion-initial><?= json_encode($contentRequirements,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
+<script src="<?= htmlspecialchars(app_url('/public/assets/content-completion.js')) ?>" defer></script>
+<?php require __DIR__.'/matrix-selector.php'; ?>
 <section class="panel content-history-panel">
     <div class="panel-head">
         <div>
@@ -84,25 +92,11 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
     <?php endif; ?>
 </section>
 
-<details class="panel collapsible-panel content-general-panel" open>
-    <summary class="collapsible-summary">
-        <span>
-            <strong>Informations generales du mois</strong>
-            <small>Contexte commun et elements de base</small>
-        </span>
-        <span class="collapsible-indicator">Afficher / masquer</span>
-    </summary>
-    <div class="panel-head">
-        <div>
-            <h2>Informations generales du mois</h2>
-            <p class="panel-subtitle">Ces informations servent de contexte commun a tous les contenus du mois.</p>
-        </div>
-    </div>
-
-
-
+<section class="workflow-workbench panel content-general-panel" data-workspace-shell>
     <form method="post" class="form-grid" data-autosave-form="true" data-autosave-label="Fiche contenu" data-autosave-endpoint="<?= htmlspecialchars(route_url('/calendrier/contenu/' . (int) ($deliverable['id'] ?? 0))) ?>">
-        <div class="autosave-status" data-autosave-status>Modifications locales</div>
+        <div class="autosave-status workbench-save-status" data-autosave-status aria-live="polite">Enregistré</div>
+        <section class="workbench-pane is-active" data-workspace-panel="month">
+        <header class="workbench-pane-head"><h2>Informations générales du mois</h2><span class="context-info" tabindex="0" title="Contexte commun et éléments de base, partagé par tous les contenus du mois.">ⓘ</span></header>
         <label class="field">
             <span>Dates ou evenements cles du mois</span>
             <textarea name="temps_forts_mois" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['temps_forts_mois'] ?? $deliverable['temps_forts_mois'] ?? '')) ?></textarea>
@@ -116,7 +110,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
             <textarea name="objectif_mois" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['objectif_mois'] ?? $deliverable['objectif_mois'] ?? '')) ?></textarea>
         </label>
 
-        <details class="panel inset-panel tpack-composer-panel" open>
+        <details class="panel inset-panel tpack-composer-panel">
             <summary class="collapsible-summary"><span><strong>Composition à partir de la matrice client</strong><small>Combinez cible, objectif, besoin, produit, format et appel à l’action.</small></span><span class="collapsible-indicator">Afficher / masquer</span></summary>
             <input type="hidden" name="composition_method" value="TPACK">
             <div class="tpack-grid">
@@ -130,7 +124,8 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
             <label class="field tpack-brief-field"><span>Combinaison générée</span><textarea name="tpack_generated_brief" data-tpack-output><?= htmlspecialchars((string)($_POST['tpack_generated_brief']??$deliverable['tpack_generated_brief']??'')) ?></textarea></label>
             <div class="form-actions"><button class="button secondary" type="button" data-tpack-generate>Générer la combinaison</button><button class="button primary" type="button" data-tpack-apply>Appliquer à la fiche contenu</button></div>
         </details>
-        <div class="panel inset-panel content-specific-panel">
+        </section>
+        <section class="workbench-pane content-specific-panel" data-workspace-panel="content" hidden>
             <div class="panel-head">
                 <div>
                     <h2>Informations specifiques du contenu</h2>
@@ -193,7 +188,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
                     <textarea name="message" <?= !$canEdit ? 'disabled' : '' ?>><?= htmlspecialchars((string) ($_POST['message'] ?? $deliverable['contenu_message'] ?? '')) ?></textarea>
                 </label>
             </div>
-        </div>
+        </section>
 
 
         <?php if ($canEdit || $canManagerInvalidate): ?>
@@ -208,7 +203,7 @@ foreach(['tpack_target'=>'targets','tpack_objective'=>'objectives','tpack_proble
             </div>
         <?php endif; ?>
     </form>
-</details>
+</section>
 
 <?php require __DIR__.'/inline-brief.php'; ?>
 

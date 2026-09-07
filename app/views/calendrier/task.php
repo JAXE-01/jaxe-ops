@@ -389,7 +389,7 @@ function task_completion_note($taskType, $task) {
     return 'La sauvegarde conserve ton avancement. Le statut final doit rester reserve au travail complet.';
 }
 ?>
-<section class="panel task-workspace-hero">
+<section class="panel task-workspace-hero" data-page-client="<?= htmlspecialchars($task['client_nom']) ?>">
     <div class="panel-head">
         <div>
             <h2><?= htmlspecialchars($task['titre']) ?></h2>
@@ -402,7 +402,6 @@ function task_completion_note($taskType, $task) {
             <?php if (!empty($nextTaskUrl)): ?>
                 <a class="button secondary" href="<?= htmlspecialchars((string) $nextTaskUrl) ?>" data-shortcut-next title="Étape suivante" aria-label="Étape suivante">→</a>
             <?php endif; ?>
-            <button class="button secondary" type="button" data-compact-toggle>Mode compact</button>
             <a class="button secondary" href="<?= htmlspecialchars($returnTo) ?>" title="Retour au projet" aria-label="Retour au projet">↩</a>
             <?php if (($taskType === 'Publication' && in_array((string) ($task['statut'] ?? ''), ['Terminee', 'Validée', 'Validee'], true)) || !empty($latestPublication)): ?>
                 <a class="button secondary" href="<?= htmlspecialchars(route_url('/reporting-metric') . '?project_id=' . (int) ($task['projet_id'] ?? 0)) ?>" title="Statistiques et rapports" aria-label="Statistiques et rapports">⌁</a>

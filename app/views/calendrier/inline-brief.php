@@ -1,5 +1,5 @@
 <?php if(!empty($briefEditUrl)): ?>
-<details id="inline-content-brief" class="panel inline-content-brief" data-inline-brief="<?= htmlspecialchars($briefEditUrl) ?>">
+<details id="inline-content-brief" class="panel inline-content-brief workbench-pane" data-inline-brief="<?= htmlspecialchars($briefEditUrl) ?>" data-workspace-panel="script" hidden>
 <summary><strong><?= ($deliverable['type_livrable']??'')==='Video'?'Script vidéo':'Brief créatif' ?></strong> · travailler ici</summary>
 <p class="mini-text">La fiche et le brief ont chacun leur sauvegarde. Les validations et droits restent inchangés.</p>
 <p role="status" data-brief-status></p>
