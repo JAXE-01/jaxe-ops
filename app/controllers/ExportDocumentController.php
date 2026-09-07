@@ -72,7 +72,7 @@ class ExportDocumentController extends Controller {
             }
             if ($action === 'export_reports') {
                 $data = $this->calendrierModel->getReportsExportData($planIds);
-                $this->downloadReportsTxt('rapport-calendriers.txt', $data, $selectedFields, $selectedReportSections);
+                $this->downloadReportsTxt($this->documentFilename('rapport-calendriers','txt',(array)($data['by_publication']??[])), $data, $selectedFields, $selectedReportSections);
                 return;
             }
             if ($action === 'export_calendar_pdf') {
@@ -224,9 +224,10 @@ class ExportDocumentController extends Controller {
     }
 
     private function documentFilename(string$type,string$extension,array$rows): string {
-        $clients=[];foreach($rows as$row){$name=trim((string)($row['client']??$row['client_name']??''));if($name!=='')$clients[$name]=true;}
-        $client=count($clients)===1?(string)array_key_first($clients):(count($clients)>1?'multi-clients':'selection');
+        $clients=[];foreach($rows as$row){$name=trim((string)($row['client']??$row['client_name']??$row['client_nom']??''));if($name!=='')$clients[$name]=true;}
+        $client=$clients?implode('-',array_keys($clients)):'selection';
         $slug=trim(strtolower((string)preg_replace('/[^a-z0-9]+/','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$client)?:$client)),'-')?:'selection';
+        $slug=substr($slug,0,120);
         return $slug.'-'.$type.'-'.date('Y-m-d').'.'.$extension;
     }
 }

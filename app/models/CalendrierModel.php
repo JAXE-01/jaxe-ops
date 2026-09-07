@@ -2540,12 +2540,12 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
             return null;
         }
 
-        $stmt = $this->db->prepare("SELECT id, reseau, compte_label, identifiant_compte, page_id, page_nom, access_token, refresh_token, is_default
-            FROM client_social_accounts
+        $stmt = $this->db->prepare("SELECT id, provider, account_label, external_account_id, account_type, access_token_encrypted, refresh_token_encrypted, metadata_json
+            FROM social_connections
             WHERE client_id = :client_id
-              AND reseau = :reseau
-              AND statut = 'Actif'
-            ORDER BY is_default DESC, updated_at DESC, id DESC
+              AND provider = :reseau
+              AND status = 'Connected'
+            ORDER BY last_validated_at DESC, updated_at DESC, id DESC
             LIMIT 1");
         $stmt->execute([
             'client_id' => $clientId,
@@ -2556,16 +2556,17 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
             return null;
         }
 
+        $metadata=json_decode((string)($row['metadata_json']??''),true)?:[];
         return [
             'id' => (int) ($row['id'] ?? 0),
-            'network' => (string) ($row['reseau'] ?? ''),
-            'label' => (string) ($row['compte_label'] ?? ''),
-            'account_identifier' => (string) ($row['identifiant_compte'] ?? ''),
-            'page_id' => (string) ($row['page_id'] ?? ''),
-            'page_name' => (string) ($row['page_nom'] ?? ''),
-            'access_token' => CryptoService::decrypt((string) ($row['access_token'] ?? '')),
-            'refresh_token' => CryptoService::decrypt((string) ($row['refresh_token'] ?? '')),
-            'is_default' => !empty($row['is_default']) ? 1 : 0,
+            'network' => (string) ($row['provider'] ?? ''),
+            'label' => (string) ($row['account_label'] ?? ''),
+            'account_identifier' => (string) ($row['external_account_id'] ?? ''),
+            'page_id' => (string) ($row['external_account_id'] ?? ''),
+            'page_name' => (string) ($metadata['page_name'] ?? $metadata['name'] ?? $row['account_label'] ?? ''),
+            'access_token' => CryptoService::decrypt((string) ($row['access_token_encrypted'] ?? '')),
+            'refresh_token' => CryptoService::decrypt((string) ($row['refresh_token_encrypted'] ?? '')),
+            'is_default' => 1,
         ];
     }
 

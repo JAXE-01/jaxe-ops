@@ -201,7 +201,7 @@ class ModuleRegistry {
                     'nombre_pages_carrousel' => ['label' => 'Nombre de pages du carrousel', 'type' => 'number'],
                     'pdf_requis' => ['label' => 'PDF requis', 'type' => 'checkbox'],
                     'source_requis' => ['label' => 'PSD / PSB requis', 'type' => 'checkbox'],
-                    'texte_script' => ['label' => 'Script / intention', 'type' => 'textarea'],
+                    'texte_script' => ['label' => 'Script', 'type' => 'textarea'],
                     'instructions_visuelles' => ['label' => 'Instructions visuelles', 'type' => 'textarea'],
                     'format' => ['label' => 'Format', 'type' => 'text'],
                     'statut' => ['label' => 'Statut', 'type' => 'select', 'options' => ['A faire' => 'A faire', 'En cours' => 'En cours', 'Valide' => 'Valide']],

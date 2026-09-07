@@ -10,10 +10,7 @@ class ClientController extends CrudController {
             $this->redirect('/' . $this->module['route']);
         }
 
-        $socialModel = new ClientSocialAccountModel();
-        $accounts = $socialModel->getByClientId((int) $id);
-        $editAccountId = (int) ($_GET['social_edit_id'] ?? 0);
-        $editingAccount = $editAccountId > 0 ? $socialModel->getById($editAccountId, (int) $id) : null;
+        $accounts = (new SocialPublishingModel())->connectionsForClient((int) $id);
 
         $returnTo = $this->resolveReturnTo('/' . $this->module['route']);
 
@@ -25,7 +22,7 @@ class ClientController extends CrudController {
             'returnTo' => $returnTo,
             'backLabel' => $this->buildBackLabel($returnTo, '/' . $this->module['route']),
             'clientSocialAccounts' => $accounts,
-            'editingSocialAccount' => $editingAccount,
+            'editingSocialAccount' => null,
         ]);
     }
 

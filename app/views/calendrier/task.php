@@ -177,7 +177,7 @@ function task_guided_requirements($taskType, array $task, array $brief, array $t
 
     if (in_array($taskType, ['Brief', 'Script'], true)) {
         $requirements[] = ['key' => 'brief_title', 'label' => 'Titre de consigne renseigne', 'done' => trim((string) ($brief['titre_brief'] ?? '')) !== ''];
-        $requirements[] = ['key' => 'brief_message', 'label' => $taskType === 'Brief' ? 'Message detaille complete' : 'Plan de script complete', 'done' => trim((string) ($taskType === 'Brief' ? ($brief['details_message'] ?? '') : ($brief['plan_script'] ?? ''))) !== ''];
+        $requirements[] = ['key' => 'brief_message', 'label' => $taskType === 'Brief' ? 'Message detaille complete' : 'Plan de tournage complet', 'done' => trim((string) ($taskType === 'Brief' ? ($brief['details_message'] ?? '') : ($brief['plan_script'] ?? ''))) !== ''];
         $requirements[] = ['key' => 'brief_status', 'label' => 'Statut de consigne sur Valide', 'done' => (string) ($brief['statut'] ?? '') === 'Valide'];
         return $requirements;
     }
@@ -496,7 +496,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                     <article class="detail-card"><span class="detail-label">Instructions</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['instructions_visuelles'] ?? $brief['recommandation_design'] ?? '—'))) ?></div></article>
                     <article class="detail-card"><span class="detail-label">CTA</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['cta'] ?? '—'))) ?></div></article>
                     <article class="detail-card"><span class="detail-label">Hook</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['hook_video'] ?? '—'))) ?></div></article>
-                    <article class="detail-card"><span class="detail-label">Texte / descriptif</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['texte_script'] ?? $brief['description_publication'] ?? '—'))) ?></div></article>
+                    <article class="detail-card"><span class="detail-label">Script</span><div class="detail-value"><?= nl2br(htmlspecialchars(trim((string) ($brief['texte_script'] ?? '')) !== '' ? (string) $brief['texte_script'] : (string) ($brief['description_publication'] ?? '—'))) ?></div></article>
                     <?php if (trim((string) ($brief['informations_complementaires'] ?? '')) !== ''): ?><article class="detail-card detail-card-accent"><span class="detail-label">Consignes supplémentaires</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) $brief['informations_complementaires'])) ?></div></article><?php endif; ?>
                 </div>
 
@@ -676,11 +676,11 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                         <input type="text" name="hook_video" value="<?= htmlspecialchars((string) ($brief['hook_video'] ?? '')) ?>">
                     </label>
                     <label class="field">
-                        <span>Plan du script</span>
+                        <span>Plan de tournage</span>
                         <textarea name="plan_script"><?= htmlspecialchars((string) ($brief['plan_script'] ?? '')) ?></textarea>
                     </label>
                     <label class="field">
-                        <span>Texte du script</span>
+                        <span>Script</span>
                         <textarea name="texte_script"><?= htmlspecialchars((string) ($brief['texte_script'] ?? '')) ?></textarea>
                     </label>
                     <label class="field">

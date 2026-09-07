@@ -12,8 +12,8 @@ $fieldLabels = [
     'type_livrable' => 'Type livrable',
     'date_prevue' => 'Date prevue',
     'impact_global' => 'Impact global',
-    'plan_script' => 'Plan script',
-    'texte_script' => 'Texte script',
+    'plan_script' => 'Plan de tournage',
+    'texte_script' => 'Script',
     'script_contenu' => 'Contenu script',
 ];
 ?>
