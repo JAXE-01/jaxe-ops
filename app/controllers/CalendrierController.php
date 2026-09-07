@@ -1054,22 +1054,17 @@ class CalendrierController extends Controller {
         if ($caption === '') {
             throw new RuntimeException('Le descriptif de publication est vide. Complétez le script avant de publier.');
         }
-        $mediaUrl = '';
-        $files = [];
-        if (!empty($task['deliverable']['pieces_jointes'])) {
-            $files = json_decode((string) $task['deliverable']['pieces_jointes'], true) ?: [];
-        }
-        foreach ($files as $file) {
-            $path = trim((string) ($file['path'] ?? ''));
-            $extension = strtolower(pathinfo((string) ($file['name'] ?? $path), PATHINFO_EXTENSION));
-            if ($path !== '' && in_array($extension, ['jpg', 'jpeg', 'png', 'mp4'], true)) {
-                $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
-                $mediaUrl = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . upload_url($path);
+        $publishing = new SocialPublishingModel();
+        $availableConnections = $publishing->publishableConnectionsForProject((int) ($task['client_id'] ?? 0), (int) ($task['projet_id'] ?? 0));
+        $selectedConnectionMap = array_fill_keys($connectionIds, true);
+        $needsInstagramJpeg = false;
+        foreach ($availableConnections as $availableConnection) {
+            if (isset($selectedConnectionMap[(int) $availableConnection['id']]) && ($availableConnection['provider'] ?? '') === 'instagram') {
+                $needsInstagramJpeg = true;
                 break;
             }
         }
-
-        $publishing = new SocialPublishingModel();
+        $mediaUrl = $this->resolveTaskPublicationMediaUrl($task, $needsInstagramJpeg);
         $publicationId = $publishing->createPublication([
             'client_id' => (int) ($task['client_id'] ?? 0),
             'project_id' => (int) ($task['projet_id'] ?? 0),
@@ -1090,6 +1085,83 @@ class CalendrierController extends Controller {
                 throw new RuntimeException('La publication n a pas abouti sur toutes les pages. La tâche reste ouverte ; consultez le détail dans Publications.');
             }
         }
+    }
+
+    private function resolveTaskPublicationMediaUrl(array $task, bool $needsInstagramJpeg): string {
+        $files = [];
+        $appendFiles = static function ($raw) use (&$files): void {
+            $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $file) {
+                    if (is_array($file)) {
+                        $files[] = $file;
+                    }
+                }
+            }
+        };
+
+        $appendFiles($task['fichiers_livres'] ?? []);
+        $deliverable = is_array($task['deliverable'] ?? null) ? $task['deliverable'] : [];
+        $appendFiles($deliverable['pieces_jointes'] ?? []);
+        foreach ((array) ($deliverable['tasks'] ?? []) as $pipelineTask) {
+            if (is_array($pipelineTask)) {
+                $appendFiles($pipelineTask['fichiers_livres'] ?? []);
+            }
+        }
+
+        foreach (array_reverse($files) as $file) {
+            $relativePath = ltrim(trim((string) ($file['path'] ?? '')), '/\\');
+            $extension = strtolower(pathinfo((string) ($file['name'] ?? $relativePath), PATHINFO_EXTENSION));
+            if ($relativePath === '' || !in_array($extension, ['jpg', 'jpeg', 'png', 'mp4'], true)) {
+                continue;
+            }
+            $absolutePath = UPLOADS_PATH . '/' . str_replace('\\', '/', $relativePath);
+            if (!is_file($absolutePath)) {
+                continue;
+            }
+
+            if ($needsInstagramJpeg && $extension === 'png') {
+                if (function_exists('imagecreatefrompng') && function_exists('imagejpeg')) {
+                    $source = @imagecreatefrompng($absolutePath);
+                    if (!$source) {
+                        throw new RuntimeException('Le fichier PNG est illisible et ne peut pas être préparé pour Instagram.');
+                    }
+                    $width = imagesx($source);
+                    $height = imagesy($source);
+                    $canvas = imagecreatetruecolor($width, $height);
+                    $white = imagecolorallocate($canvas, 255, 255, 255);
+                    imagefill($canvas, 0, 0, $white);
+                    imagecopy($canvas, $source, 0, 0, 0, 0, $width, $height);
+                    $convertedRelative = 'social-publication/generated/' . date('Y/m') . '/' . hash('sha256', $relativePath . '|' . (string) filemtime($absolutePath)) . '.jpg';
+                    $convertedAbsolute = UPLOADS_PATH . '/' . $convertedRelative;
+                    $convertedDirectory = dirname($convertedAbsolute);
+                    if (!is_dir($convertedDirectory) && !mkdir($convertedDirectory, 0775, true) && !is_dir($convertedDirectory)) {
+                        imagedestroy($source);
+                        imagedestroy($canvas);
+                        throw new RuntimeException('Impossible de créer la copie JPEG destinée à Instagram.');
+                    }
+                    $converted = is_file($convertedAbsolute) || imagejpeg($canvas, $convertedAbsolute, 92);
+                    imagedestroy($source);
+                    imagedestroy($canvas);
+                    if (!$converted) {
+                        throw new RuntimeException('La conversion du PNG pour Instagram a échoué.');
+                    }
+                    $relativePath = $convertedRelative;
+                    $extension = 'jpg';
+                }
+            }
+
+            if ($needsInstagramJpeg && !in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
+                continue;
+            }
+            $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
+            return $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . upload_url($relativePath);
+        }
+
+        if ($needsInstagramJpeg) {
+            throw new RuntimeException('Instagram exige une image. Ajoutez un fichier JPG ou PNG dans la production du contenu.');
+        }
+        return '';
     }
 
     private function buildContentResultPayloads() {
