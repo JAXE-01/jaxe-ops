@@ -5,7 +5,7 @@ class StraxMailTransport {
     private static array $rejectedCc=[];
     public static function lastError(): ?array { return self::$lastError; }
     public static function rejectedCcCount(): int { return count(self::$rejectedCc); }
-    public static function send(array $recipients,string $subject,string $message,?string $actionUrl=null,string $actionLabel='Ouvrir Strax',array $cc=[],?string $replyTo=null): bool {
+    public static function send(array $recipients,string $subject,string $message,?string $actionUrl=null,string $actionLabel='Ouvrir Strax',array $cc=[],?string $replyTo=null,?string $htmlMessage=null): bool {
         self::$lastError=null;self::$rejectedCc=[];
         $socket=null;$stage='configuration';$reference=bin2hex(random_bytes(8));
         try {
@@ -32,7 +32,8 @@ class StraxMailTransport {
             $headers=['Date: '.date(DATE_RFC2822),'Message-ID: <'.$reference.'@'.$domain.'>','From: '.$encoded(MAIL_FROM_NAME).' <'.$from.'>','To: '.implode(', ',$recipients),'Subject: '.$encoded($subject),'MIME-Version: 1.0','Content-Type: multipart/alternative; boundary="'.$boundary.'"'];
             if($acceptedCc)$headers[]='Cc: '.implode(', ',$acceptedCc);
             if($replyTo&&filter_var($replyTo,FILTER_VALIDATE_EMAIL))$headers[]='Reply-To: '.$replyTo;
-            $payload=implode("\r\n",$headers)."\r\n\r\n".StraxMailTemplate::mime($message,StraxMailTemplate::render($subject,$message,$actionUrl,$actionLabel),$boundary);
+            $html=$htmlMessage!==null?StraxMailTemplate::renderHtml($subject,$htmlMessage,$actionUrl,$actionLabel):StraxMailTemplate::render($subject,$message,$actionUrl,$actionLabel);
+            $payload=implode("\r\n",$headers)."\r\n\r\n".StraxMailTemplate::mime($message,$html,$boundary);
             $payload=(string)preg_replace('/(?m)^\./','..',$payload);
             $stage='message';self::command($socket,'DATA',[354]);self::command($socket,$payload.'.',[250]);
             error_log('[strax-mail] reference='.$reference.' result=smtp_accepted');
