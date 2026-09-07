@@ -72,40 +72,17 @@ class CadenceRevision {
         return true;
     }
     private static function isUntouched(PDO $db,array $item,array $old,array $project):bool {
-        if($item['statut']!=='Planifie'||$item['date_prevue']!==$old['date']||$item['titre']!==$old['label']||(string)$item['sous_type']!==$old['format']||(string)$item['canal']!==(string)$project['canal_principal'])return false;
-        if(!in_array(trim((string)$item['pieces_jointes']),['','[]','null'],true)||(int)$item['nombre_pages']>1)return false;
-        $q=$db->prepare('SELECT * FROM contenus WHERE livrable_item_id=? FOR UPDATE');$q->execute([$item['id']]);$content=$q->fetch(PDO::FETCH_ASSOC);
-        if(!$content||$content['sujet']!==$old['label']||$content['statut']!=='Strategique defini'||!empty($content['persona_id']))return false;
-        if((string)$content['sous_type']!==$old['format']||(int)$content['nombre_pages_carrousel']>1)return false;
-        foreach(['message','objectif_publication','cible_libre','responsable'] as $key)if(trim((string)$content[$key])!=='')return false;
-        if((string)$content['reseau_cible']!==(string)$project['canal_principal'])return false;
-        $q=$db->prepare('SELECT * FROM taches_pipeline WHERE livrable_item_id=? FOR UPDATE');$q->execute([$item['id']]);$tasks=$q->fetchAll(PDO::FETCH_ASSOC);
-        $expectedNotes=[
-            'Script'=>'Rediger le script, l intention editoriale et les indications de tournage.',
-            'Brief'=>'Produire le brief detaille du visuel, ses formats et ses livrables attendus.',
-            'Tournage'=>'Realiser la captation selon le script valide.',
-            'Montage'=>'Monter la video, integrer habillage et version finale pour validation.',
-            'Production'=>'Produire le visuel et preparer exports ainsi que source PSD/PSB si necessaire.',
-            'Validation interne'=>$item['type_livrable']==='Video'?'Verifier script, montage, habillage et conformite avant envoi client.':'Verifier la coherence strategique, le branding et la qualite avant envoi client.',
-            'Validation client'=>'Envoyer au client, recueillir les retours et valider la version finale.',
-            'Publication'=>'Publier le contenu selon le calendrier valide.',
-            'Collecte KPI'=>'Collecter les performances 14 jours apres la publication.'
-        ];
-        $taskOffsets=['Script'=>-6,'Brief'=>-6,'Tournage'=>-5,'Montage'=>-3,'Production'=>-3,'Validation interne'=>-2,'Validation client'=>-1,'Publication'=>0,'Collecte KPI'=>14];
-        foreach($tasks as $task){
-            if(!isset($taskOffsets[$task['type_tache']]) || $task['deadline']!==(new DateTimeImmutable($old['date']))->modify(sprintf('%+d days',$taskOffsets[$task['type_tache']]))->format('Y-m-d'))return false;
-            if((string)$task['notes']!==($expectedNotes[$task['type_tache']]??null))return false;
-            if(!in_array($task['statut'],['A faire','Bloquee'],true)||!in_array($task['validation_decision'],[null,'','En attente'],true)||$task['note_sur_10']!==null||trim((string)$task['validation_commentaire'])!==''||!empty(json_decode((string)$task['fichiers_livres'],true))||!empty(json_decode((string)$task['publication_reseaux'],true)))return false;
-        }
-        // Any linked brief, matrix idea, validation, publication or result protects the item.
-        $columns=$db->query("SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME IN ('livrable_item_id','synced_deliverable_id','contenu_id','content_id','task_id','tache_id')")->fetchAll(PDO::FETCH_ASSOC);
-        foreach($columns as $column){
-            $table=$column['TABLE_NAME'];$key=$column['COLUMN_NAME'];
-            if(in_array($table,['contenus','taches_pipeline'],true)||!preg_match('/^[a-zA-Z0-9_]+$/',$table))continue;
-            $ids=in_array($key,['task_id','tache_id'],true)?array_column($tasks,'id'):[in_array($key,['contenu_id','content_id'],true)?$content['id']:$item['id']];
-            if(!$ids)continue;
-            $q=$db->prepare('SELECT 1 FROM `'.$table.'` WHERE `'.$key.'` IN ('.implode(',',array_fill(0,count($ids),'?')).') LIMIT 1');$q->execute($ids);if($q->fetchColumn())return false;
-        }
-        return true;
+        // A cadence revision reschedules every item in scope, including work already
+        // started. Only an effectively published item is immutable.
+        if((string)($item['statut']??'')==='Publie')return false;
+        $q=$db->prepare("SELECT 1 FROM taches_pipeline WHERE livrable_item_id=? AND type_tache='Publication' AND statut='Terminee' LIMIT 1");
+        $q->execute([(int)$item['id']]);
+        if($q->fetchColumn())return false;
+        $q=$db->prepare("SELECT 1 FROM contenus c JOIN social_publications sp ON sp.content_id=c.id JOIN social_publication_targets spt ON spt.publication_id=sp.id WHERE c.livrable_item_id=? AND spt.status='Published' LIMIT 1");
+        $q->execute([(int)$item['id']]);
+        if($q->fetchColumn())return false;
+        $q=$db->prepare("SELECT 1 FROM contenus c JOIN calendrier_contenus cc ON cc.contenu_id=c.id WHERE c.livrable_item_id=? AND cc.statut='Publie' LIMIT 1");
+        $q->execute([(int)$item['id']]);
+        return !$q->fetchColumn();
     }
 }

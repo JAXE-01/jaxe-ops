@@ -497,7 +497,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                     <article class="detail-card"><span class="detail-label">CTA</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['cta'] ?? '—'))) ?></div></article>
                     <article class="detail-card"><span class="detail-label">Hook</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['hook_video'] ?? '—'))) ?></div></article>
                     <article class="detail-card"><span class="detail-label">Texte / descriptif</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['texte_script'] ?? $brief['description_publication'] ?? '—'))) ?></div></article>
-                    <article class="detail-card"><span class="detail-label">Statut consigne</span><div class="detail-value"><?= htmlspecialchars((string) ($brief['statut'] ?? 'A faire')) ?></div></article>
+                    <?php if (trim((string) ($brief['informations_complementaires'] ?? '')) !== ''): ?><article class="detail-card detail-card-accent"><span class="detail-label">Consignes supplémentaires</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) $brief['informations_complementaires'])) ?></div></article><?php endif; ?>
                 </div>
 
                 <?php if (!empty($task['persona_nom'])): ?>
@@ -849,7 +849,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                     </label>
                 <?php endif; ?>
                 <label class="field">
-                    <span>Date de publication</span>
+                    <span>Date réelle de publication</span>
                     <input type="date" name="date_publication" value="<?= htmlspecialchars((string) ($_POST['date_publication'] ?? $latestPublication['date_publication'] ?? $task['deadline'] ?? '')) ?>" class="<?= task_field_has_error($inlineErrors, 'date_publication') ? 'has-error' : '' ?>">
                     <small class="field-error" data-field-error-for="date_publication"><?= htmlspecialchars(task_field_error($inlineErrors, 'date_publication')) ?></small>
                 </label>
@@ -862,8 +862,8 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                     <input type="text" name="canal" value="<?= htmlspecialchars((string) ($_POST['canal'] ?? $latestPublication['canal'] ?? $task['reseau_cible'] ?? $task['canal_principal'] ?? '')) ?>">
                 </label>
                 <label class="field">
-                    <span>Note de publication</span>
-                    <textarea name="publication_note"><?= htmlspecialchars((string) ($_POST['publication_note'] ?? $latestPublication['note'] ?? '')) ?></textarea>
+                    <span>Consignes / publication manuelle</span>
+                    <textarea name="publication_note" placeholder="Précisez ici les autres pages ou réseaux publiés manuellement. Leur collecte KPI devra aussi être saisie manuellement."><?= htmlspecialchars((string) ($_POST['publication_note'] ?? $latestPublication['note'] ?? '')) ?></textarea>
                 </label>
                 <label class="field">
                     <span>Reseaux</span>

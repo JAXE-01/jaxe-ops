@@ -148,7 +148,9 @@ class CalendrierModel extends Model {
         $sql = "SELECT li.id AS deliverable_id,
                        li.titre,
                        li.type_livrable,
-                       li.date_prevue,
+                       li.date_prevue AS date_planifiee,
+                       COALESCE(pub.actual_date, li.date_prevue) AS date_prevue,
+                       pub.actual_date AS date_publication_reelle,
                        p.id AS projet_id,
                        p.nom AS projet_nom,
                        c.id AS client_id,
@@ -172,7 +174,23 @@ class CalendrierModel extends Model {
                 LEFT JOIN taches_pipeline tvi ON tvi.livrable_item_id = li.id AND tvi.type_tache = 'Validation interne'
                 LEFT JOIN taches_pipeline tvc ON tvc.livrable_item_id = li.id AND tvc.type_tache = 'Validation client'
                 LEFT JOIN taches_pipeline tpub ON tpub.livrable_item_id = li.id AND tpub.type_tache = 'Publication'
-                WHERE li.date_prevue BETWEEN :month_start AND :month_end";
+                LEFT JOIN (
+                    SELECT publication_dates.livrable_item_id, MAX(publication_dates.actual_date) AS actual_date
+                    FROM (
+                        SELECT ct.livrable_item_id, DATE(spt.published_at) AS actual_date
+                        FROM contenus ct
+                        JOIN social_publications sp ON sp.content_id = ct.id
+                        JOIN social_publication_targets spt ON spt.publication_id = sp.id
+                        WHERE spt.status = 'Published' AND spt.published_at IS NOT NULL
+                        UNION ALL
+                        SELECT ct.livrable_item_id, cc.date_publication AS actual_date
+                        FROM contenus ct
+                        JOIN calendrier_contenus cc ON cc.contenu_id = ct.id
+                        WHERE cc.statut = 'Publie' AND cc.date_publication IS NOT NULL
+                    ) publication_dates
+                    GROUP BY publication_dates.livrable_item_id
+                ) pub ON pub.livrable_item_id = li.id
+                WHERE COALESCE(pub.actual_date, li.date_prevue) BETWEEN :month_start AND :month_end";
 
         $params = [
             'month_start' => $monthStart,
@@ -204,7 +222,7 @@ class CalendrierModel extends Model {
             $params['scope_user_id'] = UserScope::userId($currentUser);
         }
 
-        $sql .= ' ORDER BY li.date_prevue ASC, c.entreprise ASC, p.nom ASC, li.id ASC';
+        $sql .= ' ORDER BY COALESCE(pub.actual_date, li.date_prevue) ASC, c.entreprise ASC, p.nom ASC, li.id ASC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -3034,6 +3052,11 @@ public function getPlanScheduledPublicationDates($planId, $excludeDeliverableId 
         $isTerminated = function($status) {
             return $status === 'Terminee';
         };
+
+        // A confirmed network publication wins over the former planned date/status.
+        if (!empty($row['date_publication_reelle'])) {
+            return ['key' => 'cal-publie', 'label' => 'Publié le ' . date('d/m/Y', strtotime((string) $row['date_publication_reelle']))];
+        }
 
         // 1. Check if overdue (contenu en retard = rouge)
         $dateStr = (string) ($row['date_prevue'] ?? '');

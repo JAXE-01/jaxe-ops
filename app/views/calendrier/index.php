@@ -344,9 +344,10 @@ if (!function_exists('cal_global_type_icon')) {
                                 $stageTextColor = cal_global_item_text_color($stageClass, $calendarColorScheme, $calendarStageSchemeMap);
                                 ?>
                                 <a class="global-calendar-item <?= htmlspecialchars($stageClass) ?>" href="<?= htmlspecialchars($projectUrl) ?>" title="<?= htmlspecialchars((string) ($item['stage_label'] ?? '')) ?>"<?= $stageStyle !== '' ? ' style="' . htmlspecialchars($stageStyle) . '"' : '' ?>>
-                                    <span class="global-calendar-type-icon"><?= htmlspecialchars(cal_global_type_icon($item['type_livrable'] ?? '')) ?></span>
+                                    <span class="global-calendar-client-mark" aria-hidden="true"><?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($item['client_nom'] ?? '?'), 0, 1))) ?></span>
+                                    <span class="global-calendar-type-icon" title="<?= htmlspecialchars((string) ($item['type_livrable'] ?? 'Contenu')) ?>"><?= htmlspecialchars(cal_global_type_icon($item['type_livrable'] ?? '')) ?></span>
                                     <span class="global-calendar-client" style="color: <?= htmlspecialchars($stageTextColor) ?>;"><?= htmlspecialchars((string) ($item['client_nom'] ?? 'Client')) ?></span>
-                                    <span class="global-calendar-title" style="color: <?= htmlspecialchars($stageTextColor) ?>;"><?= htmlspecialchars((string) ($item['titre'] ?? 'Contenu')) ?></span>
+                                    <span class="global-calendar-title" style="color: <?= htmlspecialchars($stageTextColor) ?>;"><?= htmlspecialchars((string) ($item['titre'] ?? 'Contenu')) ?><?= !empty($item['date_publication_reelle']) ? ' · publié' : '' ?></span>
                                 </a>
                             <?php endforeach; ?>
                         <?php endif; ?>

@@ -2033,6 +2033,41 @@ textarea {
     background: #fff;
 }
 
+.global-calendar-client-mark {
+    grid-row: 1 / span 2;
+    width: 22px;
+    height: 22px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 7px;
+    background: color-mix(in srgb, currentColor 13%, white);
+    font-size: .68rem;
+    font-weight: 800;
+}
+
+.global-calendar-item:has(.global-calendar-client-mark) {
+    grid-template-columns: 22px 24px minmax(0, 1fr);
+    column-gap: 5px;
+}
+
+.global-calendar-item:has(.global-calendar-client-mark) .global-calendar-client,
+.global-calendar-item:has(.global-calendar-client-mark) .global-calendar-title {
+    grid-column: 3;
+}
+
+.detail-card-accent {
+    border-left: 3px solid #65a8df;
+    background: #f0f7fd;
+}
+
+@media (max-width: 1280px) and (min-width: 761px) {
+    .global-calendar-cell { min-width: 132px; padding: 7px; }
+    .global-calendar-grid, .global-calendar-weekdays { min-width: 980px; }
+    .global-calendar-item { padding: 5px 6px; }
+    .global-calendar-item .global-calendar-client,
+    .global-calendar-item .global-calendar-title { font-size: .68rem; }
+}
+
 .global-calendar-item .global-calendar-type-icon {
     grid-row: 1 / span 2;
     font-size: 0.95rem;
