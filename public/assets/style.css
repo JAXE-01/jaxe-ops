@@ -1343,10 +1343,10 @@ input[type="submit"]:disabled {
     background: rgba(255, 255, 255, 0.55);
 }
 
-.form-grid {
+/* .form-grid {
     display: grid;
     gap: 18px;
-}
+} */
 
 .field {
     display: grid;
