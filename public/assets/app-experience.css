@@ -123,3 +123,11 @@ details>summary[data-icon-toggle=true]{display:grid!important;place-items:center
  .content-general-panel .workbench-pane>.field:last-of-type{margin-right:0}
  .content-general-panel .workbench-pane>.field textarea{min-height:92px!important}
 }
+
+.deliverable-icon-action{display:inline-block!important;margin:5px 4px 0 0!important;vertical-align:middle}
+.deliverable-icon-action>summary{list-style:none}.deliverable-icon-action>summary::-webkit-details-marker{display:none}
+.deliverable-icon-action .icon-link,.deliverable-icon-action.icon-link{display:inline-grid;place-items:center;width:30px;height:30px;min-height:30px;padding:0;border:1px solid #d4e0eb;border-radius:9px;background:#f7fafc;color:#315f86;cursor:pointer}
+.deliverable-icon-action .icon-link:hover{background:#eaf3fa;border-color:#a9c9e3}
+.deliverable-icon-action .icon-link-danger{color:#b42318;background:#fff8f8;border-color:#efcaca}
+.deliverable-icon-action .icon-link svg{width:16px!important;height:16px!important}
+.detail-card-wide{grid-column:span 2}

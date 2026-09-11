@@ -521,17 +521,22 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
             <div class="panel stack-panel">
                 <div class="panel-head">
                     <div>
-                        <h3><?= (($deliverable['type_livrable'] ?? '') === 'Video') ? 'Script / brief' : 'Brief / script' ?></h3>
+                        <h3><?= (($deliverable['type_livrable'] ?? '') === 'Video') ? 'Brief vidéo et script' : 'Brief créatif' ?></h3>
                         <p class="panel-subtitle">Consigne redigee en amont pour guider la production.</p>
                     </div>
                 </div>
                 <div class="detail-grid">
                     <article class="detail-card"><span class="detail-label">Titre</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['titre_brief'] ?? '—'))) ?></div></article>
-                    <article class="detail-card"><span class="detail-label">Message detaille</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['details_message'] ?? $brief['plan_script'] ?? '—'))) ?></div></article>
-                    <article class="detail-card"><span class="detail-label">Instructions</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['instructions_visuelles'] ?? $brief['recommandation_design'] ?? '—'))) ?></div></article>
+                    <article class="detail-card"><span class="detail-label">Message détaillé</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['details_message'] ?? '—'))) ?></div></article>
+                    <article class="detail-card"><span class="detail-label"><?= (($deliverable['type_livrable'] ?? '') === 'Video') ? 'Instructions visuelles' : 'Recommandations design' ?></span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ((($deliverable['type_livrable'] ?? '') === 'Video') ? ($brief['instructions_visuelles'] ?? '—') : ($brief['recommandation_design'] ?? '—')))) ?></div></article>
                     <article class="detail-card"><span class="detail-label">CTA</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['cta'] ?? '—'))) ?></div></article>
-                    <article class="detail-card"><span class="detail-label">Hook</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['hook_video'] ?? '—'))) ?></div></article>
-                    <article class="detail-card"><span class="detail-label">Script</span><div class="detail-value"><?= nl2br(htmlspecialchars(trim((string) ($brief['texte_script'] ?? '')) !== '' ? (string) $brief['texte_script'] : (string) ($brief['description_publication'] ?? '—'))) ?></div></article>
+                    <?php if (($deliverable['type_livrable'] ?? '') === 'Video'): ?>
+                        <article class="detail-card"><span class="detail-label">Hook</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['hook_video'] ?? '—'))) ?></div></article>
+                        <article class="detail-card"><span class="detail-label">Plan de tournage</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['plan_script'] ?? '—'))) ?></div></article>
+                        <article class="detail-card detail-card-wide"><span class="detail-label">Script</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['texte_script'] ?? '—'))) ?></div></article>
+                    <?php else: ?>
+                        <article class="detail-card detail-card-wide"><span class="detail-label">Descriptif de publication</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) ($brief['description_publication'] ?? '—'))) ?></div></article>
+                    <?php endif; ?>
                     <?php if (trim((string) ($brief['informations_complementaires'] ?? '')) !== ''): ?><article class="detail-card detail-card-accent"><span class="detail-label">Consignes supplémentaires</span><div class="detail-value"><?= nl2br(htmlspecialchars((string) $brief['informations_complementaires'])) ?></div></article><?php endif; ?>
                 </div>
 

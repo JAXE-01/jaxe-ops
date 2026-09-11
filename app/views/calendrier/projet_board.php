@@ -328,8 +328,10 @@ if ($deliverableType === 'Video') {
                                         <?php $canManageDate = calendrier_can_manage_deliverable_date($deliverable, $boardCurrentUserId, $boardCanManageAsCC); ?>
                                         <span><?= htmlspecialchars($plannedDate !== '' ? $plannedDate : 'N/A') ?></span>
                                         <?php if ($canManageDate): ?>
-                                            <details class="mini-reassign-panel" style="margin-top:6px;">
-                                                <summary class="mini-reassign-trigger">Modifier</summary>
+                                            <details class="mini-reassign-panel deliverable-icon-action">
+                                                <summary class="icon-link" title="Modifier la date prévue" aria-label="Modifier la date prévue">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.7 4.2 4.2-.7L19 8.5 15.5 5 4 16.5ZM13.8 6.7l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                </summary>
                                                 <form method="post" action="<?= htmlspecialchars($currentReturn) ?>" class="mini-inline-form">
                                                     <input type="hidden" name="manager_action" value="move_publication_date">
                                                     <input type="hidden" name="deliverable_id" value="<?= htmlspecialchars((string) ($deliverable['id'] ?? 0)) ?>">
@@ -337,8 +339,10 @@ if ($deliverableType === 'Video') {
                                                     <button class="button secondary mini-submit" type="submit">OK</button>
                                                 </form>
                                             </details>
-                                            <form method="post" action="<?= htmlspecialchars(route_url('/livrable-item/delete/' . (int) ($deliverable['id'] ?? 0))) ?>" style="margin-top:6px" onsubmit="return confirm('Retirer ce contenu du calendrier ? Son historique sera conservé.');">
-                                                <button class="mini-reassign-trigger" type="submit" style="color:#b42318">Retirer</button>
+                                            <form method="post" action="<?= htmlspecialchars(route_url('/livrable-item/delete/' . (int) ($deliverable['id'] ?? 0))) ?>" class="deliverable-icon-action" onsubmit="return confirm('Retirer ce contenu du calendrier ? Son historique sera conservé.');">
+                                                <button class="icon-link icon-link-danger" type="submit" title="Retirer du calendrier" aria-label="Retirer du calendrier">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                                </button>
                                             </form>
                                         <?php endif; ?>
                                     </td>

@@ -52,6 +52,20 @@
     .content { margin-left:72px; width:calc(100% - 72px); padding:20px 22px 38px; }
 }
 
+/* Rail compact : icônes centrées et rubriques sans espaces fantômes. */
+@media (min-width:981px) and (max-width:1366px) {
+    body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .sidebar-nav-heading,
+    body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .sidebar-section-label { display:none!important; }
+    body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .top-nav.top-nav-unified { align-items:center!important; gap:6px; }
+    body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-pill.nav-pill-icon,
+    body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-icon-button { width:46px!important; min-width:46px!important; height:44px!important; padding:0!important; justify-content:center!important; gap:0!important; }
+    body .shell-header.shell-header-unified .nav-icon,
+    body .shell-header.shell-header-unified .nav-icon svg,
+    body .shell-header.shell-header-unified .nav-icon-button>svg { display:block!important; width:20px!important; height:20px!important; min-width:20px; flex:0 0 20px; }
+    body .shell-header.shell-header-unified:hover .nav-pill.nav-pill-icon,
+    body .shell-header.shell-header-unified:focus-within .nav-pill.nav-pill-icon { justify-content:flex-start!important; padding:10px 12px!important; gap:12px!important; }
+}
+
 /* Premium white workspace */
 body { background: #f6f8fb; color: #172b45; }
 .content { background: radial-gradient(circle at 96% 2%, rgba(76,139,196,.07), transparent 25rem), #f7f9fc; }
