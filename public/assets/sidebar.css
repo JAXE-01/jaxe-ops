@@ -448,3 +448,21 @@ th {
 .settings-section-card[hidden],.settings-sidebar-group[hidden]{display:none!important}
 .settings-secondary-sidebar .settings-section-card:has(.settings-incomplete-badge){padding-bottom:9px}
 .workspace-switch{display:flex;gap:8px;margin-top:12px}.workspace-switch a{flex:1;padding:8px;text-align:center;border:1px solid #64748b;border-radius:8px;color:#fff}.workspace-switch a.active{background:#234766}.logout-form{margin:0}.logout-form .nav-icon-button{width:100%;cursor:pointer}
+
+/* État final du rail desktop compact : aucune étiquette ni hauteur fantôme. */
+@media (min-width:981px) and (max-width:1366px) {
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within){padding:12px 9px!important;gap:8px!important}
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .brand-block-inline{display:flex!important;justify-content:center;padding:0 0 10px!important;margin:0!important}
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .brand-block-inline>span:last-child,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .sidebar-context,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .workspace-switch,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .sidebar-nav-heading,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .sidebar-section-label,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-label-text,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-utility-label{display:none!important}
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .top-nav.top-nav-unified{margin:0!important;padding:0!important;align-items:center!important;gap:4px!important}
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-pill.nav-pill-icon,
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-icon-button{display:flex!important;width:46px!important;min-width:46px!important;max-width:46px!important;height:40px!important;min-height:40px!important;margin:0!important;padding:0!important;justify-content:center!important;align-items:center!important;gap:0!important}
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .nav-utility{width:46px!important;margin:auto auto 0!important;padding-top:8px!important;align-items:center!important;gap:4px!important}
+ body .shell-header.shell-header-unified:not(:hover):not(:focus-within) .logout-form{width:46px!important}
+}
