@@ -25,6 +25,23 @@ Configurer dans cPanel une tâche cron chaque minute. Vérifier d’abord le che
 * * * * * /CHEMIN/VERS/php /home/c2268453c/public_html/strax/scripts/process_social_queue.php 20 >> /home/c2268453c/public_html/strax/storage/logs/social-queue.log 2>&1
 ```
 
+Ce worker réalise maintenant les deux opérations liées :
+
+1. il publie toutes les destinations approuvées dont l’échéance est atteinte ;
+2. après chaque publication confirmée, il lance immédiatement la première collecte KPI.
+
+Le cron doit être actif toutes les minutes. Une destination approuvée qui reste dans
+le statut `Queued` après son heure prévue indique que cette commande n’est pas exécutée.
+Vérifier alors le chemin PHP, le chemin absolu du projet et le fichier
+`storage/logs/social-queue.log` dans cPanel.
+
+Pour rafraîchir ensuite les statistiques des publications déjà diffusées, conserver
+également une collecte périodique (par exemple toutes les six heures) :
+
+```cron
+17 */6 * * * /CHEMIN/VERS/php /home/c2268453c/public_html/strax/scripts/collect_social_metrics.php 50 >> /home/c2268453c/public_html/strax/storage/logs/social-metrics.log 2>&1
+```
+
 ## Recette sans risque
 
 1. Créer une connexion Meta pour le client de test.
