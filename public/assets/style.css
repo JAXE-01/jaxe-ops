@@ -1096,8 +1096,8 @@ body.preview-open {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    border-radius: 999px;
+    padding: 0px 12px;
+    border-radius: 12px;
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.84);
     font-size: 0.9rem;
@@ -1367,7 +1367,7 @@ input[type="submit"]:disabled {
 input,
 textarea,
 select {
-    width: 100%;
+    width: auto;
     padding: 12px 14px;
     border: 1px solid var(--line);
     border-radius: 16px;
