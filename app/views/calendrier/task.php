@@ -672,13 +672,14 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                 </label>
 
                 <?php if ($taskType === 'Brief'): ?>
-                    <label class="field">
-                        <span>Details du message</span>
-                        <textarea name="details_message"><?= htmlspecialchars((string) ($brief['details_message'] ?? '')) ?></textarea>
-                    </label>
+                   
                     <label class="field">
                         <span>CTA</span>
                         <input type="text" name="cta" value="<?= htmlspecialchars((string) ($brief['cta'] ?? '')) ?>">
+                    </label>
+                     <label class="field">
+                        <span>Details du message</span>
+                        <textarea name="details_message"><?= htmlspecialchars((string) ($brief['details_message'] ?? '')) ?></textarea>
                     </label>
                     <label class="field">
                         <span>Recommandations design</span>
