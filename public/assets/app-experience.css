@@ -1076,7 +1076,7 @@ details[open] > summary[data-icon-toggle="true"]::before {
   .task-workspace-compact > .form-grid > .field:has(textarea) {
     grid-column: span 6;
   }
-  .task-workspace-compact > .form-grid > .field .large {
+  .field .largejeff {
     grid-column: span 12;
   }
   .task-workspace-compact
