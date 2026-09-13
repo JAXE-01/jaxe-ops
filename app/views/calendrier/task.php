@@ -689,7 +689,7 @@ $guidedPercent = $guidedTotal > 0 ? (int) round(($guidedDone / $guidedTotal) * 1
                         <span>Infos complementaires</span>
                         <textarea name="informations_complementaires"><?= htmlspecialchars((string) ($brief['informations_complementaires'] ?? '')) ?></textarea>
                     </label>
-                    <div class="field caption-editor brief-caption-editor">
+                    <div class="field caption-editor brief-caption-editor large">
                         <label for="brief-description-publication">Descriptif publication</label>
                         <div class="text-toolbar" role="toolbar" aria-label="Mise en forme du descriptif"><button type="button" data-text-style="bold" title="Gras"><b>B</b></button><button type="button" data-text-style="italic" title="Italique"><i>I</i></button><button type="button" data-text-style="boldItalic" title="Gras italique"><b><i>BI</i></b></button><button type="button" data-text-style="mono" title="Monospace">M</button><span data-char-count>0 caractères</span></div>
                         <textarea id="brief-description-publication" name="description_publication" rows="7" placeholder="Rédigez la légende, les mentions et les hashtags…"><?= htmlspecialchars((string) ($brief['description_publication'] ?? '')) ?></textarea>
