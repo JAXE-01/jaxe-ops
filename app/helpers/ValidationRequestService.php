@@ -41,7 +41,7 @@ class ValidationRequestService {
 
     public function send(array $context, array $user): array {
         $tasks = $this->pending($context, $user);
-        $result = ['sent' => 0, 'failed' => 0, 'unassigned' => 0, 'tasks' => count($tasks)];
+        $result = ['sent' => 0, 'failed' => 0, 'unassigned' => 0, 'tasks' => count($tasks), 'errors' => []];
         $groups = [];
         foreach ($tasks as $task) {
             $email = trim((string) ($task['email'] ?? ''));
@@ -61,11 +61,20 @@ class ValidationRequestService {
                 $lines[] = '';
             }
             $body = implode("\n", $lines);
+            $deliveryError = null;
             try {
                 $ok = StraxMailTransport::send([$email], $subject, $body, route_url('/calendrier/task/' . (int) $items[0]['id']), 'Ouvrir la validation');
+                if (!$ok) $deliveryError = StraxMailTransport::lastError();
             } catch (Throwable $exception) {
-                error_log('[validation-request] ' . $exception->getMessage());
+                $reference = bin2hex(random_bytes(8));
+                error_log('[validation-request] reference=' . $reference . ' ' . $exception->getMessage());
+                $deliveryError = ['message' => 'Erreur interne lors de l’envoi', 'reference' => $reference];
                 $ok = false;
+            }
+            if (!$ok) {
+                $detail = (string) ($deliveryError['message'] ?? 'Échec sans diagnostic SMTP disponible');
+                if (!empty($deliveryError['reference'])) $detail .= ' — référence ' . $deliveryError['reference'];
+                $result['errors'][] = $detail;
             }
             $result[$ok ? 'sent' : 'failed']++;
             foreach ($items as $item) {

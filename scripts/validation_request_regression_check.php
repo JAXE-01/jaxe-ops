@@ -14,6 +14,7 @@ class AgencyAccessPolicy {
 class StraxMailTransport {
     public static array $messages = [];
     public static bool $success = true;
+    public static function lastError() { return ['message' => 'authentification refusée (code 535)', 'reference' => 'test-reference']; }
     public static function send($to, $subject, $body, $url, $label) {
         self::$messages[] = compact('to', 'subject', 'body', 'url');
         return self::$success;
@@ -54,7 +55,7 @@ $context = ['type_tache' => 'Production', 'plan_mensuel_id' => 1, 'projet_id' =>
 $service = new ValidationRequestService();
 $before = $db->query('SELECT * FROM taches_pipeline ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
 $result = $service->send($context, $user);
-check($result === ['sent' => 1, 'failed' => 0, 'unassigned' => 2, 'tasks' => 5], 'Grouping, eligibility or missing recipients');
+check($result === ['sent' => 1, 'failed' => 0, 'unassigned' => 2, 'tasks' => 5, 'errors' => []], 'Grouping, eligibility or missing recipients');
 check(count(StraxMailTransport::$messages) === 1, 'Expected one digest per responsible');
 $mail = StraxMailTransport::$messages[0];
 check($mail['to'] === ['internal@example.test'], 'Wrong internal responsible');
@@ -80,6 +81,7 @@ check($result['tasks'] === 1 && end(StraxMailTransport::$messages)['to'] === ['c
 StraxMailTransport::$success = false;
 $result = $service->send($context, $user);
 check($result['sent'] === 0 && $result['failed'] === 1, 'Mail failure misreported');
+check($result['errors'] === ['authentification refusée (code 535) — référence test-reference'], 'SMTP diagnostic lost');
 check($db->query("SELECT COUNT(*) FROM workflow_progress_reports WHERE delivery_status='Failed'")->fetchColumn() == 1, 'Failure history missing');
 $context['projet_id'] = 2;
 $denied = false;

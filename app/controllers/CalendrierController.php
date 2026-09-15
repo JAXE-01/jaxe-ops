@@ -529,7 +529,10 @@ class CalendrierController extends Controller {
                 $result = (new ValidationRequestService())->send($task, $this->currentUser());
                 $message = $result['tasks'] === 0 ? 'Aucun contenu prêt en attente de validation pour ce calendrier.'
                     : $result['tasks'] . ' contenu(s) en attente : ' . $result['sent'] . ' e-mail(s) envoyé(s) aux responsables.';
-                if ($result['failed']) $message .= ' ' . $result['failed'] . ' envoi(s) échoué(s). Vous pouvez réessayer.';
+                if ($result['failed']) {
+                    $message .= ' ' . $result['failed'] . ' envoi(s) échoué(s).';
+                    $message .= ' ' . implode(' ; ', array_unique($result['errors'])) . '.';
+                }
                 if ($result['unassigned']) $message .= ' ' . $result['unassigned'] . ' contenu(s) sans responsable actif avec une adresse e-mail valide.';
                 $this->flash($result['failed'] || $result['unassigned'] ? 'error' : 'success', $message);
             } catch (Throwable $exception) {
