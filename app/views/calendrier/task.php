@@ -417,6 +417,20 @@ function task_completion_note($taskType, $task) {
     </div>
 </section>
 
+<?php if (in_array($taskType, ['Production', 'Montage', 'Validation interne'], true)): ?>
+    <section class="panel inset-panel">
+        <div class="panel-head">
+            <div>
+                <h3><?= $taskType === 'Validation interne' ? 'Transmettre en validation client' : 'Transmettre en validation interne' ?></h3>
+                <p class="panel-subtitle">Tous les contenus terminés de cette étape, encore en attente de validation, pour ce projet et ce mois. Un e-mail récapitulatif par responsable de validation, dans votre périmètre.</p>
+            </div>
+            <form method="post" action="<?= htmlspecialchars(route_url('/calendrier/task/' . (int) $task['id'])) ?>">
+                <button class="button" type="submit" name="manager_action" value="send_validation_requests">Envoyer en validation</button>
+            </form>
+        </div>
+    </section>
+<?php endif; ?>
+
 <?php if ($canReassignTask && !empty($reassignmentOptions)): ?>
     <section class="panel inset-panel" id="task-reassign-panel" hidden>
         <div class="panel-head">

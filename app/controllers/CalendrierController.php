@@ -524,6 +524,20 @@ class CalendrierController extends Controller {
         $this->guardClienteleTaskAccess($task);
 
         $returnTo = $this->resolveCalendarReturn($task['projet_id'], $task['periode_mois'] ?? null);
+        if ($this->isPost() && (string) ($_POST['manager_action'] ?? '') === 'send_validation_requests') {
+            try {
+                $result = (new ValidationRequestService())->send($task, $this->currentUser());
+                $message = $result['tasks'] === 0 ? 'Aucun contenu prêt en attente de validation pour ce calendrier.'
+                    : $result['tasks'] . ' contenu(s) en attente : ' . $result['sent'] . ' e-mail(s) envoyé(s) aux responsables.';
+                if ($result['failed']) $message .= ' ' . $result['failed'] . ' envoi(s) échoué(s). Vous pouvez réessayer.';
+                if ($result['unassigned']) $message .= ' ' . $result['unassigned'] . ' contenu(s) sans responsable actif avec une adresse e-mail valide.';
+                $this->flash($result['failed'] || $result['unassigned'] ? 'error' : 'success', $message);
+            } catch (Throwable $exception) {
+                $this->flash('error', $exception->getMessage());
+            }
+            $this->redirect('/calendrier/task/' . (int) $taskId);
+        }
+
 
         if (isset($_GET['remove_brief_file']) && in_array((string) ($task['type_tache'] ?? ''), ['Brief', 'Script'], true) && !empty($task['deliverable'])) {
             $this->removeBriefFile($task['deliverable'], (int) $_GET['remove_brief_file'], $returnTo);
